@@ -1,0 +1,22 @@
+# build
+build/
+out/
+dist/
+lib/
+*.class
+*.jar
+*.o
+*.s
+bin/kof-agent
+
+# baselines locais de benchmark (nao versionados)
+benchmarks/baselines/*.local.json
+
+# IDE
+.idea/
+.vscode/
+*.iml
+
+# OS
+.DS_Store
+Thumbs.db
