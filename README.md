@@ -97,6 +97,7 @@ módulos, dependências permitidas e APIs previstas está em
 
 | Documento | Conteúdo |
 |-----------|----------|
+| [docs/status.md](docs/status.md) | **estado atual do projeto (fonte única — atualizado a cada etapa)** |
 | [docs/SPEC.md](docs/SPEC.md) | especificação do produto (requisitos e interfaces) |
 | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | arquitetura oficial em camadas |
 | [docs/MODULES.md](docs/MODULES.md) | mapa de módulos e dependências |

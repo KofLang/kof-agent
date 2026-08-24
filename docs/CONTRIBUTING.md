@@ -70,10 +70,16 @@ uma milestone.
 
 Ao terminar uma etapa/milestone, atualize obrigatoriamente:
 
+- **`docs/status.md` — sempre, em toda etapa** (fonte única de verdade sobre
+  o estado atual: snapshot, entregas, questões abertas, riscos no radar,
+  próximos passos e histórico resumido);
 - `docs/TASKS.md` (status das tarefas),
 - documentos afetados (`SPEC/ARCHITECTURE/MODULES/ROADMAP/RISKS/DECISIONS`),
 - READMEs das pastas tocadas,
 - `REPORT_MXX.md` da milestone.
+
+Regra prática: se o estado do projeto mudou e `docs/status.md` não mudou
+junto, o commit está incompleto.
 
 ## 7. Template oficial de report
 
