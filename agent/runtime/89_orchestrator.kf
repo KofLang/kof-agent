@@ -1,0 +1,45 @@
+record CtxChunk(String source, String id, String title, String body, Int score)
+
+orchFuse(CorpusIndex ix, MemoryLayer mem, String query, Int topK, Int maxChars): String {
+    var ctxJson = retBuildContext(ix, query, topK, maxChars, listOf<String>())
+    var chunks = listOf<CtxChunk>()
+    var parts = splitStr(ctxJson, "{\"id\":\"")
+    var i = 1
+    while (i < parts.size) {
+        var seg = parts.get(i)
+        var q1 = seg.indexOf("\"")
+        var id = seg.substring(0, q1)
+        var seen = false
+        for (var ch in chunks) {
+            if (ch.id == id) {
+                seen = true
+            }
+        }
+        if (!seen && id != "") {
+            chunks.add(CtxChunk("corpus", id, id, "", 10))
+        }
+        i = i + 1
+    }
+    var memHits = mem.byKind("semantic")
+    for (var m in memHits) {
+        if (m.value.contains(query)) {
+            chunks.add(CtxChunk("memory", m.key, m.key, m.value, 8))
+        }
+    }
+    var out = "{\"query\":\"" + escapeJson(query) + "\",\"chunks\":["
+    var first = true
+    var budget = maxChars
+    for (var ch2 in chunks) {
+        var cost = ch2.title.length + 6
+        if (budget - cost >= 0) {
+            if (!first) {
+                out = out + ","
+            }
+            first = false
+            out = out + "{\"source\":\"" + ch2.source + "\",\"id\":\"" + escapeJson(ch2.id) + "\"}"
+            budget = budget - cost
+        }
+    }
+    out = out + "]}"
+    return out
+}

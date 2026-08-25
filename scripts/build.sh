@@ -18,6 +18,9 @@ PARTS=(
   agent/runtime/47_tools.kf
   agent/runtime/50_metrics.kf
   agent/runtime/57_corpus.kf
+  agent/runtime/89_orchestrator.kf
+  agent/runtime/88_conversation.kf
+  agent/runtime/87_memory.kf
   agent/runtime/67_retrieval.kf
   agent/runtime/77_runtime_ai.kf
   agent/runtime/81_tensors_v2.kf

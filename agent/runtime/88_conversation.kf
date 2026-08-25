@@ -1,0 +1,72 @@
+record TurnRec(Int seq, String role, String content, Long ts)
+
+class ConversationEngine {
+    List<TurnRec> turns = listOf<TurnRec>()
+    Int nextSeq = 1
+    TimeSource clock
+    Int windowSize = 20
+    constructor(TimeSource ts) {
+        clock = ts
+    }
+
+    add(String role, String content) {
+        turns.add(TurnRec(nextSeq, role, content, clock.nowMs()))
+        nextSeq = nextSeq + 1
+        compact()
+    }
+
+    compact() {
+        while (turns.size > windowSize) {
+            turns.remove(0)
+        }
+    }
+
+    summarizeOlder(keepRecent): String {
+        var out = ""
+        var start = 0
+        var cut = turns.size - keepRecent
+        while (start < cut) {
+            out = out + "[" + turns.get(start).role + "] " + turns.get(start).content + "\n"
+            start = start + 1
+        }
+        return out
+    }
+
+    lastUser(): String {
+        var i = turns.size - 1
+        while (i >= 0) {
+            if (turns.get(i).role == "user") {
+                return turns.get(i).content
+            }
+            i = i - 1
+        }
+        return ""
+    }
+
+    contextWindow(Int n): List<TurnRec> {
+        var out = listOf<TurnRec>()
+        var start = turns.size - n
+        if (start < 0) {
+            start = 0
+        }
+        var i = start
+        while (i < turns.size) {
+            out.add(turns.get(i))
+            i = i + 1
+        }
+        return out
+    }
+
+    cite(Int seq): String {
+        for (var t in turns) {
+            if (t.seq == seq) {
+                return t.role + ": " + t.content
+            }
+        }
+        return ""
+    }
+
+    statsJson(): String {
+        return "{\"turns\":" + turns.size + ",\"window\":" + windowSize + "}"
+    }
+}
