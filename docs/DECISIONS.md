@@ -109,6 +109,24 @@ vai para "Questões em aberto" — nunca vira comportamento assumido.
   produzidos pelo usuário com o agente permanecem propriedade do autor.
 - **Consequências:** README/LICENSING deixam isso explícito.
 
+## D0013 — Part-files + concatenador de build
+- **Data:** 2026-08-24 · **Status:** aceito
+- **Contexto:** o compilador 0.0.14 não resolve símbolos entre arquivos (SEM015) — multi-arquivo é planned.
+- **Decisão:** código autoral em "partes" (`agent/runtime/NN_*.kf`) sem unidade compilável própria; `scripts/build.sh` concatena partes (ordem fixa) + entrada num translation-unit único por artefato.
+- **Consequências:** ordem das partes é contrato; toda definição precede o main do artefato (bug N1); migração para multi-arquivo nativo quando o compilador entregar.
+
+## D0014 — Transporte de argumentos da CLI via `.kofargs` (ARG001)
+- **Data:** 2026-08-24 · **Status:** aceito (workaround)
+- **Contexto:** `main(String[] args)` segfaulta no Native mesmo com zero args (N3).
+- **Decisão:** entrada `main()` sem parâmetros; wrapper `scripts/kof-agent` escreve argv em `.kofargs` (cwd) e o binário lê/apaga. Caminho único nos dois alvos.
+- **Consequências:** substituir por argv real assim que N3 fechar upstream; testes usam o mesmo mecanismo.
+
+## D0015 — Regras de compatibilidade nativa obrigatórias
+- **Data:** 2026-08-24 · **Status:** aceito
+- **Contexto:** bugs N4/N6/N7/N8/N9/N10 (docs/compiler-bugs.md) produzem segfault/hang/erro errado.
+- **Decisão:** proibições de estilo com força de lint via `scripts/check_compat.sh`: sem `+=` em String, sem comparação String-null, sem `continue`, sem confiar em curto-circuito, defs antes do main.
+- **Consequências:** código um pouco mais verboso; cada bug fechado upstream permite remover a regra correspondente.
+
 ---
 
 # Questões em aberto

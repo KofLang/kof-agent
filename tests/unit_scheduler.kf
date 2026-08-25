@@ -1,0 +1,119 @@
+class Collector {
+    List<String> items = listOf<String>()
+    add(String s) {
+        items.add(s)
+    }
+}
+
+class AppendJob implements TaskBody {
+    Collector col
+    String tag
+    constructor(Collector c, String t) {
+        col = c
+        tag = t
+    }
+    run(ContextView v) {
+        col.add(tag)
+    }
+}
+
+class FailJob implements TaskBody {
+    constructor() {
+    }
+    run(ContextView v) {
+        throw "intentional"
+    }
+}
+
+newCtx(): Scheduler {
+    var cfg = Config()
+    var lg = Logger(FixedClock(0))
+    lg.quiet = true
+    var s = Scheduler(EmptyView())
+    return s
+}
+
+class EmptyView implements ContextView {
+    constructor() {
+    }
+    incMetric(String name) {
+    }
+}
+
+test "priority then fifo order" {
+    var col = Collector()
+    var s = newCtx()
+    s.launch(AppendJob(col, "low"), "low", 1)
+    s.launch(AppendJob(col, "high1"), "high1", 9)
+    s.launch(AppendJob(col, "high2"), "high2", 9)
+    s.launch(AppendJob(col, "mid"), "mid", 5)
+    assert(s.pending() == 4)
+    s.drain()
+    assert(col.items.size == 4)
+    assert(col.items.get(0) == "high1")
+    assert(col.items.get(1) == "high2")
+    assert(col.items.get(2) == "mid")
+    assert(col.items.get(3) == "low")
+    assert(s.completedCount == 4)
+    assert(s.pending() == 0)
+}
+
+test "cancel queued task skips" {
+    var col = Collector()
+    var s = newCtx()
+    var id = s.launch(AppendJob(col, "never"), "never", 5)
+    assert(s.cancel(id))
+    s.drain()
+    assert(col.items.size == 0)
+    assert(s.cancelledCount == 1)
+}
+
+test "future resolves with completion" {
+    var s = newCtx()
+    var f = s.launchFuture(AppendJob(Collector(), "x"), "fut", 5)
+    s.await(f)
+    assert(f.done)
+    assert(f.ok)
+}
+
+test "failed task isolated and counted" {
+    var col = Collector()
+    var s = newCtx()
+    s.launch(FailJob(), "bad", 5)
+    s.launch(AppendJob(col, "after"), "after", 5)
+    s.drain()
+    assert(s.failedCount == 1)
+    assert(s.lastError.contains("intentional"))
+    assert(s.completedCount == 1)
+    assert(col.items.size == 1)
+}
+
+test "backpressure throws when bounded" {
+    var s = newCtx()
+    s.maxPending = 2
+    s.launch(FailJob(), "a", 5)
+    s.launch(FailJob(), "b", 5)
+    var threw = false
+    try {
+        s.launch(FailJob(), "c", 5)
+    } catch (String e) {
+        threw = e.contains("backpressure")
+    }
+    assert(threw)
+    assert(s.rejectedCount == 1)
+}
+
+test "launch after shutdown throws" {
+    var s = newCtx()
+    s.gracefulShutdown()
+    var threw = false
+    try {
+        s.launch(FailJob(), "late", 5)
+    } catch (String e) {
+        threw = e.contains("after shutdown")
+    }
+    assert(threw)
+}
+
+main() {
+}

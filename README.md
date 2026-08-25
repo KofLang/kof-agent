@@ -60,7 +60,7 @@ Projeto em fase de fundação (**Milestone 0** — documentação de engenharia)
 | Milestone | Nome | Status |
 |-----------|------|--------|
 | M0 | Fundação (docs + árvore) | ✅ |
-| M1 | Core Runtime | ⬜ |
+| M1 | Core Runtime | ✅ |
 | M2 | Compiler Gateway | ⬜ |
 | M3 | Workspace Intelligence | ⬜ |
 | M4 | Tool API | ⬜ |
@@ -123,9 +123,11 @@ Reports por milestone: [`REPORT_M00.md`](REPORT_M00.md), ...
 * Providers externos (Ollama/OpenAI/Gemini/Claude) são **opcionais**, atrás
   de interface única
 
-Metas de performance: inicialização < 100 ms · primeiro token < 200 ms ·
-streaming contínuo · baixo consumo de RAM/VRAM · mmap e lazy loading · zero
-cópias desnecessárias.
+Metas de performance: inicialização < 100 ms (**medido: ~120 µs**) · primeiro
+token < 200 ms · streaming contínuo · baixo consumo de RAM/VRAM · mmap e lazy
+loading · zero cópias desnecessárias.
+
+Estado detalhado: [docs/status.md](docs/status.md).
 
 ---
 

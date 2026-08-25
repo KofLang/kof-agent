@@ -1,0 +1,50 @@
+class Metrics {
+    Long startedAt = 0
+    Int eventsPublished = 0
+    Int handlersCalled = 0
+    Int eventsFailed = 0
+    Int tasksLaunched = 0
+    Int tasksCompleted = 0
+    Int tasksFailed = 0
+    Int tasksCancelled = 0
+    Int tasksRejected = 0
+
+    constructor() {
+    }
+
+    start(TimeSource clock) {
+        startedAt = clock.nowMs()
+    }
+
+    incByName(String name) {
+        if (name == "events.published") {
+            eventsPublished = eventsPublished + 1
+        } else if (name == "events.handlers") {
+            handlersCalled = handlersCalled + 1
+        } else if (name == "events.failed") {
+            eventsFailed = eventsFailed + 1
+        } else if (name == "tasks.launched") {
+            tasksLaunched = tasksLaunched + 1
+        } else if (name == "tasks.completed") {
+            tasksCompleted = tasksCompleted + 1
+        } else if (name == "tasks.failed") {
+            tasksFailed = tasksFailed + 1
+        } else if (name == "tasks.cancelled") {
+            tasksCancelled = tasksCancelled + 1
+        } else if (name == "tasks.rejected") {
+            tasksRejected = tasksRejected + 1
+        }
+    }
+
+    uptimeMs(TimeSource clock): Long {
+        return clock.nowMs() - startedAt
+    }
+
+    snapshotJson(TimeSource clock): String {
+        var out = "{\"uptimeMs\":" + uptimeMs(clock)
+        out = out + ",\"events\":{\"published\":" + eventsPublished + ",\"handlersCalled\":" + handlersCalled + ",\"failed\":" + eventsFailed + "}"
+        out = out + ",\"tasks\":{\"launched\":" + tasksLaunched + ",\"completed\":" + tasksCompleted + ",\"failed\":" + tasksFailed + ",\"cancelled\":" + tasksCancelled + ",\"rejected\":" + tasksRejected + "}"
+        out = out + "}"
+        return out
+    }
+}

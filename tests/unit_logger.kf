@@ -1,0 +1,40 @@
+test "level filtering suppresses" {
+    var lg = Logger(FixedClock(1000))
+    lg.configure(LOG_WARN(), false, false)
+    assert(lg.isEnabled(LOG_INFO()) == false)
+    assert(lg.write(LOG_INFO(), "hidden") == "")
+    var shown = lg.write(LOG_ERROR(), "shown")
+    assert(shown.length > 0)
+    assert(shown.contains("ERROR"))
+}
+
+test "plain format contains fields" {
+    var lg = Logger(FixedClock(1234))
+    lg.configure(LOG_DEBUG(), false, false)
+    lg.setRequestId("req-9")
+    var line = lg.info("hello")
+    assert(line.contains("1234"))
+    assert(line.contains("INFO"))
+    assert(line.contains("req-9"))
+    assert(line.contains("hello"))
+}
+
+test "json format shape" {
+    var lg = Logger(FixedClock(55))
+    lg.configure(LOG_DEBUG(), false, true)
+    var line = lg.error("boom \"x\"")
+    assert(line.startsWith("{\"ts\":\"55\""))
+    assert(line.contains("\"level\":\"ERROR\""))
+    assert(line.contains("boom \\\"x\\\""))
+}
+
+test "color codes when enabled" {
+    var lg = Logger(FixedClock(1))
+    lg.configure(LOG_DEBUG(), true, false)
+    var line = lg.warn("careful")
+    assert(line.contains("\u001b[33m"))
+    assert(line.contains("\u001b[0m"))
+}
+
+main() {
+}

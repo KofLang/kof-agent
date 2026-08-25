@@ -1,0 +1,2 @@
+{"benchmark":"thread_pool","workers":1,"iterations":20000,"ms":137,"tasks_per_s":144927,"target":"native"}
+{"benchmark":"thread_pool_scaling","workers":[2,4],"status":"TP001","note":"single-worker deterministic fallback","target":"native"}

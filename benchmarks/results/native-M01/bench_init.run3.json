@@ -1,0 +1,1 @@
+{"benchmark":"init","boots_per_batch":100,"batches":7,"best_batch_ms":11,"median_batch_ms":12,"us_per_boot_median":120,"target":"native"}

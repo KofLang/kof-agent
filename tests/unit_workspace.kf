@@ -1,0 +1,81 @@
+WS_ROOT(): String { return "build/wsfix" }
+
+prepareWsAt(String root) {
+    var d = Directory(root)
+    if (!d.exists()) {
+        d.createDirectories()
+    }
+    var a = File(joinPath(root, "main.kf"))
+    if (a.exists()) {
+        a.delete()
+    }
+    var gi = File(joinPath(root, ".gitignore"))
+    if (gi.exists()) {
+        gi.delete()
+    }
+    var cf = File(joinPath(root, "kof.config"))
+    if (cf.exists()) {
+        cf.delete()
+    }
+}
+
+WS1(): String { return "build/wsfix_1" }
+WS2(): String { return "build/wsfix_2" }
+WS3(): String { return "build/wsfix_3" }
+WS4(): String { return "build/wsfix_4" }
+
+prepareWs() {
+    var d = Directory(WS_ROOT())
+    if (!d.exists()) {
+        d.createDirectories()
+    }
+    var a = File(joinPath(WS_ROOT(), "main.kf"))
+    if (a.exists()) {
+        a.delete()
+    }
+    var gi = File(joinPath(WS_ROOT(), ".gitignore"))
+    if (gi.exists()) {
+        gi.delete()
+    }
+    var cf = File(joinPath(WS_ROOT(), "kof.config"))
+    if (cf.exists()) {
+        cf.delete()
+    }
+}
+
+test "scan detects kf files config and ignores" {
+    prepareWsAt(WS1())
+    File(joinPath(WS1(), "main.kf")).writeText("main() {\n}\n")
+    File(joinPath(WS1(), ".gitignore")).writeText("# comment\nbuild/\n\n*.tmp\n")
+    var r = scanWorkspace(WS1())
+    assert(r.valid)
+    assert(r.hasGit == false)
+    assert(r.hasConfigFile == false)
+    assert(r.kfFiles == 1)
+    assert(r.ignoreRules == 2)
+}
+
+test "config file detected when present" {
+    prepareWsAt(WS2())
+    File(joinPath(WS2(), "kof.config")).writeText("a = b\n")
+    var r = scanWorkspace(WS2())
+    assert(r.hasConfigFile)
+}
+
+test "invalid root reported not thrown" {
+    var r = scanWorkspace("build/definitely-missing-dir")
+    assert(r.valid == false)
+    assert(r.detail.length > 0)
+}
+
+test "nested kf counted with depth" {
+    prepareWsAt(WS4())
+    Directory(joinPath(WS4(), "sub")).createDirectories()
+    File(joinPath(joinPath(WS4(), "sub"), "inner.kf")).writeText("x")
+    File(joinPath(joinPath(WS4(), "sub"), "note.txt")).writeText("x")
+    var r = scanWorkspace(WS4())
+    assert(r.kfFiles == 1)
+}
+
+main() {
+}

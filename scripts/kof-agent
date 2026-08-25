@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+set -euo pipefail
+ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+BIN="$ROOT/build/out/Default/Main"
+if [ ! -x "$BIN" ]; then
+  echo "kof-agent: binary not built. run: scripts/build_cli.sh" >&2
+  exit 2
+fi
+ARGSFILE="$(pwd)/.kofargs"
+printf '%s\n' "$@" > "$ARGSFILE"
+set +e
+"$BIN"
+RC=$?
+set -e
+rm -f "$ARGSFILE"
+exit $RC

@@ -1,0 +1,15 @@
+main() {
+    var lg = Logger(RealTimeClock())
+    lg.configure(LOG_INFO(), false, false)
+    lg.quiet = true
+    var n = 50000
+    var t0 = now()
+    var i = 0
+    while (i < n) {
+        lg.info("bench line " + i)
+        i = i + 1
+    }
+    var dt = now() - t0
+    println("{\"benchmark\":\"logger\",\"iterations\":" + n + ",\"ms\":" + dt + ",\"lines_per_s\":" + (n * 1000 / (dt + 1)) + ",\"target\":\"native\"}")
+    process.exit(0)
+}

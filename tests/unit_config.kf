@@ -1,0 +1,68 @@
+CFG_PATH(): String { return "build/test_cfg.kofconfig" }
+
+writeCfg(String content): Bool {
+    var f = File(CFG_PATH())
+    if (f.exists()) {
+        f.delete()
+    }
+    return f.writeText(content)
+}
+
+test "missing file loads false with defaults" {
+    var c = Config()
+    var f = File(CFG_PATH())
+    if (f.exists()) {
+        f.delete()
+    }
+    var ok = c.loadFile(CFG_PATH())
+    assert(ok == false)
+    assert(c.loaded == false)
+    assert(c.getStr("any.key", "dflt") == "dflt")
+    assert(c.getInt("n", 7) == 7)
+    assert(c.getBool("b", true))
+}
+
+test "typed values parsed" {
+    assert(writeCfg("app.name = kof-agent\nserver.port=8080\nverbose = yes\n"))
+    var c = Config()
+    assert(c.loadFile(CFG_PATH()))
+    assert(c.loaded)
+    assert(c.has("server.port"))
+    assert(c.getStr("app.name", "") == "kof-agent")
+    assert(c.getInt("server.port", 0) == 8080)
+    assert(c.getBool("verbose", false))
+}
+
+test "comments and blanks skipped" {
+    assert(writeCfg("# comment\n\nbad line without eq\nkey = value\n"))
+    var c = Config()
+    assert(c.loadFile(CFG_PATH()))
+    assert(c.entries.size == 1)
+    assert(c.getRaw("key") == "value")
+}
+
+test "invalid int throws config error" {
+    assert(writeCfg("port = 8o80\n"))
+    var c = Config()
+    c.loadFile(CFG_PATH())
+    var threw = false
+    try {
+        c.getInt("port", 1)
+    } catch (String e) {
+        threw = e.contains("invalid integer")
+    }
+    assert(threw)
+}
+
+test "reload picks up changes" {
+    assert(writeCfg("v = 1\n"))
+    var c = Config()
+    c.loadFile(CFG_PATH())
+    assert(c.getInt("v", 0) == 1)
+    assert(writeCfg("v = 2\n"))
+    assert(c.reload())
+    assert(c.getInt("v", 0) == 2)
+}
+
+main() {
+}

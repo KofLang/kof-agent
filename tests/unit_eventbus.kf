@@ -1,0 +1,99 @@
+class TopicRecorder implements EventHandler {
+    List<String> seen = listOf<String>()
+    Bool consume = false
+    constructor(Bool c) {
+        consume = c
+    }
+    onEvent(EventEnvelope e): Bool {
+        seen.add(e.topic + "#" + e.payload)
+        return !consume
+    }
+}
+
+class CounterHandler implements EventHandler {
+    Int count = 0
+    constructor() {
+    }
+    onEvent(EventEnvelope e): Bool {
+        count = count + 1
+        return true
+    }
+}
+
+class NoopTask implements TaskBody {
+    constructor() {
+    }
+    run(ContextView v) {
+    }
+}
+
+newBus(): EventBus {
+    return EventBus()
+}
+
+test "publish reaches subscriber with envelope" {
+    var bus = newBus()
+    var rec = TopicRecorder(false)
+    bus.subscribe("task.started", rec)
+    var called = bus.publish("task.started", "42")
+    assert(called == 1)
+    assert(rec.seen.size == 1)
+    assert(rec.seen.get(0) == "task.started#42")
+}
+
+test "unsubscribe stops delivery" {
+    var bus = newBus()
+    var rec = TopicRecorder(false)
+    var id = bus.subscribe("t", rec)
+    bus.publish("t", "1")
+    assert(bus.unsubscribe(id))
+    var called = bus.publish("t", "2")
+    assert(called == 0)
+    assert(rec.seen.size == 1)
+    assert(bus.unsubscribe(id) == false)
+}
+
+test "once fires a single time" {
+    var bus = newBus()
+    var rec = TopicRecorder(false)
+    bus.once("boot", rec)
+    bus.publish("boot", "a")
+    bus.publish("boot", "b")
+    assert(rec.seen.size == 1)
+}
+
+test "wildcard receives all topics" {
+    var bus = newBus()
+    var rec = TopicRecorder(false)
+    bus.subscribe("*", rec)
+    bus.publish("a", "1")
+    bus.publish("b", "2")
+    assert(rec.seen.size == 2)
+}
+
+test "false return consumes chain" {
+    var bus = newBus()
+    var first = TopicRecorder(true)
+    var second = CounterHandler()
+    bus.subscribe("chain", first)
+    bus.subscribe("chain", second)
+    var called = bus.publish("chain", "x")
+    assert(called == 1)
+    assert(second.count == 0)
+}
+
+test "async publish delivers after drain" {
+    var cfg = Config()
+    var ctx = RuntimeContext(cfg, FixedClock(0))
+    ctx.wire()
+    var rec = TopicRecorder(false)
+    ctx.bus.subscribe("async", rec)
+    ctx.bus.publishAsync(ctx.sched, ctx, "async", "payload-1")
+    assert(rec.seen.size == 0)
+    ctx.sched.drain()
+    assert(rec.seen.size == 1)
+    assert(rec.seen.get(0).contains("payload-1"))
+}
+
+main() {
+}

@@ -1,0 +1,255 @@
+VERSION_STR(): String { return "0.1.0-m01" }
+TARGET_STR(): String { return "native" }
+
+usageText(): String {
+    var u = ""
+    u = u + "kof-agent " + VERSION_STR() + "\n"
+    u = u + "\n"
+    u = u + "usage:\n"
+    u = u + "  kof-agent version\n"
+    u = u + "  kof-agent help\n"
+    u = u + "  kof-agent status [--root DIR] [--json]\n"
+    u = u + "  kof-agent doctor [--root DIR] [--json]\n"
+    u = u + "  kof-agent config show [--file PATH] [--json]\n"
+    u = u + "\n"
+    u = u + "exit codes: 0 ok · 1 usage · 2 failure\n"
+    return u
+}
+
+class CliOpts {
+    String cmd = "help"
+    String sub = ""
+    Bool jsonFlag = false
+    String root = "."
+    String file = ""
+}
+
+parseOptsList(List<String> raw): CliOpts {
+    var o = CliOpts()
+    var i = 0
+    while (i < raw.size) {
+        var a = raw.get(i)
+        if (a == "--json") {
+            o.jsonFlag = true
+        } else if (a == "--root") {
+            i = i + 1
+            if (i < raw.size) {
+                o.root = raw.get(i)
+            }
+        } else if (a == "--file") {
+            i = i + 1
+            if (i < raw.size) {
+                o.file = raw.get(i)
+            }
+        } else if (o.cmd == "help") {
+            o.cmd = a
+        } else if (o.sub == "" && (o.cmd == "config")) {
+            o.sub = a
+        } else {
+            throw "cli: unknown argument '" + a + "'"
+        }
+        i = i + 1
+    }
+    return o
+}
+
+cmdVersion(Bool json): Int {
+    if (json) {
+        println("{\"name\":\"kof-agent\",\"version\":\"" + VERSION_STR() + "\",\"target\":\"" + TARGET_STR() + "\"}")
+    } else {
+        println("kof-agent " + VERSION_STR() + " (target " + TARGET_STR() + ")")
+    }
+    return 0
+}
+
+class StatusProbe implements TaskBody {
+    run(ContextView v) {
+        v.incMetric("tasks.completed")
+    }
+}
+
+bootQuiet(CliOpts o): RuntimeContext {
+    var cfg = Config()
+    var path = o.file
+    if (path == "") {
+        path = joinPath(o.root, "kof.config")
+    }
+    cfg.loadFile(path)
+    var ctx = RuntimeContext(cfg, RealTimeClock())
+    ctx.logger.quiet = true
+    ctx.wire()
+    return ctx
+}
+
+wsJson(WorkspaceReport r): String {
+    var out = "{\"valid\":" + r.valid
+    out = out + ",\"kfFiles\":" + r.kfFiles
+    out = out + ",\"hasGit\":" + r.hasGit
+    out = out + ",\"hasConfigFile\":" + r.hasConfigFile
+    out = out + ",\"ignoreRules\":" + r.ignoreRules
+    out = out + "}"
+    return out
+}
+
+cmdStatus(CliOpts o): Int {
+    var ws = scanWorkspace(o.root)
+    if (!ws.valid) {
+        if (o.jsonFlag) {
+            println("{\"error\":\"workspace invalid\",\"detail\":\"" + escapeJson(ws.detail) + "\"}")
+        } else {
+            println("status: workspace invalid: " + ws.detail)
+        }
+        return 2
+    }
+    var ctx = bootQuiet(o)
+    ctx.life.transition(LC_INITIALIZING())
+    ctx.finishBoot()
+    ctx.sched.launch(StatusProbe(), "status-probe", 5)
+    ctx.shutdownGraceful()
+    if (o.jsonFlag) {
+        var line = runtimeStatusJson(ctx)
+        line = line.substring(0, line.length - 1)
+        line = line + ",\"workspace\":" + wsJson(ws) + "}"
+        println(line)
+    } else {
+        println("state      : " + ctx.life.stateName())
+        println("scheduler  : launched=" + ctx.met.tasksLaunched + " completed=" + ctx.met.tasksCompleted + " pending=" + ctx.sched.pending())
+        println("events     : published=" + ctx.met.eventsPublished + " handlers=" + ctx.met.handlersCalled)
+        println("uptime     : " + ctx.met.uptimeMs(ctx.clock) + " ms")
+        println("workspace  : kfFiles=" + ws.kfFiles + " git=" + ws.hasGit + " config=" + ws.hasConfigFile)
+    }
+    return 0
+}
+
+doctorCheckWorkspace(CliOpts o): CheckRec {
+    var d = Directory(o.root)
+    if (d.exists() && d.isDirectory()) {
+        return CheckRec("workspace", true, "root ok: " + o.root)
+    }
+    return CheckRec("workspace", false, "root missing or not a directory: " + o.root)
+}
+
+doctorCheckConfig(CliOpts o): CheckRec {
+    var cfg = Config()
+    var path = o.file
+    if (path == "") {
+        path = joinPath(o.root, "kof.config")
+    }
+    var ok = cfg.loadFile(path)
+    if (ok) {
+        return CheckRec("config", true, "loaded " + path + " (" + cfg.entries.size + " entries)")
+    }
+    if (!File(path).exists()) {
+        return CheckRec("config", true, "no config file; defaults in effect")
+    }
+    return CheckRec("config", false, "config exists but failed to load: " + path)
+}
+
+doctorCheckLogLevel(CliOpts o): CheckRec {
+    var cfg = Config()
+    var path = o.file
+    if (path == "") {
+        path = joinPath(o.root, "kof.config")
+    }
+    cfg.loadFile(path)
+    var name = cfg.getStr("log.level", "INFO")
+    var lvl = logLevelFromName(name)
+    if (lvl >= 0) {
+        return CheckRec("log-level", true, "log.level=" + name)
+    }
+    return CheckRec("log-level", false, "invalid log.level '" + name + "'")
+}
+
+doctorCheckCache(CliOpts o): CheckRec {
+    var dirPath = joinPath(o.root, "build/cache")
+    var d = Directory(dirPath)
+    if (!d.exists()) {
+        if (!d.createDirectories()) {
+            return CheckRec("cache", false, "cannot create " + dirPath)
+        }
+    }
+    var probe = File(joinPath(dirPath, ".probe"))
+    if (!probe.writeText("ok")) {
+        return CheckRec("cache", false, "cannot write probe in " + dirPath)
+    }
+    if (!probe.delete()) {
+        return CheckRec("cache", false, "cannot remove probe in " + dirPath)
+    }
+    return CheckRec("cache", true, "writable at " + dirPath)
+}
+
+checkJson(CheckRec c): String {
+    return "{\"id\":\"" + c.id + "\",\"ok\":" + c.ok + ",\"detail\":\"" + escapeJson(c.detail) + "\"}"
+}
+
+cmdDoctor(CliOpts o): Int {
+    var c1 = doctorCheckWorkspace(o)
+    var c2 = doctorCheckConfig(o)
+    var c3 = doctorCheckLogLevel(o)
+    var c4 = doctorCheckCache(o)
+    var allOk = c1.ok && c2.ok && c3.ok && c4.ok
+    if (o.jsonFlag) {
+        var out = "{\"checks\":[" + checkJson(c1) + "," + checkJson(c2) + "," + checkJson(c3) + "," + checkJson(c4) + "],\"allOk\":" + allOk + "}"
+        println(out)
+    } else {
+        println("check workspace : " + c1.detail + " -> " + c1.ok)
+        println("check config    : " + c2.detail + " -> " + c2.ok)
+        println("check log-level : " + c3.detail + " -> " + c3.ok)
+        println("check cache     : " + c4.detail + " -> " + c4.ok)
+        println("overall         : " + allOk)
+    }
+    if (allOk) {
+        return 0
+    }
+    return 2
+}
+
+cmdConfigShow(CliOpts o): Int {
+    if (o.sub != "" && o.sub != "show") {
+        println("kof-agent: unknown config subcommand '" + o.sub + "'")
+        return 1
+    }
+    var cfg = Config()
+    var ok = cfg.loadFile(o.file)
+    if (o.jsonFlag) {
+        println(cfg.snapshotJson())
+    } else {
+        if (!ok) {
+            println("config: file not loaded (" + o.file + "); defaults in effect")
+            return 0
+        }
+        println("source: " + cfg.sourcePath + " entries=" + cfg.entries.size)
+        for (var e in cfg.entries) {
+            println("  " + e.key + " = " + e.value)
+        }
+    }
+    return 0
+}
+
+main() {
+    var argv = loadArgsFile(".kofargs")
+    var code = 0
+    try {
+        var o = parseOptsList(argv)
+        if (o.cmd == "version") {
+            code = cmdVersion(o.jsonFlag)
+        } else if (o.cmd == "help" || o.cmd == "--help") {
+            print(usageText())
+            code = 0
+        } else if (o.cmd == "status") {
+            code = cmdStatus(o)
+        } else if (o.cmd == "doctor") {
+            code = cmdDoctor(o)
+        } else if (o.cmd == "config") {
+            code = cmdConfigShow(o)
+        } else {
+            println("kof-agent: unknown command '" + o.cmd + "'")
+            print(usageText())
+            code = 1
+        }
+    } catch (String e) {
+        println("kof-agent: error: " + e)
+        code = 1
+    }
+    process.exit(code)
+}

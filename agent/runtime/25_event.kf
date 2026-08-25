@@ -1,0 +1,108 @@
+record EventEnvelope(String topic, String payload, Int seq)
+
+interface EventHandler {
+    onEvent(EventEnvelope e): Bool
+}
+
+class Subscription {
+    Int id
+    String topic
+    EventHandler h
+    Bool once = false
+    constructor(Int sid, String t, EventHandler handler, Bool onceFlag) {
+        id = sid
+        topic = t
+        h = handler
+        once = onceFlag
+    }
+}
+
+class EventBus {
+    List<Subscription> subs = listOf<Subscription>()
+    Int nextId = 1
+    Int seq = 1
+
+    subscribe(String topic, EventHandler h): Int {
+        var s = Subscription(nextId, topic, h, false)
+        nextId = nextId + 1
+        subs.add(s)
+        return s.id
+    }
+
+    once(String topic, EventHandler h): Int {
+        var s = Subscription(nextId, topic, h, true)
+        nextId = nextId + 1
+        subs.add(s)
+        return s.id
+    }
+
+    unsubscribe(Int id): Bool {
+        var i = 0
+        while (i < subs.size) {
+            if (subs.get(i).id == id) {
+                subs.remove(i)
+                return true
+            }
+            i = i + 1
+        }
+        return false
+    }
+
+    publishEnvelope(EventEnvelope e): Int {
+        var matched = listOf<Int>()
+        var i = 0
+        while (i < subs.size) {
+            var s = subs.get(i)
+            if (s.topic == e.topic || s.topic == "*") {
+                matched.add(i)
+            }
+            i = i + 1
+        }
+        var called = 0
+        for (var m in matched) {
+            var sub = subs.get(m)
+            if (sub.once) {
+                unsubscribe(sub.id)
+            }
+            called = called + 1
+            var cont = sub.h.onEvent(e)
+            if (!cont) {
+                break
+            }
+        }
+        return called
+    }
+
+    publish(String topic, String payload): Int {
+        var env = EventEnvelope(topic, payload, seq)
+        seq = seq + 1
+        return publishEnvelope(env)
+    }
+
+    broadcast(String payload): Int {
+        return publish("*", payload)
+    }
+
+    publishAsync(Scheduler sched, ContextView view, String topic, String payload): Int {
+        var job = PublishJob(this, topic, payload)
+        return sched.launch(job, "event.publish", 5)
+    }
+
+    statsJson(): String {
+        return "{\"subscribers\":" + subs.size + ",\"published\":" + (seq - 1) + "}"
+    }
+}
+
+class PublishJob implements TaskBody {
+    EventBus bus
+    String topic
+    String payload
+    constructor(EventBus b, String t, String p) {
+        bus = b
+        topic = t
+        payload = p
+    }
+    run(ContextView v) {
+        bus.publish(topic, payload)
+    }
+}

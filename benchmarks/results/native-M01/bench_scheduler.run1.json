@@ -1,0 +1,1 @@
+{"benchmark":"scheduler","iterations":100000,"ms":694,"tasks_per_s":143884,"completed":100000,"target":"native"}

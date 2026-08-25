@@ -1,0 +1,4 @@
+// v
+main() {
+    println(1)
+}

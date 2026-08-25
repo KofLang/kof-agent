@@ -1,0 +1,50 @@
+class QuietBoot implements TaskBody {
+    constructor() {
+    }
+    run(ContextView v) {
+    }
+}
+
+batchBoot(Int times): Long {
+    var t0 = now()
+    var i = 0
+    while (i < times) {
+        var cfg = Config()
+        var ctx = RuntimeContext(cfg, RealTimeClock())
+        ctx.logger.quiet = true
+        ctx.wire()
+        ctx.life.transition(LC_INITIALIZING())
+        ctx.finishBoot()
+        ctx.shutdownGraceful()
+        i = i + 1
+    }
+    return now() - t0
+}
+
+bootOnce(): Long {
+    var t0 = now()
+    var cfg = Config()
+    var ctx = RuntimeContext(cfg, RealTimeClock())
+    ctx.logger.quiet = true
+    ctx.wire()
+    ctx.life.transition(LC_INITIALIZING())
+    ctx.finishBoot()
+    ctx.shutdownGraceful()
+    return now() - t0
+}
+
+main() {
+    var batches = 7
+    var perBatch = 100
+    var samples = new Int[batches]
+    var i = 0
+    while (i < batches) {
+        samples[i] = batchBoot(perBatch)
+        i = i + 1
+    }
+    sortInts(samples, batches)
+    var best = samples[0]
+    var med = samples[batches / 2]
+    println("{\"benchmark\":\"init\",\"boots_per_batch\":" + perBatch + ",\"batches\":" + batches + ",\"best_batch_ms\":" + best + ",\"median_batch_ms\":" + med + ",\"us_per_boot_median\":" + (med * 1000 / perBatch) + ",\"target\":\"native\"}")
+    process.exit(0)
+}

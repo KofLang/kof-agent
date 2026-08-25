@@ -1,6 +1,7 @@
 # TASKS — Milestone corrente
 
-**Milestone atual:** M0 — Fundação
+**Milestone atual:** M2 — Compiler Gateway (não iniciada)
+**Milestones concluídas:** M0 ✅ · M1 ✅
 **Última atualização:** 24 de agosto de 2026
 
 ---
@@ -27,7 +28,30 @@
 | 0.16 | Repositório publicado em `main` (origin: github.com/KofLang/kof-agent) | 🟡 |
 
 Critério de fechamento da M0: todos os itens ✅ e consistência cruzada entre
-os documentos (nenhum documento contradiz outro).
+os documentos. **M0 fechada em 24/08/2026.**
+
+## M1 — Core Runtime ✅ (24/08/2026)
+
+| # | Tarefa | Resultado |
+|---|--------|-----------|
+| 1.1 | specs SCHEDULER/EVENT_BUS/LIFECYCLE/CLI | ✅ 4 specs |
+| 1.2 | docs/runtime.md + docs/compiler-bugs.md | ✅ |
+| 1.3 | Scheduler heap determinístico + Future/await/cancel/backpressure/shutdown | ✅ |
+| 1.4 | EventBus tipado sync/async (once, wildcard, chain-consume) | ✅ |
+| 1.5 | Lifecycle estados+hooks+veto+crash | ✅ |
+| 1.6 | Logger TRACE..FATAL plain/json/color/quiet/request-id | ✅ |
+| 1.7 | Config tipada arquivo>default, validação, reload | ✅ (env: ENV001) |
+| 1.8 | Workspace scanner + WorkspaceReport | ✅ |
+| 1.9 | Metrics snapshotJson + RuntimeContext DI + statusJson | ✅ |
+| 1.10 | CLI version/help/status/doctor/config --json exit 0/1/2 | ✅ (argv: ARG001) |
+| 1.11 | WorkerPool size=1; >1 = TP001 documentado | ✅ |
+| 1.12 | Testes unit+integração+stress | ✅ 39 testes + 2 stress, 11/11 suítes |
+| 1.13 | Benchmarks init/events/scheduler/logger/pool + baseline JSON | ✅ init ~120 µs |
+| 1.14 | check_compat.sh (gate anti-miscompile N6–N9) | ✅ |
+| 1.15 | REPORT_M01.md + status.md | ✅ |
+
+Backlog M2 (rascunho): spike Q1 (vias de integração), spec COMPILER_GATEWAY,
+golden tests ≥20 programas, benchmarks p50/p95, REPORT_M02.
 
 ## Backlog M1 — Core Runtime (rascunho; será refinado ao abrir a milestone)
 

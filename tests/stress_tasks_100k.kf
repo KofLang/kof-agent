@@ -1,0 +1,26 @@
+class NoopJob implements TaskBody {
+    constructor() {
+    }
+    run(ContextView v) {
+    }
+}
+
+main() {
+    var cfg = Config()
+    var ctx = RuntimeContext(cfg, RealTimeClock())
+    ctx.logger.quiet = true
+    ctx.wire()
+    var job = NoopJob()
+    var t0 = now()
+    var i = 0
+    while (i < 100000) {
+        ctx.sched.launch(job, "noop", 5)
+        i = i + 1
+    }
+    ctx.sched.drain()
+    var dt = now() - t0
+    assert(ctx.sched.completedCount == 100000)
+    assert(ctx.sched.failedCount == 0)
+    println("stress tasks: completed=100000 ms=" + dt + " tasks_per_s=" + (100000000 / (dt + 1)))
+    process.exit(0)
+}

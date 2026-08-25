@@ -1,0 +1,83 @@
+test "legal happy path" {
+    var lc = Lifecycle()
+    assert(lc.state() == LC_BOOTING())
+    lc.transition(LC_INITIALIZING())
+    lc.transition(LC_READY())
+    lc.transition(LC_BUSY())
+    lc.transition(LC_READY())
+    lc.transition(LC_STOPPING())
+    lc.transition(LC_STOPPED())
+    assert(lc.stateName() == "STOPPED")
+    assert(lc.isAlive() == false)
+}
+
+test "illegal transition throws" {
+    var lc = Lifecycle()
+    var threw = false
+    try {
+        lc.transition(LC_READY())
+    } catch (String e) {
+        threw = e.contains("illegal transition")
+    }
+    assert(threw)
+}
+
+test "hooks fire in registration order" {
+    var lc = Lifecycle()
+    var r1 = NameRecorder("first")
+    var r2 = NameRecorder("second")
+    lc.registerBoot(r1)
+    lc.registerBoot(r2)
+    lc.transition(LC_INITIALIZING())
+    assert(r1.recorded() == 1)
+    assert(r2.recorded() == 1)
+    assert(r1.last() == "first:BOOTING->INITIALIZING")
+}
+
+test "veto hook blocks transition" {
+    var lc = Lifecycle()
+    lc.registerReady(VetoHook())
+    lc.transition(LC_INITIALIZING())
+    var threw = false
+    try {
+        lc.transition(LC_READY())
+    } catch (String e) {
+        threw = e.contains("veto")
+    }
+    assert(threw)
+    assert(lc.state() == LC_INITIALIZING())
+}
+
+class VetoHook implements LifecycleHook {
+    constructor() {
+    }
+    onTransition(Int from, Int to): Bool {
+        return false
+    }
+}
+
+test "crash path reaches failed with hooks" {
+    var lc = Lifecycle()
+    var crashed = CrashRecorder()
+    lc.registerCrash(crashed)
+    lc.transition(LC_INITIALIZING())
+    lc.crash("disk on fire")
+    assert(lc.state() == LC_FAILED())
+    assert(lc.lastError == "disk on fire")
+    assert(crashed.sawCrash)
+}
+
+class CrashRecorder implements LifecycleHook {
+    Bool sawCrash = false
+    constructor() {
+    }
+    onTransition(Int from, Int to): Bool {
+        if (to == LC_FAILED()) {
+            sawCrash = true
+        }
+        return true
+    }
+}
+
+main() {
+}

@@ -1,0 +1,28 @@
+class CountingHandler implements EventHandler {
+    Int received = 0
+    constructor() {
+    }
+    onEvent(EventEnvelope e): Bool {
+        received = received + 1
+        return true
+    }
+}
+
+main() {
+    var cfg = Config()
+    var ctx = RuntimeContext(cfg, RealTimeClock())
+    ctx.logger.quiet = true
+    ctx.wire()
+    var h = CountingHandler()
+    ctx.bus.subscribe("stress.events", h)
+    var t0 = now()
+    var i = 0
+    while (i < 10000) {
+        ctx.bus.publish("stress.events", "m")
+        i = i + 1
+    }
+    var dt = now() - t0
+    assert(h.received == 10000)
+    println("stress events: received=10000 ms=" + dt + " ops_per_s=" + (10000000 / (dt + 1)))
+    process.exit(0)
+}

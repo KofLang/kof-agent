@@ -1,0 +1,27 @@
+class NoopJob implements TaskBody {
+    constructor() {
+    }
+    run(ContextView v) {
+    }
+}
+
+main() {
+    var cfg = Config()
+    var ctx = RuntimeContext(cfg, RealTimeClock())
+    ctx.logger.quiet = true
+    ctx.wire()
+    ctx.life.transition(LC_INITIALIZING())
+    ctx.finishBoot()
+    var job = NoopJob()
+    var n = 100000
+    var t0 = now()
+    var i = 0
+    while (i < n) {
+        ctx.sched.launch(job, "noop", 5)
+        i = i + 1
+    }
+    ctx.sched.drain()
+    var dt = now() - t0
+    println("{\"benchmark\":\"scheduler\",\"iterations\":" + n + ",\"ms\":" + dt + ",\"tasks_per_s\":" + (n * 1000 / (dt + 1)) + ",\"completed\":" + ctx.sched.completedCount + ",\"target\":\"native\"}")
+    process.exit(0)
+}

@@ -1,0 +1,32 @@
+# COMPILER BUGS — Ledger de bugs do Kof 0.0.14 descobertos pelo kof-agent
+
+> Registro técnico para reporte upstream ao compilador Kof. Cada item foi
+> reproduzido durante a M1 e contornado no código do agente. Este arquivo é
+> a justificativa viva das regras em `CODE_STYLE.md` §12 e do gate
+> `scripts/check_compat.sh`.
+
+Ambiente: kof 0.0.14-alpha, JDK 25 (build), binutils 2.46, Linux x86_64.
+
+| ID | Alvo | Sintoma | Repro mínimo | Workaround no agente |
+|----|------|---------|--------------|----------------------|
+| J1 | JVM | `COMP001`: KofRuntime gerado não compila (`unclosed string literal` em `headers.split("`) quando o programa usa `now()` ou `secrets.*` — seções time/web/security do runtime-template com escape duplo quebrado | `main(){ println(now()) }` → `kof run --target jvm` | Benchmarks/CLI são nativos; unidades de teste não chamam `now()`; env via `secrets` proibida |
+| N1 | Native | Função top-level definida **depois** de `main` e referenciada por ele → `undefined reference` no `ld`, mesmo sem try/catch | `main(){ f() }  f(): Int { return 1 }` | Regra "defs antes do main"; concatenador garante partes→entrada |
+| N2 | Native | `"42".toInt()` → `undefined reference to String_kof_string_to_int` (símbolo ausente do runtime asm) | `println("42".toInt())` nativo | `parseIntStr()` própria em `00_core.kf` |
+| N3 | Native | `main(String[] args)` → **segfault** ao acessar `args.length` (mesmo com 0 args) | `main(String[] a){ println(a.length) }` | Entrada `main()` sem parâmetros + convenção `.kofargs` escrita pelo wrapper (ARG001) |
+| N4 | Native | `String.split(sep)` → **segfault** | `"a=b".split("=")` | `splitStr()` própria em `00_core.kf` |
+| N6 | Native | Comparar String com `null` (`t == null` / `!= null`) após `readText()` bem-sucedido → **segfault** (`kof_string_equals` contra ponteiro nulo) | `var t = f.readText(); if (t == null) {...}` | Guardas apenas com `exists()/isFile()`; proibido comparar String a null |
+| N7 | Native | `continue` dentro de `for-in`/`while` → **loop infinito** | loop com `if (x.length == 0) { continue }` | Proibido `continue`; reestruturar com flags/if aninhados |
+| N8 | Native | `||` e `&&` **sem curto-circuito**: lado direito avaliado mesmo quando o esquerdo decide | `s.length == 0 || s.substring(0,1) == "#"` com `s=""` → bounds error | Aninhar ifs sempre que o RHS puder falhar |
+| N9 | Native | Acúmulo com `+=` sobre String perde o acumulador (resultado = última atribuição) dentro de funções | `out += s.substring(i, i+1)` em while → retorna último char | Sempre `out = out + expr`; gate do check_compat |
+| N10 | Native | Miscompile **dependente de posição/tamanho**: mesma construção funciona num programa pequeno e gera `array index out of bounds` espúrio (condição Int correta) em programa grande | `parseInto` com `indexOf`+`substring` crashava só no artefato completo; isolado passava | Reescrever com `splitStr`; manter funções críticas pequenas; se sintoma reaparecer, bisect por truncamento do translation-unit |
+
+## Notas
+
+- N1/N4/N6/N7/N8/N9 foram descobertos por falhas **reais em execução**
+  (segfault/hang/bounds), nunca por divergência silenciosa de resultado —
+  exceto N9, que produzia resultado errado sem erro.
+- Todos os workarounds estão concentrados em `agent/runtime/00_core.kf`
+  (`splitStr`, `parseIntStr`, `escapeJson`) ou banidos por estilo.
+- Ao atualizar o compilador, rodar `scripts/test.sh` + `scripts/check_compat.sh`
+  e tentar REMOVER workarounds: cada bug fechado upstream deve resultar em PR
+  simplificando o código afetado.

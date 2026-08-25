@@ -1,0 +1,47 @@
+test "parse int positive" {
+    assert(parseIntStr("42") == 42)
+    assert(parseIntStr("0") == 0)
+    assert(parseIntStr("007") == 7)
+}
+
+test "parse int negative" {
+    assert(parseIntStr("-13") == -13)
+}
+
+test "parse int invalid throws" {
+    var threw = false
+    try {
+        parseIntStr("12x")
+    } catch (String e) {
+        threw = true
+    }
+    assert(threw)
+}
+
+test "parse bool variants" {
+    assert(parseBoolStr("true"))
+    assert(parseBoolStr("YES"))
+    assert(parseBoolStr("0") == false)
+    assert(parseBoolStr("") == false)
+}
+
+test "escape json special chars" {
+    assert(escapeJson("plain") == "plain")
+    assert(escapeJson("a\"b") == "a\\\"b")
+    assert(escapeJson("a\nb") == "a\\nb")
+}
+
+test "split str basic" {
+    var l = splitStr("a,b,c", ",")
+    assert(l.size == 3)
+    assert(l.get(0) == "a")
+    assert(l.get(2) == "c")
+}
+
+test "join path" {
+    assert(joinPath("data", "users.txt") == "data/users.txt")
+    assert(joinPath("", "x") == "x")
+}
+
+main() {
+}

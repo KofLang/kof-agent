@@ -1,0 +1,34 @@
+class BurstJob implements TaskBody {
+    constructor() {
+    }
+    run(ContextView v) {
+    }
+}
+
+test "shutdown drains everything then refuses" {
+    var cfg = Config()
+    var ctx = RuntimeContext(cfg, FixedClock(0))
+    ctx.logger.quiet = true
+    ctx.wire()
+    ctx.life.transition(LC_INITIALIZING())
+    ctx.finishBoot()
+    var i = 0
+    while (i < 500) {
+        ctx.sched.launch(BurstJob(), "burst", 5)
+        i = i + 1
+    }
+    assert(ctx.sched.pending() == 500)
+    ctx.shutdownGraceful()
+    assert(ctx.sched.completedCount == 500)
+    assert(ctx.sched.pending() == 0)
+    var refused = false
+    try {
+        ctx.sched.launch(BurstJob(), "late", 5)
+    } catch (String e) {
+        refused = true
+    }
+    assert(refused)
+}
+
+main() {
+}

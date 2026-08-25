@@ -1,0 +1,100 @@
+record LogLine(Long ts, String level, String req, String msg)
+
+LOG_TRACE(): Int { return 0 }
+LOG_DEBUG(): Int { return 1 }
+LOG_INFO(): Int { return 2 }
+LOG_WARN(): Int { return 3 }
+LOG_ERROR(): Int { return 4 }
+LOG_FATAL(): Int { return 5 }
+
+logLevelName(Int lvl): String {
+    if (lvl == 0) { return "TRACE" }
+    if (lvl == 1) { return "DEBUG" }
+    if (lvl == 2) { return "INFO" }
+    if (lvl == 3) { return "WARN" }
+    if (lvl == 4) { return "ERROR" }
+    return "FATAL"
+}
+
+logLevelFromName(String s): Int {
+    var v = s.toUpperCase()
+    if (v == "TRACE") { return 0 }
+    if (v == "DEBUG") { return 1 }
+    if (v == "INFO") { return 2 }
+    if (v == "WARN") { return 3 }
+    if (v == "ERROR") { return 4 }
+    if (v == "FATAL") { return 5 }
+    return -1
+}
+
+class Logger {
+    Int level = LOG_INFO()
+    Bool color = false
+    Bool json = false
+    Bool quiet = false
+    String requestId = "-"
+    TimeSource clock
+
+    constructor(TimeSource ts) {
+        clock = ts
+    }
+
+    configure(Int lvl, Bool col, Bool js) {
+        level = lvl
+        color = col
+        json = js
+    }
+
+    setRequestId(String rid) {
+        requestId = rid
+    }
+
+    trace(String m): String { return write(LOG_TRACE(), m) }
+    debug(String m): String { return write(LOG_DEBUG(), m) }
+    info(String m): String { return write(LOG_INFO(), m) }
+    warn(String m): String { return write(LOG_WARN(), m) }
+    error(String m): String { return write(LOG_ERROR(), m) }
+    fatal(String m): String { return write(LOG_FATAL(), m) }
+
+    isEnabled(Int lvl): Bool {
+        return lvl >= level
+    }
+
+    write(Int lvl, String msg): String {
+        if (!isEnabled(lvl)) {
+            return ""
+        }
+        var ts = clock.nowMs()
+        var name = logLevelName(lvl)
+        var line = ""
+        if (json) {
+            line = "{\"ts\":\"" + ts + "\",\"level\":\"" + name + "\",\"req\":\"" + escapeJson(requestId) + "\",\"msg\":\"" + escapeJson(msg) + "\"}"
+        } else {
+            var body = "[" + name + "] [" + requestId + "] " + msg
+            if (color) {
+                body = ansiFor(lvl) + body + "\u001b[0m"
+            }
+            line = ts + " " + body
+        }
+        if (!quiet) {
+            println(line)
+        }
+        return line
+    }
+
+    ansiFor(Int lvl): String {
+        if (lvl <= LOG_DEBUG()) {
+            return "\u001b[90m"
+        }
+        if (lvl == LOG_INFO()) {
+            return "\u001b[36m"
+        }
+        if (lvl == LOG_WARN()) {
+            return "\u001b[33m"
+        }
+        if (lvl == LOG_ERROR()) {
+            return "\u001b[31m"
+        }
+        return "\u001b[35m"
+    }
+}

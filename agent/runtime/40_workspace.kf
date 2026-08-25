@@ -1,0 +1,90 @@
+class WorkspaceReport {
+    String root = ""
+    Bool valid = false
+    Bool hasGit = false
+    Bool hasConfigFile = false
+    Bool hasCacheDir = false
+    Int kfFiles = 0
+    Int totalEntries = 0
+    Int ignoreRules = 0
+    String detail = ""
+}
+
+countKfFiles(String dir, Int depth): Int {
+    if (depth > 3) {
+        return 0
+    }
+    var d = Directory(dir)
+    if (!d.exists() || !d.isDirectory()) {
+        return 0
+    }
+    var names = d.list()
+    var n = 0
+    for (var name in names) {
+        var child = joinPath(dir, name)
+        var f = File(child)
+        if (f.isFile()) {
+            if (name.length >= 3) {
+                var ext = name.substring(name.length - 3, name.length)
+                if (ext == ".kf") {
+                    n = n + 1
+                }
+            }
+        } else if (f.isDirectory()) {
+            if (name != ".git") {
+                n = n + countKfFiles(child, depth + 1)
+            }
+        }
+    }
+    return n
+}
+
+listTopEntries(String dir): Int {
+    var d = Directory(dir)
+    if (!d.exists() || !d.isDirectory()) {
+        return 0
+    }
+    var names = d.list()
+    return names.size
+}
+
+scanWorkspace(String root): WorkspaceReport {
+    var r = WorkspaceReport()
+    r.root = root
+    var d = Directory(root)
+    if (!d.exists()) {
+        r.valid = false
+        r.detail = "root does not exist"
+        return r
+    }
+    if (!d.isDirectory()) {
+        r.valid = false
+        r.detail = "root is not a directory"
+        return r
+    }
+    r.valid = true
+    r.detail = "ok"
+    var gitDir = Directory(joinPath(root, ".git"))
+    r.hasGit = gitDir.exists()
+    var cfgFile = File(joinPath(root, "kof.config"))
+    r.hasConfigFile = cfgFile.exists()
+    var cacheDir = Directory(joinPath(root, "build"))
+    r.hasCacheDir = cacheDir.exists()
+    r.kfFiles = countKfFiles(root, 1)
+    r.totalEntries = listTopEntries(root)
+    var gi = File(joinPath(root, ".gitignore"))
+    if (gi.exists() && gi.isFile()) {
+        var txt = gi.readText()
+        var lines = splitStr(txt, "\n")
+        for (var raw in lines) {
+            var line = raw.trim()
+            if (line.length > 0) {
+                var first = line.substring(0, 1)
+                if (first != "#") {
+                    r.ignoreRules = r.ignoreRules + 1
+                }
+            }
+        }
+    }
+    return r
+}

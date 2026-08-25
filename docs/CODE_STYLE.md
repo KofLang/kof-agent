@@ -131,3 +131,16 @@ Booleanos: `isX`/`hasX`/`canX`. Funções: verbo + substantivo.
 recursos da própria plataforma · getters/setters · `.equals()` ·
 StringBuilder · utility classes · camadas Controller/Service/Repository sem
 problema real.
+
+## 13. Compatibilidade do backend nativo 0.0.14 (obrigatória)
+
+Impostas por `scripts/check_compat.sh`; justificativas em
+`docs/compiler-bugs.md`:
+
+1. Acúmulo de String SEMPRE explícito: `out = out + e`. Nunca `+=`.
+2. Nunca comparar String com `null`.
+3. Nunca usar `continue`.
+4. Não depender de curto-circuito de `&&`/`||` — aninhar ifs.
+5. Um artefato = um translation-unit gerado por `scripts/build.sh`.
+6. Toda definição antes do `main` do artefato.
+7. Sem campos estáticos mutáveis — estado em `RuntimeContext` injetado.

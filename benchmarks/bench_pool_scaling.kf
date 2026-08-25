@@ -1,0 +1,33 @@
+class PoolNoop implements TaskBody {
+    constructor() {
+    }
+    run(ContextView v) {
+    }
+}
+
+main() {
+    var cfg = Config()
+    var ctx = RuntimeContext(cfg, RealTimeClock())
+    ctx.logger.quiet = true
+    ctx.wire()
+    var job = PoolNoop()
+    var n = 20000
+    var t0 = now()
+    var i = 0
+    while (i < n) {
+        ctx.pool.launch(job, "pool")
+        i = i + 1
+    }
+    ctx.sched.drain()
+    var dt = now() - t0
+    println("{\"benchmark\":\"thread_pool\",\"workers\":1,\"iterations\":" + n + ",\"ms\":" + dt + ",\"tasks_per_s\":" + (n * 1000 / (dt + 1)) + ",\"target\":\"native\"}")
+    var gap = ""
+    try {
+        var p2 = WorkerPool(ctx.sched, 2)
+        gap = "supported"
+    } catch (String e) {
+        gap = "TP001"
+    }
+    println("{\"benchmark\":\"thread_pool_scaling\",\"workers\":[2,4],\"status\":\"" + gap + "\",\"note\":\"single-worker deterministic fallback\",\"target\":\"native\"}")
+    process.exit(0)
+}

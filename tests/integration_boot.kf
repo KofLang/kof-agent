@@ -1,0 +1,80 @@
+class ReadyMarker implements LifecycleHook {
+    Bool fired = false
+    constructor() {
+    }
+    onTransition(Int from, Int to): Bool {
+        if (to == LC_READY()) {
+            fired = true
+        }
+        return true
+    }
+}
+
+class Collector {
+    List<String> items = listOf<String>()
+    add(String s) {
+        items.add(s)
+    }
+}
+
+class EchoHandler implements EventHandler {
+    Int received = 0
+    constructor() {
+    }
+    onEvent(EventEnvelope e): Bool {
+        received = received + 1
+        return true
+    }
+}
+
+class ComputeJob implements TaskBody {
+    Collector col
+    constructor(Collector c) {
+        col = c
+    }
+    run(ContextView v) {
+        col.add("computed")
+    }
+}
+
+test "full boot publish compute shutdown" {
+    var cfg = Config()
+    var ctx = RuntimeContext(cfg, FixedClock(0))
+    ctx.wire()
+    var marker = ReadyMarker()
+    ctx.life.registerReady(marker)
+    assert(ctx.life.state() == LC_BOOTING())
+    ctx.life.transition(LC_INITIALIZING())
+    ctx.finishBoot()
+    assert(marker.fired)
+    assert(ctx.life.state() == LC_READY())
+
+    var echo = EchoHandler()
+    ctx.bus.subscribe("integration", echo)
+    var called = ctx.bus.publish("integration", "ping")
+    assert(called == 1)
+    assert(echo.received == 1)
+
+    var col = Collector()
+    var f = ctx.sched.launchFuture(ComputeJob(col), "compute", 5)
+    ctx.sched.await(f)
+    assert(f.ok)
+    assert(col.items.size == 1)
+
+    ctx.shutdownGraceful()
+    assert(ctx.life.stateName() == "STOPPED")
+    assert(ctx.sched.launchedCount == 1)
+    assert(ctx.sched.completedCount == 1)
+    assert(ctx.sched.accepting == false)
+
+    var threw = false
+    try {
+        ctx.sched.launch(ComputeJob(col), "late", 5)
+    } catch (String e) {
+        threw = e.contains("after shutdown")
+    }
+    assert(threw)
+}
+
+main() {
+}

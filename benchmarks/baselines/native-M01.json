@@ -1,0 +1,19 @@
+{
+  "target": "native",
+  "milestone": "M01",
+  "date": "2026-08-25T00:37:29Z",
+  "env": {"kernel": "7.1.4-gentoo-dist-bin", "arch": "x86_64"},
+  "results": [
+{"benchmark":"init","boots_per_batch":100,"batches":7,"best_batch_ms":11,"median_batch_ms":12,"us_per_boot_median":120,"target":"native"}
+,
+{"benchmark":"events","iterations":20000,"ms":360,"ops_per_s":55401,"delivered":20000,"target":"native"}
+,
+{"benchmark":"scheduler","iterations":100000,"ms":705,"tasks_per_s":141643,"completed":100000,"target":"native"}
+,
+{"benchmark":"logger","iterations":50000,"ms":2569,"lines_per_s":19455,"target":"native"}
+,
+{"benchmark":"thread_pool","workers":1,"iterations":20000,"ms":136,"tasks_per_s":145985,"target":"native"}
+{"benchmark":"thread_pool_scaling","workers":[2,4],"status":"TP001","note":"single-worker deterministic fallback","target":"native"}
+
+  ]
+}

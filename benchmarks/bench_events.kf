@@ -1,0 +1,29 @@
+class TickHandler implements EventHandler {
+    Int count = 0
+    constructor() {
+    }
+    onEvent(EventEnvelope e): Bool {
+        count = count + 1
+        return true
+    }
+}
+
+main() {
+    var cfg = Config()
+    var ctx = RuntimeContext(cfg, RealTimeClock())
+    ctx.logger.quiet = true
+    ctx.wire()
+    var h = TickHandler()
+    ctx.bus.subscribe("bench.events", h)
+    var n = 20000
+    var t0 = now()
+    var i = 0
+    while (i < n) {
+        ctx.bus.publish("bench.events", "tick")
+        i = i + 1
+    }
+    var dt = now() - t0
+    sortInts(new Int[1], 0)
+    println("{\"benchmark\":\"events\",\"iterations\":" + n + ",\"ms\":" + dt + ",\"ops_per_s\":" + (n * 1000 / (dt + 1)) + ",\"delivered\":" + h.count + ",\"target\":\"native\"}")
+    process.exit(0)
+}

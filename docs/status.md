@@ -6,8 +6,8 @@
 > vence: implementação → testes → este arquivo → demais docs.
 
 **Última atualização:** 24 de agosto de 2026
-**Milestone corrente:** M1 — Core Runtime (não iniciada)
-**Milestones concluídas:** M0 — Fundação ✅
+**Milestone corrente:** M2 — Compiler Gateway (não iniciada)
+**Milestones concluídas:** M0 — Fundação ✅ · M1 — Core Runtime ✅
 
 ---
 
@@ -16,77 +16,89 @@
 | Item | Estado |
 |------|--------|
 | Repositório | `github.com/KofLang/kof-agent` · branch `main` · sincronizado |
-| Histórico | `75cc779 first commit` → `5c0f56b docs(m0): fundação` |
-| Código | **nenhum ainda** (por definição da M0) |
-| Linguagem / target | Kof · Native (ELF x86-64) primário (D0001) |
-| Próxima ação | specs `specs/SCHEDULER.md`, `specs/EVENT_BUS.md`, `specs/LIFECYCLE.md`, `specs/CLI.md` |
+| Código | runtime completo em Kof: 9 partes + CLI (~2.6k linhas), compila no **Native** |
+| Suíte | **11/11 suítes verdes** (39 testes estruturados + 2 stress), target native |
+| Benchmarks | baseline `native-M01`: init **120 µs**, scheduler ~143k tasks/s, bus ~56k ops/s, logger ~19.6k l/s, pool ~141k t/s |
+| Próxima ação | spike Q1 (vias de integração com o compilador) + `specs/COMPILER_GATEWAY.md` |
 
----
+## M1 — Core Runtime ✅ (concluída em 24/08/2026)
 
-## M0 — Fundação ✅ (concluída em 24/08/2026)
+- Scheduler cooperativo determinístico: heap de prioridades (O(n log n)),
+  futures/await, cancelamento, backpressure, shutdown gracioso; estados
+  CREATED→QUEUED→RUNNING→(WAITING reservado)→COMPLETED/CANCELLED/FAILED.
+- EventBus tipado: envelopes-record, sync/async (async = task do scheduler),
+  once, wildcard `*`, consumo de cadeia.
+- Lifecycle BOOTING→INITIALIZING→READY⇄BUSY→STOPPING→STOPPED / FAILED com
+  hooks ordenados e veto.
+- Logger TRACE..FATAL: plain/JSON/ANSI, request id, quiet-sink; níveis via
+  config (`log.level`).
+- Config tipada arquivo > default, validação com erros claros, reload;
+  env pendente (ENV001).
+- Workspace scanner (kf count recursivo, git, config, ignores).
+- Metrics com snapshot JSON; uptime por TimeSource injetável.
+- CLI nativa: version/help/status/doctor/config, --json, exit codes
+  0/1/2; argv via wrapper `.kofargs` (ARG001 — N3 upstream).
+- Infra: build.sh (part-files → translation unit único), test.sh,
+  bench_m01.sh, check_compat.sh, build_cli.sh, wrapper kof-agent.
 
-Entregue:
-
-- Documentação de engenharia completa: SPEC (RF-1..RF-13), ARCHITECTURE,
-  MODULES (27 módulos, dependências só para baixo), ROADMAP M0–M12 com DoD,
-  TASKS, CONTRIBUTING (Regra Zero + template de report), CODE_STYLE,
-  DECISIONS (D0001–D0012 + Q1–Q4), RISKS (R01–R10), BENCHMARK_PLAN,
-  TEST_PLAN.
-- Árvore completa de diretórios com README por pasta.
-- README raiz no estilo do ecossistema Kof; LICENSE GPLv3; .gitignore.
-- REPORT_M00.md no template oficial.
-- Publicação no GitHub (`main` tracking `origin/main`).
-
-Verificação rápida do estado dos documentos:
-
-| Documento | Estado |
-|-----------|--------|
-| docs/SPEC.md | ✅ aceito |
-| docs/ARCHITECTURE.md | ✅ aceito |
-| docs/MODULES.md | ✅ aceito |
-| docs/ROADMAP.md | ✅ aceito |
-| docs/TASKS.md | ✅ M0 fechada; backlog M1 rascunhado |
-| docs/CONTRIBUTING.md | ✅ obrigatório desde já |
-| docs/CODE_STYLE.md | ✅ vale a partir da primeira linha de Kof (M1) |
-| docs/DECISIONS.md | ✅ 12 decisões; 4 questões em aberto |
-| docs/RISKS.md | ✅ 10 riscos vivos |
-| docs/BENCHMARK_PLAN.md | ✅ gates por milestone definidos |
-| docs/TEST_PLAN.md | ✅ gates por milestone definidos |
+DoD da M1: todos os itens verdes — specs antes de código, testes unit/
+integração/stress, benchmarks com baseline exportado, report e docs
+sincronizados.
 
 ## Testes & Benchmarks
 
-Nenhum executado — sem código na fundação. Gates começam na M1
-(init < 100 ms, dispatch do event bus) conforme TEST_PLAN/BENCHMARK_PLAN.
+- Suítes (`scripts/test.sh`, native): unit_core 7 · unit_logger 4 ·
+  unit_config 5 · unit_scheduler 6 · unit_eventbus 6 · unit_lifecycle 5 ·
+  unit_workspace 4 · integration_boot 1 · shutdown_safe 1 → **39 PASS**.
+- Stress: 10.000 eventos (bus+handler) ✓ · 100.000 tasks (heap) ✓.
+- Zero flakiness: nenhum assert de tempo; tempo vive só nos benchmarks.
+- Baseline: `benchmarks/baselines/native-M01.json` (+ runs crus ×3).
 
-## Questões em aberto (bloqueiam decisões futuras, não o início da M1)
+## Questões em aberto
 
-- **Q1** mecanismo Compiler Gateway: subprocess vs residente vs API embutida — decidir antes da M2 com benchmark das vias.
-- **Q2** FP no Native (FLT001 do compilador Kof): estratégia SIMD/HAL para o runtime AI — revisar antes da M10 (spike cedo).
-- **Q3** Map/Set ausentes na linguagem: padrão atual = `List<record>` + busca linear.
+- **Q1** mecanismo do Compiler Gateway (subprocess vs residente vs embutido)
+  — decidir na abertura da M2 com benchmark das vias. **É o próximo passo.**
+- **Q2** FP/SIMD no Native para o Runtime AI (FLT001 upstream) — revisar na
+  M10; spike antecipado recomendado após M6.
+- **Q3** Map/Set ausentes — padrão List<record> mantido.
 - **Q4** formato binário dos índices vetoriais — spec antes da M6.
 
-## Riscos no radar (top 3)
+## Riscos no radar (top)
 
-1. **R01** FLT001 pode limitar performance nativa do runtime AI → spike técnico cedo; HAL isolada.
-2. **R05** corpus defasado → checksum/versionamento obrigatórios desde a M5.
-3. **R09** ambiguidade do Brain PT-BR → intents tipadas; ambiguidade vira pergunta.
+1. **N10** miscompile posição-dependente do backend nativo pode ressurgir com
+   o crescimento do código — mitigado por check_compat.sh + técnica de bisect
+   documentada + partes pequenas.
+2. **R05** corpus defasado — checksums/versionamento desde a M5.
+3. **R09** ambiguidade do Brain PT-BR — intents tipadas; ambiguidade vira
+   pergunta (M7).
+
+## Ledger de bugs do compilador (upstream Kof 0.0.14)
+
+Descobertos e contornados na M1 — detalhes/repros:
+[docs/compiler-bugs.md](compiler-bugs.md).
+
+J1 (JVM runtime gen quebra com now/secrets) · N1 (defs após main não linkam)
+· N2 (String.toInt sem símbolo nativo) · N3 (argv segfault) · N4 (split
+segfault) · N6 (String==null segfault) · N7 (continue = loop infinito) ·
+N8 (&&/|| sem curto-circuito) · N9 (+= String perde acumulador) · N10
+(miscompile posição-dependente). Gate automático: `scripts/check_compat.sh`.
 
 ## Pendências conhecidas
 
-- Nenhuma pêndencia técnica de código (nada foi implementado ainda).
-- Specs individuais por interface começam na M1.
+- ENV001 (env layer), ARG001 (argv real), TP001/TP002 (multi-worker),
+  métricas RAM/CPU/GPU — todos bloqueados por capacidades upstream,
+  diagnosticados explicitamente (nunca silenciosos).
+- Specs próprias para CONFIG/LOG/WORKSPACE/METRICS quando ganharem
+  superfície nova (hoje: docs/runtime.md §3).
 
-## Próximos passos imediatos (M1)
+## Próximos passos imediatos (M2)
 
-1. Escrever as 4 specs (Scheduler, Event Bus, Lifecycle, CLI) — Regra Zero.
-2. Implementar scheduler cooperativo + thread pool + event bus tipado em
-   Kof compilando para Native.
-3. Logger (`KOF_AGENT_LOG_LEVEL`) e Config (arquivo > env > default) no
-   espírito kof.log/kof.config.
-4. CLI mínima (`version`, `help`, `status`) com exit codes determinísticos
-   e `--json`.
-5. Benchmarks init/dispatch + primeiro baseline `benchmarks/baselines/native-M01.json`.
-6. Fechar com REPORT_M01.md e **atualizar este status.md**.
+1. Spike Q1: medir subprocess vs residente vs embutida (meia semana).
+2. `specs/COMPILER_GATEWAY.md` — contratos tipados, "nunca texto onde cabe
+   estrutura".
+3. Implementar Gateway pela via vencedora; golden tests ≥20 programas reais.
+4. Benchmarks p50/p95 de compile-check; baseline `native-M02.json`.
+5. REPORT_M02.md + atualizar este status.md.
 
 ---
 
@@ -94,4 +106,5 @@ Nenhum executado — sem código na fundação. Gates começam na M1
 
 | Data | Evento |
 |------|--------|
-| 2026-08-24 | M0 concluída; repo publicado em `main`; status.md criado |
+| 2026-08-24 | M0 concluída; repo publicado; status.md criado |
+| 2026-08-24 | M1 concluída: runtime nativo completo, 11 suítes verdes, baselines registrados, 10 bugs do compilador documentados |
