@@ -8,7 +8,7 @@ while IFS= read -r u; do
   [ -z "$u" ] && continue
   rm -rf "$ROOT/build/brain_corpus"
   "$ROOT/scripts/build.sh" "tests/brain/$u" "build/tests_brain/$u" >/dev/null 2>&1
-  if (cd "$ROOT" && "$KOF" test "build/tests_brain/$u.kf" --target native >/dev/null 2>&1); then
+  if (cd "$ROOT" && "$KOF" test "build/tests_brain/$u" --target native >/dev/null 2>&1); then
     pass=$((pass+1))
   else
     fail=$((fail+1)); failed="$failed $u"

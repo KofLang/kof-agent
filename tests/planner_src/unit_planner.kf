@@ -1,0 +1,73 @@
+SEEDB(): String { return "build/brain_corpus" }
+
+seedBrain() {
+    mkFile("build/brain_corpus/language/spawn-doc.md", "---\nid: b-spawn\ntitle: spawn task scheduler\nmodule: language\ncategory: language\nkeywords: spawn,task,scheduler\nsymbols: spawn\n---\nspawn executa tarefas.")
+    mkFile("build/brain_corpus/diagnostics/E999.md", "---\nid: b-e999\ntitle: erro E999\nmodule: diagnostics\ncategory: diagnostics\nkeywords: e999\n---\nworkaround documentado.")
+}
+
+mkPlanP(String intent): BrainPlan {
+    seedBrain()
+    return brainProcess(freshBus(), corpusLoad(freshBus(), SEEDB(), FixedClock(1)), intent, listOf<String>(), listOf<String>())
+}
+
+test "create website plan has create tasks" {
+    var p = mkPlanP("cria um site")
+    var ep = plannerBuild(freshBus(), p, "src/main.kf")
+    assert(ep.tasks.size >= 2)
+    assert(ep.strategy == "Web")
+}
+
+test "repair plan chains compile search" {
+    var p = mkPlanP("arruma o erro ARITH001")
+    var ep = plannerBuild(freshBus(), p, "x.kf")
+    assert(ep.strategy == "Repair")
+    assert(ep.tasks.get(0).validation == "compiles")
+    assert(ep.tasks.get(1).depsCsv == ep.tasks.get(0).id)
+}
+
+test "runtests plan single task" {
+    var p = mkPlanP("rode os testes")
+    var ep = plannerBuild(freshBus(), p, "tests/")
+    assert(ep.tasks.size == 1)
+    assert(ep.tasks.get(0).kind == "RunTests")
+}
+
+test "generic plan fallback indexes workspace" {
+    var p = mkPlanP("janela janela")
+    var ep = plannerBuild(freshBus(), p, "")
+    assert(ep.tasks.get(0).kind == "IndexWorkspace")
+}
+
+test "plan json shape" {
+    var p = mkPlanP("cria um site")
+    var ep = plannerBuild(freshBus(), p, "src/main.kf")
+    var j = ep.toJson()
+    assert(j.contains("\"strategy\":\"Web\""))
+    assert(j.contains("\"acyclic\":true"))
+}
+
+test "duplicates merged" {
+    var t = listOf<PlanTaskRec>()
+    plTask(t, "p", 1, "A", "fs.read", "same", "", "", "")
+    plTask(t, "p", 2, "A", "fs.read", "same", "", "", "")
+    assert(plMergeDuplicates(t).size == 1)
+}
+
+test "deps satisfiable check" {
+    var t = listOf<PlanTaskRec>()
+    plTask(t, "p", 1, "A", "fs.read", "", "", "", "")
+    plTask(t, "p", 2, "B", "fs.write", "x", "", t.get(0).id, "")
+    assert(plDepsSatisfiable(t))
+    var bad = listOf<PlanTaskRec>()
+    plTask(bad, "q", 1, "C", "fs.read", "", "", "ghost-id", "")
+    assert(plDepsSatisfiable(bad) == false)
+}
+
+test "cycle detection on task deps" {
+    var t = listOf<PlanTaskRec>()
+    plTask(t, "p", 1, "A", "fs.read", "", "", "p-t2", "")
+    plTask(t, "p", 2, "B", "fs.write", "", "", "p-t1", "")
+    assert(plHasCycle(t))
+}
+main() {
+}

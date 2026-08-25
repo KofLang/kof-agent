@@ -4,10 +4,10 @@ B_INTENT_UNKNOWN(): String { return "Unknown" }
 
 brainSynonymIntent(String token): String {
     var s = retLower(token)
-    if (s == "crie" || s == "criar" || s == "faz" || s == "fazer" || s == "gere" || s == "gerar") {
+    if (s == "crie" || s == "cria" || s == "criar" || s == "faz" || s == "fazer" || s == "gera" || s == "gere" || s == "gerar") {
         return "create"
     }
-    if (s == "edite" || s == "editar" || s == "mude" || s == "mudar" || s == "altere") {
+    if (s == "edite" || s == "edita" || s == "editar" || s == "mude" || s == "mudar" || s == "altere") {
         return "edit"
     }
     if (s == "arruma" || s == "arrumar" || s == "corrija" || s == "corrigir" || s == "conserta") {
@@ -148,7 +148,7 @@ brainRequiredEntity(String intent): String {
     return ""
 }
 
-brainConfidence(intent, hasVerb, hasObj, ctxItems): Int {
+brainConfidence(String intent, Bool hasVerb, Bool hasObj, Int ctxItems): Int {
     var score = 20
     if (hasVerb) {
         score = score + 30
@@ -165,7 +165,7 @@ brainConfidence(intent, hasVerb, hasObj, ctxItems): Int {
     return score
 }
 
-brainCandidateTools(intent): String {
+brainCandidateTools(String intent): String {
     if (intent == "RepairDiagnostic") {
         return "compiler.check,search.text,patch.replace"
     }
@@ -188,11 +188,11 @@ brainAmbiguitiesJson(String required, String entitiesJson, List<String> historyP
     var has = entitiesJson.contains("\"" + required + "\":\"")
     var filled = false
     if (entitiesJson.contains(required)) {
-        var keyPart = "\\"" + required + "\\":\\""
+        var keyPart = "\"" + required + "\":\""
         var at = entitiesJson.indexOf(keyPart)
         if (at >= 0) {
             var vstart = at + keyPart.length
-            var vend = entitiesJson.indexOf("\\"", vstart)
+            var vend = entitiesJson.indexOf("\"", vstart)
             if (vend > vstart) {
                 filled = true
             }
@@ -202,7 +202,7 @@ brainAmbiguitiesJson(String required, String entitiesJson, List<String> historyP
         filled = true
     }
     if (!filled) {
-        return "[{\\"missing\\":\\"" + required + "\\",\\"question\\":\\"Qual " + required + "?\\"}]"
+        return "[{\"missing\":\"" + required + "\",\"question\":\"Qual " + required + "?\"}]"
     }
     return "[]"
 }

@@ -1,0 +1,19 @@
+SEEDB(): String { return "build/brain_corpus" }
+
+seedBrain() {
+    mkFile("build/brain_corpus/language/spawn-doc.md", "---\nid: b-spawn\ntitle: spawn task scheduler\nmodule: language\ncategory: language\nkeywords: spawn,task,scheduler\nsymbols: spawn\n---\nspawn executa tarefas.")
+    mkFile("build/brain_corpus/diagnostics/E999.md", "---\nid: b-e999\ntitle: erro E999\nmodule: diagnostics\ncategory: diagnostics\nkeywords: e999\n---\nworkaround documentado.")
+}
+
+mkPlanP(String intent): BrainPlan {
+    seedBrain()
+    return brainProcess(freshBus(), corpusLoad(freshBus(), SEEDB(), FixedClock(1)), intent, listOf<String>(), listOf<String>())
+}
+
+test "generic plan fallback indexes workspace" {
+    var p = mkPlanP("janela janela")
+    var ep = plannerBuild(freshBus(), p, "")
+    assert(ep.tasks.get(0).kind == "IndexWorkspace")
+}
+main() {
+}

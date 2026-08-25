@@ -1,0 +1,175 @@
+record PlanTaskRec(String id, String kind, String toolId, String argA, String argB, String depsCsv, String validation, String rollback)
+record PlanValidationRec(String taskId, String kind, String detail)
+
+PLANNER_VERSION(): Int { return 1 }
+
+plStrategyFor(String intent): String {
+    if (intent == "CreateWebsite" || intent == "CreateUI") {
+        return "Web"
+    }
+    if (intent == "CreateAPI" || intent == "GenerateCRUD") {
+        return "CRUD"
+    }
+    if (intent == "RepairDiagnostic") {
+        return "Repair"
+    }
+    if (intent == "RunTests") {
+        return "Compiler"
+    }
+    if (intent == "GenerateDocs") {
+        return "Docs"
+    }
+    if (intent == "CreateRPA") {
+        return "RPA"
+    }
+    return "Generic"
+}
+
+plEmit(EventBus bus, List<PlanTaskRec> tasks, String planId) {
+    bus.publish("plan.created", planId + " tasks=" + tasks.size)
+}
+
+plTask(List<PlanTaskRec> out, String planId, Int seq, String kind, String toolId, String a, String b, String deps, String validation) {
+    out.add(PlanTaskRec(planId + "-t" + seq, kind, toolId, a, b, deps, validation, ""))
+}
+
+plTasksFor(EventBus bus, BrainPlan plan, String targetFile): List<PlanTaskRec> {
+    var out = listOf<PlanTaskRec>()
+    var pid = "plan-" + plStrategyFor(plan.intent) + "-" + plan.confidence
+    var seq = 0
+    var last = ""
+    if (plan.intent.startsWith("Create") || plan.intent == "GenerateCRUD") {
+        seq = seq + 1
+        plTask(out, pid, seq, "CreateDir", "fs.mkdir", joinPath("src", ""), "", "", "dir-exists")
+        last = out.get(out.size - 1).id
+        seq = seq + 1
+        plTask(out, pid, seq, "CreateFile", "patch.file", joinPath("src", "main.kf"), "main() {\n}\n", last, "file-exists")
+        last = out.get(out.size - 1).id
+    }
+    if (plan.intent == "RepairDiagnostic") {
+        seq = seq + 1
+        plTask(out, pid, seq, "CompileCheck", "compiler.check", targetFile, "", "", "compiles")
+        last = out.get(out.size - 1).id
+        seq = seq + 1
+        plTask(out, pid, seq, "SearchText", "search.text", plan.entitiesJson, "", last, "results-found")
+        last = out.get(out.size - 1).id
+    }
+    if (plan.intent == "RunTests") {
+        seq = seq + 1
+        plTask(out, pid, seq, "RunTests", "compiler.run", targetFile, "", "", "tests-pass")
+        last = out.get(out.size - 1).id
+    }
+    if (out.size == 0) {
+        seq = seq + 1
+        plTask(out, pid, seq, "IndexWorkspace", "ws.open", "", "", "", "indexed")
+        last = out.get(out.size - 1).id
+    }
+    plEmit(bus, out, pid)
+    return out
+}
+
+plDepsSatisfiable(List<PlanTaskRec> tasks): Bool {
+    var ids = listOf<String>()
+    for (var t in tasks) {
+        ids.add(t.id)
+    }
+    var ok = true
+    for (var t in tasks) {
+        if (t.depsCsv != "") {
+            if (!wsInList(ids, t.depsCsv)) {
+                ok = false
+            }
+        }
+    }
+    return ok
+}
+
+plHasCycle(List<PlanTaskRec> tasks): Bool {
+    var edges = listOf<WsEdgeRec>()
+    for (var t in tasks) {
+        if (t.depsCsv != "") {
+            edges.add(WsEdgeRec(t.id, t.depsCsv))
+        }
+    }
+    return wsDetectCycle(edges).size > 0
+}
+
+plMergeDuplicates(List<PlanTaskRec> tasks): List<PlanTaskRec> {
+    var out = listOf<PlanTaskRec>()
+    for (var t in tasks) {
+        var dup = false
+        for (var o in out) {
+            if (o.toolId == t.toolId && o.argA == t.argA && o.argB == t.argB) {
+                dup = true
+            }
+        }
+        if (!dup) {
+            out.add(t)
+        }
+    }
+    return out
+}
+
+class ExecutionPlan {
+    String id = ""
+    String intent = ""
+    String strategy = ""
+    List<PlanTaskRec> tasks = listOf<PlanTaskRec>()
+    Bool acyclic = true
+    Int version = PLANNER_VERSION()
+
+    toJson(): String {
+        var out = "{\"id\":\"" + id + "\",\"intent\":\"" + intent + "\",\"strategy\":\"" + strategy + "\""
+        out = out + ",\"acyclic\":" + acyclic + ",\"tasks\":["
+        var first = true
+        for (var t in tasks) {
+            if (!first) {
+                out = out + ","
+            }
+            first = false
+            out = out + "{\"id\":\"" + t.id + "\",\"kind\":\"" + t.kind + "\",\"tool\":\"" + t.toolId + "\""
+            if (t.depsCsv != "") {
+                out = out + ",\"deps\":\"" + t.depsCsv + "\""
+            }
+            if (t.validation != "") {
+                out = out + ",\"validate\":\"" + t.validation + "\""
+            }
+            out = out + "}"
+        }
+        out = out + "]}"
+        return out
+    }
+}
+
+plannerBuild(EventBus bus, BrainPlan plan, String targetFile): ExecutionPlan {
+    var rawTasks = plTasksFor(bus, plan, targetFile)
+    var merged = plMergeDuplicates(rawTasks)
+    var plan0 = ExecutionPlan()
+    plan0.intent = plan.intent
+    plan0.strategy = plStrategyFor(plan.intent)
+    plan0.tasks = merged
+    plan0.acyclic = !plHasCycle(merged)
+    bus.publish("plan.optimized", "tasks=" + merged.size)
+    bus.publish("rollback.generated", "backups-via-katool-bak")
+    return plan0
+}
+
+plValidateTask(ToolRegistry reg, ToolCtx ctx, PlanTaskRec t): PlanValidationRec {
+    var kind = t.validation
+    var ok = true
+    var detail = kind
+    if (kind == "file-exists") {
+        var f = File(t.argA)
+        ok = f.exists() && f.isFile()
+    } else if (kind == "compiles") {
+        ok = false
+        detail = "GW-EXEC: compiler.check via ponte"
+    } else if (kind == "tests-pass") {
+        ok = false
+        detail = "GW-EXEC: compiler.run via ponte"
+    }
+    if (ok) {
+        ctx.bus.publish("task.validated", t.id)
+    }
+    return PlanValidationRec(t.id, kind, detail)
+}
