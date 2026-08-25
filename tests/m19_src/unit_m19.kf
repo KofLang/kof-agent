@@ -1,0 +1,68 @@
+test "execute single completes" {
+    var b = EventBus()
+    var o = ToolOrchestrator(b, RealTimeClock())
+    var r = o.executeTool("fs.read", OrchTool(1, 10, 1000, 0))
+    assert(r.state == 6)
+}
+
+test "sequential runs all" {
+    var b = EventBus()
+    var o = ToolOrchestrator(b, RealTimeClock())
+    var ids = listOf<String>()
+    ids.add("a")
+    ids.add("b")
+    ids.add("c")
+    var ok = o.executeSequential(ids, OrchTool(1, 1, 100, 0))
+    assert(ok == 3)
+}
+
+test "retry counts increments" {
+    var b = EventBus()
+    var o = ToolOrchestrator(b, RealTimeClock())
+    o.retryOnce("x", OrchTool(1, 1, 100, 2))
+    assert(o.retriesDone >= 1)
+}
+
+test "budget blocks overspend" {
+    var b = EventBus()
+    var o = ToolOrchestrator(b, RealTimeClock())
+    o.budget.limit = 5
+    var r = o.executeTool("heavy", OrchTool(1, 100, 100, 0))
+    assert(r.state == 4)
+}
+
+test "audit records scopes" {
+    var b = EventBus()
+    var o = ToolOrchestrator(b, RealTimeClock())
+    o.audit.allow("filesystem")
+    o.audit.allow("network")
+    o.audit.deny("secrets")
+    assert(o.audit.countFor("filesystem") == 1)
+    assert(o.audit.countFor("network") == 1)
+}
+
+test "trace spans measure durations" {
+    var b = EventBus()
+    var o = ToolOrchestrator(b, RealTimeClock())
+    var before = o.trace.spanCount()
+    o.executeTool("traced", OrchTool(1, 1, 100, 0))
+    assert(o.trace.spanCount() > before)
+}
+
+test "cancel stops execution" {
+    var b = EventBus()
+    var o = ToolOrchestrator(b, RealTimeClock())
+    o.cancelExecution()
+    var r = o.executeTool("after", OrchTool(1, 1, 100, 0))
+    assert(r.state == 4)
+}
+
+test "batch respects parallelism loop" {
+    var b = EventBus()
+    var o = ToolOrchestrator(b, RealTimeClock())
+    var ids = listOf<String>()
+    ids.add("p1")
+    ids.add("p2")
+    var done = o.executeBatch(ids, OrchTool(1, 1, 100, 0), 2)
+    assert(done == 2)
+}

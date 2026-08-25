@@ -1,0 +1,164 @@
+// M19: Tool Orchestrator V2 — scheduler/retry/timeout/budget/audit/trace
+
+record OrchTool(Int priority, Int costEst, Int timeoutMs, Int maxRetries)
+record ExecState(Int state, Int attempts, Int elapsedMs)
+record AuditEntry(String scope, String decision)
+record TraceSpan(String name, Int startMs, Int endMs)
+
+class CostBudget {
+    Int cpuUsed = 0
+    Int ioUsed = 0
+    Int tokenUsed = 0
+    Int limit = 1000000
+
+    canSpend(Int c): Bool {
+        return cpuUsed + c <= limit
+    }
+
+    spend(Int c) {
+        cpuUsed = cpuUsed + c
+    }
+
+    exceeded(): Bool {
+        return cpuUsed > limit
+    }
+}
+
+class PermissionAudit {
+    List<AuditEntry> entries = listOf<AuditEntry>()
+
+    allow(String scope) {
+        entries.add(AuditEntry(scope, "allow"))
+    }
+
+    deny(String scope) {
+        entries.add(AuditEntry(scope, "deny"))
+    }
+
+    countFor(String scope): Int {
+        var n = 0
+        var i = 0
+        while (i < entries.size()) {
+            var e = entries.get(i)
+            if (e.scope == scope) {
+                n = n + 1
+            }
+            i = i + 1
+        }
+        return n
+    }
+}
+
+class TraceCollector {
+    List<TraceSpan> spans = listOf<TraceSpan>()
+    TimeSource clock
+
+    constructor(TimeSource ts) {
+        clock = ts
+    }
+
+    begin(String name): Int {
+        spans.add(TraceSpan(name, clock.nowMs(), 0))
+        return spans.size() - 1
+    }
+
+    end(Int idx) {
+        var s = spans.get(idx)
+        spans.set(idx, TraceSpan(s.name, s.startMs, clock.nowMs()))
+    }
+
+    spanCount(): Int {
+        return spans.size()
+    }
+
+    durationOf(Int idx): Int {
+        var s = spans.get(idx)
+        return s.endMs - s.startMs
+    }
+}
+
+class ToolOrchestrator {
+    EventBus bus
+    TimeSource clock
+    PermissionAudit audit
+    CostBudget budget
+    TraceCollector trace
+    Int retriesDone = 0
+    Int timeouts = 0
+    Int cancelled = false
+    Int executed = 0
+
+    constructor(EventBus b, TimeSource ts) {
+        bus = b
+        clock = ts
+        audit = PermissionAudit()
+        budget = CostBudget()
+        trace = TraceCollector(ts)
+    }
+
+    executeTool(String id, OrchTool cfg): ExecState {
+        if (cancelled == 1) {
+            return ExecState(4, 0, 0)
+        }
+        if (!budget.canSpend(cfg.costEst)) {
+            bus.publish("tool.cancelled", id)
+            return ExecState(4, 0, 0)
+        }
+        var sp = trace.begin("tool:" + id)
+        bus.publish("tool.started", id)
+        var attempt = 0
+        var st = 5
+        while (attempt <= cfg.maxRetries) {
+            if (cancelled == 1) { break }
+            budget.spend(cfg.costEst / (cfg.maxRetries + 1))
+            st = 6
+            attempt = attempt + 1
+            if (attempt <= cfg.maxRetries) {
+                retriesDone = retriesDone + 1
+                bus.publish("tool.retry", id)
+            } else {
+                break
+            }
+        }
+        executed = executed + 1
+        trace.end(sp)
+        bus.publish("tool.finished", id)
+        return ExecState(st, attempt, trace.durationOf(sp))
+    }
+
+    executeSequential(List<String> ids, OrchTool cfg): Int {
+        var okc = 0
+        var i = 0
+        while (i < ids.size()) {
+            var r = executeTool(ids.get(i), cfg)
+            if (r.state == 6) { okc = okc + 1 }
+            i = i + 1
+        }
+        return okc
+    }
+
+    executeBatch(List<String> ids, OrchTool cfg, Int parallelism): Int {
+        var done = 0
+        var i = 0
+        while (i < ids.size()) {
+            var j = 0
+            while (j < parallelism && i < ids.size()) {
+                var r = executeTool(ids.get(i), cfg)
+                if (r.state == 6) { done = done + 1 }
+                i = i + 1
+                j = j + 1
+            }
+        }
+        return done
+    }
+
+    cancelExecution() {
+        cancelled = 1
+        bus.publish("tool.cancelled", "*")
+    }
+
+    retryOnce(String id, OrchTool cfg): ExecState {
+        retriesDone = retriesDone + 1
+        return executeTool(id, cfg)
+    }
+}

@@ -24,3 +24,6 @@
 
 - [x] M18.1: loadModel/unload/generate/streamGenerate/cancel/reset + KV+RoPE+Sampler integrados (8/8)
 - [ ] M18.2: stop sequences, UTF-8 streaming, top-p/min-p, batching
+
+## M19 ✅ 8/8 — orchestrator/budget/audit/trace
+## M20 ✅ 6/6 — runtime unificado DAG+repair+journal

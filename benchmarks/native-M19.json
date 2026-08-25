@@ -1,0 +1,6 @@
+{
+  "milestone": "M19",
+  "target": "native",
+  "compiler": "@ 416ff4b",
+  "measurements": { "tools_200_seq_ms": 10, "tools_per_sec": 20000, "overhead_tracing": "incluido" }
+}

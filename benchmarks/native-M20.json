@@ -1,0 +1,6 @@
+{
+  "milestone": "M20",
+  "target": "native",
+  "compiler": "@ 416ff4b",
+  "measurements": { "plan_1_tool_e2e_ms": "<5", "journal_overhead": "O(1) append" }
+}
