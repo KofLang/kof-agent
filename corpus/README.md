@@ -1,5 +1,3 @@
-# corpus/
+# Corpus Kof Agent
 
-Corpus oficial de conhecimento: markdown versionado com metadata (id, title, module, target, version, keywords, symbols, embedding, checksum).
-
-> Estado: fundacao (Milestone 0 — sem implementacao). Responsabilidades, APIs previstas e dependencias permitidas: [docs/MODULES.md](../docs/MODULES.md).
+Fonte de conhecimento versionada. Todo documento tem frontmatter com id e checksum calculado no load.

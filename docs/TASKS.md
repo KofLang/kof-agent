@@ -1,7 +1,7 @@
 # TASKS — Milestone corrente
 
-**Milestone atual:** M5 — Corpus Engine (não iniciada)
-**Milestones:** M0 ✅ · M1 ✅ · M2 🟡 · M3 🟡 · M4 🟡 (N10)
+**Milestone atual:** M6 — Retrieval Engine (não iniciada)
+**Milestones:** M0 ✅ · M1 ✅ · M2–M5 🟡 (N10 bloqueia verificação integral desde M3)
 **Última atualização:** 24 de agosto de 2026
 
 ---

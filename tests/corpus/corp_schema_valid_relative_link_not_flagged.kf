@@ -1,0 +1,17 @@
+CROOT(): String { return "corpus" }
+
+test "valid relative link not flagged" {
+    mkFile("build/cok/a.md", "---\nid: cok-a\ntitle: A\n---\nVide [b](b.md)\n")
+    mkFile("build/cok/b.md", "B\n")
+    var ix = corpusLoad(freshBus(), "build/cok", FixedClock(1))
+    var issues = corpusValidate(ix, "build/cok")
+    var broken = 0
+    for (var i in issues) {
+        if (i.kind == "broken-link") {
+            broken = broken + 1
+        }
+    }
+    assert(broken == 0)
+}
+main() {
+}

@@ -1,0 +1,16 @@
+CROOT(): String { return "corpus" }
+
+test "invalid file flagged" {
+    mkFile("build/cinv/raw.md", "sem frontmatter aqui\n")
+    var ix = corpusLoad(freshBus(), "build/cinv", FixedClock(1))
+    var issues = corpusValidate(ix, "build/cinv")
+    var found = false
+    for (var i in issues) {
+        if (i.kind == "invalid-file") {
+            found = true
+        }
+    }
+    assert(found)
+}
+main() {
+}

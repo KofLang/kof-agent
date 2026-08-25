@@ -1,0 +1,20 @@
+test "symbol registry built from frontmatter" {
+    var ix = corpusLoad(freshBus(), CROOT(), FixedClock(1))
+    var docs = corpusSymbolDocs(ix, "spawn")
+    assert(docs.size == 1)
+    assert(docs.get(0) == "lang-spawn")
+}
+
+test "builtin symbols not orphans" {
+    var ix = corpusLoad(freshBus(), CROOT(), FixedClock(1))
+    var issues = corpusValidate(ix, CROOT())
+    for (var i in issues) {
+        if (i.kind == "orphan-symbol") {
+            assert(i.detail.contains("spawn") == false)
+            assert(i.detail.contains("json.decode") == false)
+        }
+    }
+    assert(true)
+}
+main() {
+}

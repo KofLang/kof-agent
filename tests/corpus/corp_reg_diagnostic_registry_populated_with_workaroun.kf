@@ -1,0 +1,20 @@
+test "symbol registry built from frontmatter" {
+    var ix = corpusLoad(freshBus(), CROOT(), FixedClock(1))
+    var docs = corpusSymbolDocs(ix, "spawn")
+    assert(docs.size == 1)
+    assert(docs.get(0) == "lang-spawn")
+}
+
+test "diagnostic registry populated with workaround lookup" {
+    var ix = corpusLoad(freshBus(), CROOT(), FixedClock(1))
+    assert(ix.diagRegistry.size == 2)
+    var hasArith = false
+    for (var d in ix.diagRegistry) {
+        if (d.code == "diag-ARITH001") {
+            hasArith = true
+        }
+    }
+    assert(hasArith)
+}
+main() {
+}

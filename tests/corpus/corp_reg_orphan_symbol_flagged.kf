@@ -1,0 +1,21 @@
+test "symbol registry built from frontmatter" {
+    var ix = corpusLoad(freshBus(), CROOT(), FixedClock(1))
+    var docs = corpusSymbolDocs(ix, "spawn")
+    assert(docs.size == 1)
+    assert(docs.get(0) == "lang-spawn")
+}
+
+test "orphan symbol flagged" {
+    mkFile("build/corph/o.md", "---\nid: orf\ntitle: O\nsymbols: NaoExiste\n---\nX\n")
+    var ix = corpusLoad(freshBus(), "build/corph", FixedClock(1))
+    var issues = corpusValidate(ix, "build/corph")
+    var found = false
+    for (var i in issues) {
+        if (i.kind == "orphan-symbol") {
+            found = true
+        }
+    }
+    assert(found)
+}
+main() {
+}

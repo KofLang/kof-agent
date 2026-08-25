@@ -1,0 +1,10 @@
+CROOT(): String { return "corpus" }
+
+test "checksum changes when content changes" {
+    var before = parseCorpusDoc("corpus/language/spawn.md", CROOT()).checksum
+    mkFile("build/none.txt", "")
+    var after = parseCorpusDoc("build/none.txt", CROOT())
+    assert(after.checksum != before)
+}
+main() {
+}

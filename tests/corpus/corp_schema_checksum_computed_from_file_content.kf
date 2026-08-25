@@ -1,0 +1,9 @@
+CROOT(): String { return "corpus" }
+
+test "checksum computed from file content" {
+    var d = parseCorpusDoc("corpus/language/spawn.md", CROOT())
+    var raw = File("corpus/language/spawn.md").readText()
+    assert(d.checksum == wsHash(raw))
+}
+main() {
+}

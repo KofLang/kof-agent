@@ -64,7 +64,7 @@ Projeto em fase de fundação (**Milestone 0** — documentação de engenharia)
 | M2 | Compiler Gateway | 🟡 (ponte ativa; execução in-language aguarda upstream) |
 | M3 | Workspace Intelligence | 🟡 (N10 upstream bloqueia 21/37 testes) |
 | M4 | Tool API | 🟡 (N10) |
-| M5 | Corpus Engine | ⬜ |
+| M5 | Corpus Engine | 🟡 (N10) |
 | M6 | Retrieval Engine | ⬜ |
 | M7 | Kof Brain | ⬜ |
 | M8 | Planner | ⬜ |

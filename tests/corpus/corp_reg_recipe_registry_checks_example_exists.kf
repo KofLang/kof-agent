@@ -1,0 +1,15 @@
+test "symbol registry built from frontmatter" {
+    var ix = corpusLoad(freshBus(), CROOT(), FixedClock(1))
+    var docs = corpusSymbolDocs(ix, "spawn")
+    assert(docs.size == 1)
+    assert(docs.get(0) == "lang-spawn")
+}
+
+test "recipe registry checks example exists" {
+    var ix = corpusLoad(freshBus(), CROOT(), FixedClock(1))
+    assert(ix.recipeRegistry.size == 1)
+    assert(ix.recipeRegistry.get(0).exampleExists)
+    assert(ix.recipeRegistry.get(0).examplePath == "corpus/examples/rest-api.kf")
+}
+main() {
+}

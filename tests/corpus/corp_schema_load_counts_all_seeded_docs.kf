@@ -1,0 +1,8 @@
+CROOT(): String { return "corpus" }
+
+test "load counts all seeded docs" {
+    var ix = corpusLoad(freshBus(), CROOT(), FixedClock(1))
+    assert(ix.docs.size >= 7)
+}
+main() {
+}

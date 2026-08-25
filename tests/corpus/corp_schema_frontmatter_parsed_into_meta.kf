@@ -1,0 +1,11 @@
+CROOT(): String { return "corpus" }
+
+test "frontmatter parsed into meta" {
+    var ix = corpusLoad(freshBus(), CROOT(), FixedClock(1))
+    var d = corpusById(ix, "lang-record")
+    assert(d.meta.title.contains("record"))
+    assert(d.meta.category == "language")
+    assert(d.meta.languageVersion == "0.0.14")
+}
+main() {
+}

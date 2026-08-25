@@ -1,0 +1,15 @@
+test "symbol registry built from frontmatter" {
+    var ix = corpusLoad(freshBus(), CROOT(), FixedClock(1))
+    var docs = corpusSymbolDocs(ix, "spawn")
+    assert(docs.size == 1)
+    assert(docs.get(0) == "lang-spawn")
+}
+
+test "symbol registry built from frontmatter" {
+    var ix = corpusLoad(freshBus(), CROOT(), FixedClock(1))
+    var docs = corpusSymbolDocs(ix, "spawn")
+    assert(docs.size == 1)
+    assert(docs.get(0) == "lang-spawn")
+}
+main() {
+}

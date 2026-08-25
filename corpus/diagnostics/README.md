@@ -1,0 +1,3 @@
+# diagnostics
+
+Documentos desta categoria.

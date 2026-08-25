@@ -1,0 +1,307 @@
+record CorpMeta(String id, String title, String module, String category, String version, String languageVersion, String author, String createdAt, String updatedAt, String keywordsCsv, String symbolsCsv, String dependenciesCsv, String status, String tagsCsv, String extraKey, String extraValue)
+class CorpusDoc {
+    CorpMeta meta = CorpMeta("", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "")
+    String body = ""
+    String relPath = ""
+    Int checksum = 0
+    constructor() {
+    }
+}
+
+CORPUS_IDX_VERSION(): Int { return 1 }
+
+collectMdFiles(String dir, Int depth, List<String> out) {
+    if (depth > 5) {
+        return
+    }
+    var d = Directory(dir)
+    if (!d.exists() || !d.isDirectory()) {
+        return
+    }
+    var names = d.list()
+    for (var n in names) {
+        var skipIt = n == ".git" || n == "build"
+        if (!skipIt) {
+            var child = joinPath(dir, n)
+            var f = File(child)
+            if (f.isFile()) {
+                if (n.length >= 3) {
+                    var ext = n.substring(n.length - 3, n.length)
+                    if (ext == ".md") {
+                        out.add(child)
+                    }
+                }
+            } else {
+                if (f.isDirectory()) {
+                    collectMdFiles(child, depth + 1, out)
+                }
+            }
+        }
+    }
+}
+
+metaField(String block, String key): String {
+    var lines = splitStr(block, "\n")
+    var prefix = key + ":"
+    for (var raw in lines) {
+        var t = raw.trim()
+        if (t.startsWith(prefix)) {
+            return t.substring(prefix.length, t.length).trim()
+        }
+    }
+    return ""
+}
+
+parseCorpusDoc(String path, String root): CorpusDoc {
+    var d = CorpusDoc()
+    d.relPath = path
+    var f = File(path)
+    if (!f.exists() || !f.isFile()) {
+        return d
+    }
+    var txt = f.readText()
+    d.checksum = wsHash(txt)
+    var rest = txt
+    if (txt.startsWith("---\n")) {
+        var end = txt.indexOf("\n---\n", 4)
+        if (end > 0) {
+            var block = txt.substring(4, end)
+            rest = txt.substring(end + 5, txt.length)
+            d.meta = CorpMeta(metaField(block, "id"), metaField(block, "title"), metaField(block, "module"), metaField(block, "category"), metaField(block, "version"), metaField(block, "languageVersion"), metaField(block, "author"), metaField(block, "createdAt"), metaField(block, "updatedAt"), metaField(block, "keywords"), metaField(block, "symbols"), metaField(block, "dependencies"), metaField(block, "status"), metaField(block, "tags"), metaField(block, "example"), "")
+        }
+    }
+    if (d.meta.id == "") {
+        d.meta.id = wsSanitize(path)
+        d.meta.title = d.meta.id
+        d.meta.status = "unparsed"
+    }
+    d.body = rest
+    return d
+}
+
+record SymRef(String symbol, String docId)
+record DiagRegRec(String code, String docPath, String workaroundId)
+record RecipeRec(String name, String docPath, String examplePath, Bool exampleExists)
+
+class CorpusIndex {
+    List<CorpusDoc> docs = listOf<CorpusDoc>()
+    List<SymRef> symIndex = listOf<SymRef>()
+    List<DiagRegRec> diagRegistry = listOf<DiagRegRec>()
+    List<RecipeRec> recipeRegistry = listOf<RecipeRec>()
+    List<String> builtinSymbols = listOf<String>()
+
+    constructor() {
+        builtinSymbols.add("spawn")
+        builtinSymbols.add("record")
+        builtinSymbols.add("constructor")
+        builtinSymbols.add("Window")
+        builtinSymbols.add("Palette.red")
+        builtinSymbols.add("web.app")
+        builtinSymbols.add("json.decode")
+        builtinSymbols.add("json.encode")
+        builtinSymbols.add("passwords.hash")
+        builtinSymbols.add("db.connect")
+        builtinSymbols.add("orm.save")
+        builtinSymbols.add("log.info")
+        builtinSymbols.add("config.str")
+        builtinSymbols.add("crypto.sha256")
+        builtinSymbols.add("secrets.get")
+        builtinSymbols.add("jwt.verify")
+    }
+}
+
+wsAddDoc(CorpusIndex ix, CorpusDoc d) {
+    ix.docs.add(d)
+    var syms = d.meta.symbolsCsv
+    if (syms.length > 0) {
+        var parts = splitStr(syms, ",")
+        for (var p in parts) {
+            var name = p.trim()
+            if (name.length > 0) {
+                ix.symIndex.add(SymRef(name, d.meta.id))
+            }
+        }
+    }
+}
+
+wsBuildRegistries(CorpusIndex ix) {
+    ix.diagRegistry = listOf<DiagRegRec>()
+    ix.recipeRegistry = listOf<RecipeRec>()
+    for (var d in ix.docs) {
+        if (d.meta.category == "diagnostics") {
+            var code = d.meta.id
+            var w = ""
+            if (d.body.contains("String_kof_string_to_int")) {
+                w = "N2"
+            }
+            if (d.body.contains("CONC001")) {
+                w = "CONC001"
+            }
+            ix.diagRegistry.add(DiagRegRec(code, d.relPath, w))
+        }
+        if (d.meta.category == "recipes") {
+            var ex = d.meta.extraKey
+            var exOk = false
+            if (ex.length > 0) {
+                var ef = File(ex)
+                exOk = ef.exists() && ef.isFile()
+            }
+            ix.recipeRegistry.add(RecipeRec(d.meta.title, d.relPath, ex, exOk))
+        }
+    }
+    if (ix.diagRegistry.size > 0 || ix.recipeRegistry.size > 0) {
+    }
+}
+
+corpusLoad(EventBus bus, String root, TimeSource clock): CorpusIndex {
+    bus.publish("corpus.loading", root)
+    var ix = CorpusIndex()
+    var paths = listOf<String>()
+    collectMdFiles(root, 1, paths)
+    for (var p in paths) {
+        wsAddDoc(ix, parseCorpusDoc(p, root))
+    }
+    wsBuildRegistries(ix)
+    bus.publish("corpus.loaded", "docs=" + ix.docs.size)
+    return ix
+}
+
+record CorpIssueRec(String kind, String detail)
+
+
+corpusValidate(CorpusIndex ix, String root): List<CorpIssueRec> {
+    var issues = listOf<CorpIssueRec>()
+    var i = 0
+    while (i < ix.docs.size) {
+        var a = ix.docs.get(i)
+        if (a.meta.status == "unparsed") {
+            issues.add(CorpIssueRec("invalid-file", a.relPath))
+        }
+        var j = i + 1
+        while (j < ix.docs.size) {
+            var b = ix.docs.get(j)
+            if (b.meta.id == a.meta.id && a.meta.id != "") {
+                issues.add(CorpIssueRec("duplicate-id", a.meta.id))
+            }
+            j = j + 1
+        }
+        var recomputed = wsHash(File(a.relPath).readText())
+        if (recomputed != a.checksum) {
+            issues.add(CorpIssueRec("checksum-changed", a.relPath))
+        }
+        var links = listOf<String>()
+        for (var ln in splitStr(a.body, "\n")) {
+            if (ln.contains("](") ) {
+                var open = ln.indexOf("](")
+                var close = ln.indexOf(")", open)
+                if (close > open) {
+                    links.add(ln.substring(open + 2, close))
+                }
+            }
+        }
+        for (var l in links) {
+            if (!l.startsWith("http")) {
+                var target = joinPath(joinPath(root, ""), l)
+                var tf = File(target)
+                if (!tf.exists()) {
+                    issues.add(CorpIssueRec("broken-link", a.relPath + " -> " + l))
+                }
+            }
+        }
+        for (var sr in ix.symIndex) {
+            if (sr.docId == a.meta.id) {
+                var known = false
+                for (var b in ix.builtinSymbols) {
+                    if (b == sr.symbol) {
+                        known = true
+                    }
+                }
+                if (!known) {
+                    issues.add(CorpIssueRec("orphan-symbol", sr.symbol + "@" + a.meta.id))
+                }
+            }
+        }
+        i = i + 1
+    }
+    return issues
+}
+
+corpusById(CorpusIndex ix, String id): CorpusDoc {
+    for (var d in ix.docs) {
+        if (d.meta.id == id) {
+            return d
+        }
+    }
+    return CorpusDoc()
+}
+
+
+corpusByCategory(CorpusIndex ix, String cat): List<CorpusDoc> {
+    var out = listOf<CorpusDoc>()
+    for (var d in ix.docs) {
+        if (d.meta.category == cat) {
+            out.add(d)
+        }
+    }
+    return out
+}
+
+corpusSearchKeyword(CorpusIndex ix, String kw): List<CorpusDoc> {
+    var out = listOf<CorpusDoc>()
+    for (var d in ix.docs) {
+        if (d.meta.keywordsCsv.contains(kw) || d.meta.title.contains(kw)) {
+            out.add(d)
+        }
+    }
+    return out
+}
+
+corpusSymbolDocs(CorpusIndex ix, String symbol): List<String> {
+    var out = listOf<String>()
+    for (var sr in ix.symIndex) {
+        if (sr.symbol == symbol) {
+            out.add(sr.docId)
+        }
+    }
+    return out
+}
+
+corpusSerialize(CorpusIndex ix): String {
+    var meta = ""
+    var firstD = true
+    for (var d in ix.docs) {
+        if (!firstD) {
+            meta = meta + "\u0002"
+        }
+        firstD = false
+        meta = meta + d.relPath + "\u0003" + d.checksum + "\u0003" + d.meta.id
+    }
+    var symSec = ""
+    var firstS = true
+    for (var sr in ix.symIndex) {
+        if (!firstS) {
+            symSec = symSec + "\u0002"
+        }
+        firstS = false
+        symSec = symSec + sr.symbol + "\u0003" + sr.docId
+    }
+    return meta + "\u0001" + symSec
+}
+
+corpusSaveCache(EventBus bus, String dir, CorpusIndex ix): Bool {
+    var d = Directory(dir)
+    if (!d.exists()) {
+        d.createDirectories()
+    }
+    var body = corpusSerialize(ix)
+    var okIdx = wsWriteVersioned(joinPath(dir, "corpus.idx"), "CRPIDX", CORPUS_IDX_VERSION(), body)
+    var hashes = listOf<String>()
+    for (var doc in ix.docs) {
+        hashes.add(doc.relPath + "\u0003" + doc.checksum)
+    }
+    var okH = wsWriteVersioned(joinPath(dir, "corpus.hashes"), "CRPHSH", CORPUS_IDX_VERSION(), wsJoin(hashes, "\u0002"))
+    var info = "{\"docs\":" + ix.docs.size + ",\"symbols\":" + ix.symIndex.size + ",\"diagnostics\":" + ix.diagRegistry.size + ",\"recipes\":" + ix.recipeRegistry.size + "}"
+    var okM = wsWriteVersioned(joinPath(dir, "corpus.meta"), "CRPMET", CORPUS_IDX_VERSION(), info)
+    bus.publish("registry.updated", info)
+    return okIdx && okH && okM
+}

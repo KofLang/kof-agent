@@ -1,0 +1,18 @@
+test "symbol registry built from frontmatter" {
+    var ix = corpusLoad(freshBus(), CROOT(), FixedClock(1))
+    var docs = corpusSymbolDocs(ix, "spawn")
+    assert(docs.size == 1)
+    assert(docs.get(0) == "lang-spawn")
+}
+
+test "cache save and load roundtrip" {
+    var bus = freshBus()
+    var ix = corpusLoad(bus, CROOT(), FixedClock(1))
+    assert(corpusSaveCache(bus, "build/ccache", ix))
+    var raw = File("build/ccache/corpus.idx").readText()
+    assert(raw.startsWith("CRPIDX|1|"))
+    var meta = File("build/ccache/corpus.meta").readText()
+    assert(meta.startsWith("CRPMET"))
+}
+main() {
+}

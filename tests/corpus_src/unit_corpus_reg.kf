@@ -1,0 +1,76 @@
+test "symbol registry built from frontmatter" {
+    var ix = corpusLoad(freshBus(), CROOT(), FixedClock(1))
+    var docs = corpusSymbolDocs(ix, "spawn")
+    assert(docs.size == 1)
+    assert(docs.get(0) == "lang-spawn")
+}
+
+test "orphan symbol flagged" {
+    mkFile("build/corph/o.md", "---\nid: orf\ntitle: O\nsymbols: NaoExiste\n---\nX\n")
+    var ix = corpusLoad(freshBus(), "build/corph", FixedClock(1))
+    var issues = corpusValidate(ix, "build/corph")
+    var found = false
+    for (var i in issues) {
+        if (i.kind == "orphan-symbol") {
+            found = true
+        }
+    }
+    assert(found)
+}
+
+test "builtin symbols not orphans" {
+    var ix = corpusLoad(freshBus(), CROOT(), FixedClock(1))
+    var issues = corpusValidate(ix, CROOT())
+    for (var i in issues) {
+        if (i.kind == "orphan-symbol") {
+            assert(i.detail.contains("spawn") == false)
+            assert(i.detail.contains("json.decode") == false)
+        }
+    }
+    assert(true)
+}
+
+test "diagnostic registry populated with workaround lookup" {
+    var ix = corpusLoad(freshBus(), CROOT(), FixedClock(1))
+    assert(ix.diagRegistry.size == 2)
+    var hasArith = false
+    for (var d in ix.diagRegistry) {
+        if (d.code == "diag-ARITH001") {
+            hasArith = true
+        }
+    }
+    assert(hasArith)
+}
+
+test "recipe registry checks example exists" {
+    var ix = corpusLoad(freshBus(), CROOT(), FixedClock(1))
+    assert(ix.recipeRegistry.size == 1)
+    assert(ix.recipeRegistry.get(0).exampleExists)
+    assert(ix.recipeRegistry.get(0).examplePath == "corpus/examples/rest-api.kf")
+}
+
+test "cache save and load roundtrip" {
+    var bus = freshBus()
+    var ix = corpusLoad(bus, CROOT(), FixedClock(1))
+    assert(corpusSaveCache(bus, "build/ccache", ix))
+    var raw = File("build/ccache/corpus.idx").readText()
+    assert(raw.startsWith("CRPIDX|1|"))
+    var meta = File("build/ccache/corpus.meta").readText()
+    assert(meta.startsWith("CRPMET"))
+}
+
+test "tampered cache rejected by checksum" {
+    var bus = freshBus()
+    var ix = corpusLoad(bus, CROOT(), FixedClock(1))
+    corpusSaveCache(bus, "build/ccache2", ix)
+    var f = File("build/ccache2/corpus.idx")
+    var txt = f.readText()
+    var nl = txt.indexOf("\n")
+    f.delete()
+    f.writeText(txt.substring(0, nl) + "X\n" + txt.substring(nl + 1, txt.length))
+    var back = wsReadVersioned("build/ccache2/corpus.idx", "CRPIDX")
+    assert(back == "")
+}
+
+main() {
+}

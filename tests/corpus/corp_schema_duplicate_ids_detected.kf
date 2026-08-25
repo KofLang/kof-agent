@@ -1,0 +1,17 @@
+CROOT(): String { return "corpus" }
+
+test "duplicate ids detected" {
+    mkFile("build/cdup/a.md", "---\nid: dupx\ntitle: A\n---\nA\n")
+    mkFile("build/cdup/b.md", "---\nid: dupx\ntitle: B\n---\nB\n")
+    var ix = corpusLoad(freshBus(), "build/cdup", FixedClock(1))
+    var issues = corpusValidate(ix, "build/cdup")
+    var found = false
+    for (var i in issues) {
+        if (i.kind == "duplicate-id") {
+            found = true
+        }
+    }
+    assert(found)
+}
+main() {
+}

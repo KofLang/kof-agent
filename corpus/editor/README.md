@@ -1,0 +1,3 @@
+# editor
+
+Documentos desta categoria.

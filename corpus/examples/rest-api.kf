@@ -1,0 +1,7 @@
+main() {
+    var app = web.app()
+    app.get("/hello") {
+        return "oi"
+    }
+    app.listen(8080)
+}

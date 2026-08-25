@@ -1,0 +1,21 @@
+test "symbol registry built from frontmatter" {
+    var ix = corpusLoad(freshBus(), CROOT(), FixedClock(1))
+    var docs = corpusSymbolDocs(ix, "spawn")
+    assert(docs.size == 1)
+    assert(docs.get(0) == "lang-spawn")
+}
+
+test "tampered cache rejected by checksum" {
+    var bus = freshBus()
+    var ix = corpusLoad(bus, CROOT(), FixedClock(1))
+    corpusSaveCache(bus, "build/ccache2", ix)
+    var f = File("build/ccache2/corpus.idx")
+    var txt = f.readText()
+    var nl = txt.indexOf("\n")
+    f.delete()
+    f.writeText(txt.substring(0, nl) + "X\n" + txt.substring(nl + 1, txt.length))
+    var back = wsReadVersioned("build/ccache2/corpus.idx", "CRPIDX")
+    assert(back == "")
+}
+main() {
+}

@@ -1,0 +1,83 @@
+CROOT(): String { return "corpus" }
+
+test "load counts all seeded docs" {
+    var ix = corpusLoad(freshBus(), CROOT(), FixedClock(1))
+    assert(ix.docs.size >= 7)
+}
+
+test "frontmatter parsed into meta" {
+    var ix = corpusLoad(freshBus(), CROOT(), FixedClock(1))
+    var d = corpusById(ix, "lang-record")
+    assert(d.meta.title.contains("record"))
+    assert(d.meta.category == "language")
+    assert(d.meta.languageVersion == "0.0.14")
+}
+
+test "checksum computed from file content" {
+    var d = parseCorpusDoc("corpus/language/spawn.md", CROOT())
+    var raw = File("corpus/language/spawn.md").readText()
+    assert(d.checksum == wsHash(raw))
+}
+
+test "checksum changes when content changes" {
+    var before = parseCorpusDoc("corpus/language/spawn.md", CROOT()).checksum
+    mkFile("build/none.txt", "")
+    var after = parseCorpusDoc("build/none.txt", CROOT())
+    assert(after.checksum != before)
+}
+
+test "duplicate ids detected" {
+    mkFile("build/cdup/a.md", "---\nid: dupx\ntitle: A\n---\nA\n")
+    mkFile("build/cdup/b.md", "---\nid: dupx\ntitle: B\n---\nB\n")
+    var ix = corpusLoad(freshBus(), "build/cdup", FixedClock(1))
+    var issues = corpusValidate(ix, "build/cdup")
+    var found = false
+    for (var i in issues) {
+        if (i.kind == "duplicate-id") {
+            found = true
+        }
+    }
+    assert(found)
+}
+
+test "invalid file flagged" {
+    mkFile("build/cinv/raw.md", "sem frontmatter aqui\n")
+    var ix = corpusLoad(freshBus(), "build/cinv", FixedClock(1))
+    var issues = corpusValidate(ix, "build/cinv")
+    var found = false
+    for (var i in issues) {
+        if (i.kind == "invalid-file") {
+            found = true
+        }
+    }
+    assert(found)
+}
+
+test "broken link detected" {
+    var ix = corpusLoad(freshBus(), CROOT(), FixedClock(1))
+    var issues = corpusValidate(ix, CROOT())
+    var found = false
+    for (var i in issues) {
+        if (i.kind == "broken-link" && i.detail.contains("language/spawn.md")) {
+            found = true
+        }
+    }
+    assert(found)
+}
+
+test "valid relative link not flagged" {
+    mkFile("build/cok/a.md", "---\nid: cok-a\ntitle: A\n---\nVide [b](b.md)\n")
+    mkFile("build/cok/b.md", "B\n")
+    var ix = corpusLoad(freshBus(), "build/cok", FixedClock(1))
+    var issues = corpusValidate(ix, "build/cok")
+    var broken = 0
+    for (var i in issues) {
+        if (i.kind == "broken-link") {
+            broken = broken + 1
+        }
+    }
+    assert(broken == 0)
+}
+
+main() {
+}

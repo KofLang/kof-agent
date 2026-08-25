@@ -1,0 +1,3 @@
+# patterns
+
+Documentos desta categoria.

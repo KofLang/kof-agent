@@ -1,0 +1,15 @@
+CROOT(): String { return "corpus" }
+
+test "broken link detected" {
+    var ix = corpusLoad(freshBus(), CROOT(), FixedClock(1))
+    var issues = corpusValidate(ix, CROOT())
+    var found = false
+    for (var i in issues) {
+        if (i.kind == "broken-link" && i.detail.contains("language/spawn.md")) {
+            found = true
+        }
+    }
+    assert(found)
+}
+main() {
+}
