@@ -1,7 +1,7 @@
 # TASKS — Milestone corrente
 
-**Milestone atual:** M2 — Compiler Gateway (não iniciada)
-**Milestones concluídas:** M0 ✅ · M1 ✅
+**Milestone atual:** M3 — Workspace Intelligence (não iniciada)
+**Milestones:** M0 ✅ · M1 ✅ · M2 🟡 (fechada com bloqueios upstream documentados)
 **Última atualização:** 24 de agosto de 2026
 
 ---
@@ -50,8 +50,21 @@ os documentos. **M0 fechada em 24/08/2026.**
 | 1.14 | check_compat.sh (gate anti-miscompile N6–N9) | ✅ |
 | 1.15 | REPORT_M01.md + status.md | ✅ |
 
-Backlog M2 (rascunho): spike Q1 (vias de integração), spec COMPILER_GATEWAY,
-golden tests ≥20 programas, benchmarks p50/p95, REPORT_M02.
+## M2 — Compiler Gateway 🟡 (24/08/2026)
+
+| # | Tarefa | Resultado |
+|---|--------|-----------|
+| 2.1 | Spike Q1: 3 arquiteturas medidas (1000+ ops, p50/p95/p99) | ✅ docs/spikes + native-M02-spike.json |
+| 2.2 | ADR/arquitetura vencedora | ✅ D0016: B' híbrido batch-subprocess |
+| 2.3 | specs/COMPILER_GATEWAY.md | ✅ |
+| 2.4 | Estruturas tipadas + SubprocessGateway + registry + eventos | ✅ compila (95_gateway.kf) |
+| 2.5 | Golden tests ≥20 programas reais | ✅ 20/20 via ponte; 5 gaps semânticos upstream catalogados |
+| 2.6 | Execução in-language do gateway | ❌ bloqueado J2+GW001 (pontes: golden_compiler.sh / bench harness) |
+| 2.7 | REPORT_M02 + status.md | ✅ |
+
+Backlog M3 (rascunho): spec WORKSPACE realista (sem parser paralelo —
+símbolos só quando GW-AST-DUMP abrir), índice incremental por checksum,
+consultas por arquivo/dir, benchmarks de indexação, REPORT_M03.
 
 ## Backlog M1 — Core Runtime (rascunho; será refinado ao abrir a milestone)
 

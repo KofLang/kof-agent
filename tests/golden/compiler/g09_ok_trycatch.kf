@@ -1,0 +1,7 @@
+main() {
+    try {
+        throw "boom"
+    } catch (String e) {
+        println(e)
+    }
+}

@@ -1,0 +1,14 @@
+class User {
+    String name
+    constructor(String n) {
+        name = n
+    }
+    greet(): String {
+        return "hi " + name
+    }
+}
+
+main() {
+    var u = User("Mel")
+    println(u.greet())
+}

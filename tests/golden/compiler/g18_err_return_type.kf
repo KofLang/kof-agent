@@ -1,0 +1,6 @@
+Int f(): String {
+    return 1
+}
+
+main() {
+}

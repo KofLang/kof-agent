@@ -1,0 +1,12 @@
+{
+  "source": "g05_ok_inherit_iface.kf",
+  "expected": {
+    "exit_code": 0,
+    "first_diagnostic_code": "*"
+  },
+  "ast": null,
+  "symbols": null,
+  "semantic": null,
+  "ir": null,
+  "gap": "GW-AST-DUMP"
+}

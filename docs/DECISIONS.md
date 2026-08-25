@@ -127,14 +127,23 @@ vai para "Questões em aberto" — nunca vira comportamento assumido.
 - **Decisão:** proibições de estilo com força de lint via `scripts/check_compat.sh`: sem `+=` em String, sem comparação String-null, sem `continue`, sem confiar em curto-circuito, defs antes do main.
 - **Consequências:** código um pouco mais verboso; cada bug fechado upstream permite remover a regra correspondente.
 
+## D0016 — ADR-001: arquitetura do Compiler Gateway
+- **Data:** 2026-08-24 · **Status:** aceito (baseado em docs/spikes/compiler-gateway-q1.md)
+- **Contexto:** Q1 exigia comparar subprocess vs residente vs embedded. Medido: A=201 ms/op; B' (batch amortizado)=21.8 ms/arquivo (~9×); C bloqueado sem FFI. `process.run` é one-shot (sem pipes) e está quebrado nos DOIS alvos (J2 no JVM, GW001 no native).
+- **Decisão:** interface única `CompilerGateway`; implementação default = SubprocessGateway com política batch por snapshot (B'); Resident/Embedded definidos na interface, implementações desbloqueiam quando upstream fechar GW002/GW003 — sem mudar chamadores.
+- **Consequências:** repair loop da M9 usa check-dir-batched (não per-file); ponte tooling (`golden_compiler.sh`) mantém golden tests verdes hoje; parser de diagnostics é ponte versionada até GW-DIAG-JSON.
+
+## D0017 — Golden tests refletem o compilador real, não o desejado
+- **Data:** 2026-08-24 · **Status:** aceito
+- **Contexto:** bless dos goldens revelou 5 lacunas semânticas (GW-SEM-COVERAGE): programas "que deveriam falhar" passam limpos no 0.0.14.
+- **Decisão:** manifest registra o comportamento OBSERVADO; casos divergentes da doc são renomeados para `_gap_*` com nota e viram itens de upstream. Nada é "consertado" no agente nem mascarado nos testes.
+- **Consequências:** M9 (repair) só pode reparar o que o compilador diagnostica; a lista GW-SEM-COVERAGE vai ao upstream.
+
 ---
 
 # Questões em aberto
 
-## Q1 — Mecanismo de integração com o compilador (M2)
-Subprocess (`kof check --json`) vs protocolo residente (LSP-like) vs API
-embutida futura? Impacta latência do repair loop. **Decidir antes da M2 com
-benchmark das três vias.**
+## ~~Q1~~ ✅ RESOLVIDA (D0016) — benchmark das três vias executado; vencedor: B' híbrido batch-subprocess. Detalhes: docs/spikes/compiler-gateway-q1.md.
 
 ## Q2 — Ponto flutuante no target Native
 O compilador hoje reporta gap FLT001 (sem SSE real no Native). Runtime AI

@@ -1,0 +1,5 @@
+main() {
+    var on = true
+    var s = if (on) "on" else "off"
+    println(s)
+}

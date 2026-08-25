@@ -1,0 +1,126 @@
+gwPrint(CheckResult r) {
+    println(r.toJson())
+}
+
+gwCheck(EventBus bus, String path): Int {
+    var g = SubprocessGateway()
+    var r = g.checkPath(bus, path)
+    gwPrint(r)
+    if (r.ok) {
+        return 0
+    }
+    return 2
+}
+
+gwBuild(EventBus bus, String path, String target): Int {
+    var g = SubprocessGateway()
+    var r = g.buildTarget(bus, path, target)
+    gwPrint(r)
+    if (r.ok) {
+        return 0
+    }
+    return 2
+}
+
+gwSelfTest(): Int {
+    var bus = EventBus()
+    var failures = 0
+
+    var reg = CompatibilityRegistry()
+    var hit = reg.lookup("ld: undefined reference to `String_kof_string_to_int`")
+    if (hit != "N2") {
+        println("selftest FAIL: registry N2 -> " + hit)
+        failures = failures + 1
+    }
+
+    var d = parseCheckLine(":0:0: error: Undefined variable or type: 'z' [SEM011]", "x.kf")
+    if (d.code != "SEM011") {
+        println("selftest FAIL: parse code=" + d.code)
+        failures = failures + 1
+    }
+
+    var s = snapshotDir(".")
+    var snap2 = snapshotDir(".")
+    var dirty = diffSnapshots(s, snap2)
+    if (dirty.size != 0) {
+        println("selftest FAIL: dirty inesperado=" + dirty.size)
+        failures = failures + 1
+    }
+
+    if (failures == 0) {
+        println("{\"selftest\":\"ok\",\"registry\":" + reg.size() + "}")
+        return 0
+    }
+    return 1
+}
+
+gwGolden(String listFile): Int {
+    var bus = EventBus()
+    var lines = loadArgsFile(listFile)
+    var pass = 0
+    var fail = 0
+    for (var line in lines) {
+        var parts = splitStr(line, "|")
+        if (parts.size == 3) {
+            var file = parts.get(0).trim()
+            var wantExit = parseIntStr(parts.get(1).trim())
+            var wantCode = parts.get(2).trim()
+            var g = SubprocessGateway()
+            var r = g.checkPath(bus, file)
+            var gotCode = ""
+            if (r.diagnostics.size > 0) {
+                gotCode = r.diagnostics.get(0).code
+            }
+            var okExit = (r.exitCode == wantExit)
+            var okCode = (wantCode == "*" || gotCode == wantCode)
+            if (okExit && okCode) {
+                pass = pass + 1
+                println("PASS " + file)
+            } else {
+                fail = fail + 1
+                println("FAIL " + file + " wantExit=" + wantExit + " gotExit=" + r.exitCode + " wantCode=" + wantCode + " gotCode=" + gotCode)
+            }
+        }
+    }
+    println("golden: " + pass + " passed, " + fail + " failed")
+    if (fail == 0) {
+        return 0
+    }
+    return 1
+}
+
+main() {
+    var argv = loadArgsFile(".kofargs")
+    var code = 0
+    try {
+        var cmd = "help"
+        var a1 = ""
+        var a2 = ""
+        if (argv.size > 0) {
+            cmd = argv.get(0)
+        }
+        if (argv.size > 1) {
+            a1 = argv.get(1)
+        }
+        if (argv.size > 2) {
+            a2 = argv.get(2)
+        }
+        var bus = EventBus()
+        if (cmd == "check") {
+            code = gwCheck(bus, a1)
+        } else if (cmd == "build") {
+            code = gwBuild(bus, a1, a2)
+        } else if (cmd == "selftest") {
+            code = gwSelfTest()
+        } else if (cmd == "golden") {
+            code = gwGolden(a1)
+        } else {
+            println("kof-agent-gateway: comandos = check <file> | build <file> <target> | selftest | golden <list>")
+            code = 1
+        }
+    } catch (String e) {
+        println("gateway error: " + e)
+        code = 1
+    }
+    process.exit(code)
+}

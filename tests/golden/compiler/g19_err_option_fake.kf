@@ -1,0 +1,3 @@
+main() {
+    var o = Option.of(1)
+}

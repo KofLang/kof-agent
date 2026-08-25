@@ -1,0 +1,244 @@
+record RangeRec(Int startLine, Int startCol, Int endLine, Int endCol)
+record LocationRec(String file, RangeRec range)
+record DiagnosticRec(String code, String severity, String message, LocationRec location, String workaroundId)
+record SymbolRec(String name, String kind, String visibility, String gapNote)
+record ModuleInfoRec(String path, Bool checked, Int diagCount, Bool ok)
+record FileHashRec(String path, Int hash)
+record SnapshotRec(String root, List<FileHashRec> files)
+record GatewayEventRec(String event, String detail)
+
+GW_UNKNOWN_LOCATION(): LocationRec {
+    return LocationRec("", RangeRec(0, 0, 0, 0))
+}
+
+hashString(String s): Int {
+    var h = 5381
+    var i = 0
+    while (i < s.length) {
+        h = h * 33 + s.charAt(i)
+        i = i + 1
+    }
+    return h
+}
+
+snapshotDir(String dir): SnapshotRec {
+    var snaps = listOf<FileHashRec>()
+    var d = Directory(dir)
+    if (!d.exists() || !d.isDirectory()) {
+        return SnapshotRec(dir, snaps)
+    }
+    var names = d.list()
+    for (var n in names) {
+        var child = joinPath(dir, n)
+        var f = File(child)
+        if (f.isFile()) {
+            var txt = f.readText()
+            snaps.add(FileHashRec(child, hashString(txt)))
+        }
+    }
+    return SnapshotRec(dir, snaps)
+}
+
+diffSnapshots(SnapshotRec before, SnapshotRec after): List<String> {
+    var dirty = listOf<String>()
+    for (var fh in after.files) {
+        var found = false
+        var old = 0
+        for (var b in before.files) {
+            if (b.path == fh.path) {
+                found = true
+                old = b.hash
+            }
+        }
+        if (!found || old != fh.hash) {
+            dirty.add(fh.path)
+        }
+    }
+    return dirty
+}
+
+class WorkaroundEntry {
+    String signature
+    String bugId
+    String fix
+    constructor(String sig, String id, String f) {
+        signature = sig
+        bugId = id
+        fix = f
+    }
+}
+
+class CompatibilityRegistry {
+    List<WorkaroundEntry> entries = listOf<WorkaroundEntry>()
+
+    constructor() {
+        entries.add(WorkaroundEntry("String_kof_string_to_int", "N2", "agent/runtime/00_core.kf parseIntStr"))
+        entries.add(WorkaroundEntry(".split(", "N4", "agent/runtime/00_core.kf splitStr"))
+        entries.add(WorkaroundEntry("kof_sec_secret_get", "SEC-BUG13", "secrets nativo: env scan proprio"))
+        entries.add(WorkaroundEntry("CONC001", "CONC001", "spawn indisponivel no native: scheduler worker unico"))
+        entries.add(WorkaroundEntry("FLT001", "Q2", "FP nativo sem SSE: caminho JVM/HAL"))
+    }
+
+    lookup(String message): String {
+        for (var w in entries) {
+            if (message.contains(w.signature)) {
+                return w.bugId
+            }
+        }
+        return ""
+    }
+
+    size(): Int {
+        return entries.size
+    }
+}
+
+parseCheckLine(String line, String srcLabel): DiagnosticRec {
+    var sev = "error"
+    var body = line
+    if (line.contains(" warning: ")) {
+        sev = "warning"
+        body = line.substring(line.indexOf(" warning: ") + 10, line.length)
+    } else if (line.contains(" error: ")) {
+        body = line.substring(line.indexOf(" error: ") + 8, line.length)
+    } else {
+        return DiagnosticRec("GW-UNPARSED", sev, line, LocationRec(srcLabel, RangeRec(0, 0, 0, 0)), "")
+    }
+    var code = ""
+    var msg = body
+    if (body.endsWith("]") && body.lastIndexOf("[") >= 0) {
+        var open = body.lastIndexOf("[")
+        code = body.substring(open + 1, body.length - 1)
+        msg = body.substring(0, open).trim()
+    }
+    return DiagnosticRec(code, sev, msg, LocationRec(srcLabel, RangeRec(0, 0, 0, 0)), "")
+}
+
+class CheckResult {
+    Bool ok = false
+    Int exitCode = 0
+    Long durationMs = 0
+    String target = ""
+    List<DiagnosticRec> diagnostics = listOf<DiagnosticRec>()
+
+    diagCount(): Int {
+        return diagnostics.size
+    }
+
+    codesJson(): String {
+        var out = "["
+        var first = true
+        for (var d in diagnostics) {
+            if (!first) {
+                out = out + ","
+            }
+            first = false
+            out = out + "\"" + escapeJson(d.code) + "\""
+        }
+        out = out + "]"
+        return out
+    }
+
+    toJson(): String {
+        var out = "{\"ok\":" + ok + ",\"exitCode\":" + exitCode
+        out = out + ",\"durationMs\":" + durationMs
+        out = out + ",\"diagnostics\":["
+        var first = true
+        for (var d in diagnostics) {
+            if (!first) {
+                out = out + ","
+            }
+            first = false
+            var w = d.workaroundId
+            var wj = ""
+            if (w != "") {
+                wj = ",\"workaround\":\"" + escapeJson(w) + "\""
+            }
+            out = out + "{\"code\":\"" + escapeJson(d.code) + "\",\"severity\":\"" + d.severity + "\",\"msg\":\"" + escapeJson(d.message) + "\",\"file\":\"" + escapeJson(d.location.file) + "\"" + wj + "}"
+        }
+        out = out + "]}"
+        return out
+    }
+}
+
+parseLongStr(String s): Long {
+    var n = 0
+    var i = 0
+    while (i < s.length) {
+        var c = s.charAt(i)
+        if (c >= 48 && c <= 57) {
+            n = n * 10 + (c - 48)
+        }
+        i = i + 1
+    }
+    return n
+}
+
+jvmNowMs(): Long {
+    var r = process.run("date", "+%s%N")
+    return parseLongStr(r.stdout.trim()) / 1000000
+}
+
+class SubprocessGateway {
+    String kofPath = "kof"
+    CompatibilityRegistry registry = CompatibilityRegistry()
+
+    emitDiagnostics(EventBus bus, CheckResult r) {
+        bus.publish("compiler.diagnostics", r.codesJson())
+    }
+
+    checkPath(EventBus bus, String path): CheckResult {
+        bus.publish("compiler.started", path)
+        var r = CheckResult()
+        var t0 = jvmNowMs()
+        var res = process.run(kofPath, "check", path)
+        r.durationMs = jvmNowMs() - t0
+        r.exitCode = res.exitCode
+        r.ok = res.exitCode == 0
+        var raw = res.stdout + res.stderr
+        var lines = splitStr(raw, "\n")
+        for (var ln in lines) {
+            var t = ln.trim()
+            if (t.length > 0 && t.contains(": error: ")) {
+                var d = parseCheckLine(t, path)
+                var w = registry.lookup(d.message)
+                var wd = ""
+                if (w != "") {
+                    wd = w
+                }
+                r.diagnostics.add(DiagnosticRec(d.code, d.severity, d.message, d.location, wd))
+            }
+        }
+        if (r.ok) {
+            bus.publish("build.succeeded", path)
+        } else {
+            bus.publish("build.failed", r.codesJson())
+        }
+        emitDiagnostics(bus, r)
+        bus.publish("compiler.finished", path)
+        return r
+    }
+
+    buildTarget(EventBus bus, String path, String target): CheckResult {
+        bus.publish("compiler.started", "build " + path + " [" + target + "]")
+        var r = CheckResult()
+        r.target = target
+        var t0 = jvmNowMs()
+        var res = process.run(kofPath, "build", path, "--target", target)
+        r.durationMs = jvmNowMs() - t0
+        r.exitCode = res.exitCode
+        r.ok = res.exitCode == 0
+        if (r.ok) {
+            bus.publish("build.succeeded", path)
+        } else {
+            bus.publish("build.failed", res.stderr)
+        }
+        return r
+    }
+
+    runProgram(EventBus bus, String path): String {
+        bus.publish("compiler.started", "run " + path)
+        var res = process.run(kofPath, "run", path)
+        return res.stdout
+    }
+}

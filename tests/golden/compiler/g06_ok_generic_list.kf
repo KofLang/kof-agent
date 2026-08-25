@@ -1,0 +1,5 @@
+main() {
+    var l = listOf(1, 2, 3)
+    l.add(4)
+    assert(l.size == 4)
+}

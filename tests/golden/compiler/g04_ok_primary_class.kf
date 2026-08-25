@@ -1,0 +1,10 @@
+class Session(String id) {
+    label(): String {
+        return id
+    }
+}
+
+main() {
+    var s = Session("a1")
+    println(s.label())
+}

@@ -17,12 +17,16 @@ PARTS=(
   agent/runtime/90_runtime.kf
 )
 
-# usage: build.sh <entry.kf> <out.kf>
+# usage: build.sh <entry.kf> <out.kf> [--with-gateway]
 ENTRY="$1"
 OUT="$2"
 mkdir -p "$(dirname "$ROOT/$OUT")"
 : > "$ROOT/$OUT"
-for p in "${PARTS[@]}"; do
+SELECTED=("${PARTS[@]}")
+if [ "${3:-}" = "--with-gateway" ]; then
+  SELECTED+=("agent/runtime/95_gateway.kf")
+fi
+for p in "${SELECTED[@]}"; do
   cat "$ROOT/$p" >> "$ROOT/$OUT"
   printf '\n' >> "$ROOT/$OUT"
 done

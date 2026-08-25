@@ -1,0 +1,5 @@
+main() {
+    var s = "kof"
+    assert(s == "kof")
+    assert(s.length == 3)
+}

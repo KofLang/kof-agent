@@ -61,7 +61,7 @@ Projeto em fase de fundação (**Milestone 0** — documentação de engenharia)
 |-----------|------|--------|
 | M0 | Fundação (docs + árvore) | ✅ |
 | M1 | Core Runtime | ✅ |
-| M2 | Compiler Gateway | ⬜ |
+| M2 | Compiler Gateway | 🟡 (ponte ativa; execução in-language aguarda upstream) |
 | M3 | Workspace Intelligence | ⬜ |
 | M4 | Tool API | ⬜ |
 | M5 | Corpus Engine | ⬜ |

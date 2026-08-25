@@ -1,0 +1,13 @@
+{
+  "source": "g11_gap_unassigned_var.kf",
+  "expected": {
+    "exit_code": 0,
+    "first_diagnostic_code": "*"
+  },
+  "ast": null,
+  "symbols": null,
+  "semantic": null,
+  "ir": null,
+  "gap": "GW-SEM-COVERAGE",
+  "note": "UPSTREAM SEMANTIC GAP: compilador 0.0.14 aceita este programa sem diagnostico"
+}

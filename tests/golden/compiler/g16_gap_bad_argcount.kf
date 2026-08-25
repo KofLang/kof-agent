@@ -1,0 +1,5 @@
+record P(Int a)
+
+main() {
+    var p = P()
+}

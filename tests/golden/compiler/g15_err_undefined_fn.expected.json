@@ -1,0 +1,12 @@
+{
+  "source": "g15_err_undefined_fn.kf",
+  "expected": {
+    "exit_code": 1,
+    "first_diagnostic_code": "*"
+  },
+  "ast": null,
+  "symbols": null,
+  "semantic": null,
+  "ir": null,
+  "gap": "GW-AST-DUMP"
+}

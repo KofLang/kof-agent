@@ -6,8 +6,8 @@
 > vence: implementação → testes → este arquivo → demais docs.
 
 **Última atualização:** 24 de agosto de 2026
-**Milestone corrente:** M2 — Compiler Gateway (não iniciada)
-**Milestones concluídas:** M0 — Fundação ✅ · M1 — Core Runtime ✅
+**Milestone corrente:** M3 — Workspace Intelligence (não iniciada)
+**Milestones:** M0 ✅ · M1 ✅ · **M2 🟡 Parcial (bloqueios upstream J2/GW001; ponte tooling operacional)**
 
 ---
 
@@ -19,7 +19,24 @@
 | Código | runtime completo em Kof: 9 partes + CLI (~2.6k linhas), compila no **Native** |
 | Suíte | **11/11 suítes verdes** (39 testes estruturados + 2 stress), target native |
 | Benchmarks | baseline `native-M01`: init **120 µs**, scheduler ~143k tasks/s, bus ~56k ops/s, logger ~19.6k l/s, pool ~141k t/s |
-| Próxima ação | spike Q1 (vias de integração com o compilador) + `specs/COMPILER_GATEWAY.md` |
+| Próxima ação | M3: índice persistente incremental (base SnapshotRec/diff pronta) |
+| Gateway Q1 | ✅ decidido (D0016): B' híbrido batch-subprocess — A=201ms/op, B'=21.8ms/arq, C bloqueado |
+
+## M2 — Compiler Gateway 🟡 (24/08/2026)
+
+Entregue: spec completa (`specs/COMPILER_GATEWAY.md`); API tipada estabilizada
+e compilando (`95_gateway.kf`: DiagnosticRec/Location/Symbol/Snapshot/
+CheckResult + CompatibilityRegistry + eventos); spike Q1 executado e
+documentado (`docs/spikes/compiler-gateway-q1.md`,
+`benchmarks/native-M02-spike.json`); golden suite **20/20 verde**
+(`scripts/golden_compiler.sh`, manifest = verdade observada).
+
+Bloqueado por upstream (execução in-language): `process.run` quebra o gerador
+JVM (**J2**, novo) e não existe no Native (**GW001**) → ponte tooling mantém
+golden/benchmarks funcionais. Achado crítico: **GW-SEM-COVERAGE** — 5 classes
+de erro documentadas que o 0.0.14 NÃO emite (var inexistente, type mismatch
+em decl, método inexistente, aridade, dup decl) — catalogadas SC1..SC5 para
+upstream; repair loop (M9) só poderá reparar o que o compilador diagnosticar.
 
 ## M1 — Core Runtime ✅ (concluída em 24/08/2026)
 
@@ -56,8 +73,9 @@ sincronizados.
 
 ## Questões em aberto
 
-- **Q1** mecanismo do Compiler Gateway (subprocess vs residente vs embutido)
-  — decidir na abertura da M2 com benchmark das vias. **É o próximo passo.**
+- ~~Q1~~ ✅ resolvida (D0016). Novas questões: GW002 (pipes p/ residente),
+  GW003 (FFI p/ embedded), GW-DIAG-JSON/GW-AST-DUMP (canais estruturados do
+  compilador) — todas upstream, rastreadas em specs/COMPILER_GATEWAY.md §9.
 - **Q2** FP/SIMD no Native para o Runtime AI (FLT001 upstream) — revisar na
   M10; spike antecipado recomendado após M6.
 - **Q3** Map/Set ausentes — padrão List<record> mantido.
@@ -108,3 +126,4 @@ N8 (&&/|| sem curto-circuito) · N9 (+= String perde acumulador) · N10
 |------|--------|
 | 2026-08-24 | M0 concluída; repo publicado; status.md criado |
 | 2026-08-24 | M1 concluída: runtime nativo completo, 11 suítes verdes, baselines registrados, 10 bugs do compilador documentados |
+| 2026-08-24 | M2 🟡: gateway tipado + ADR-001 (B' híbrido) + goldens 20/20 via ponte; J2 e SC1–SC5 descobertos; execução in-language aguarda upstream |

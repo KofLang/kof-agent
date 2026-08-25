@@ -1,0 +1,6 @@
+record Point(Int x, Int y)
+
+main() {
+    var p = Point(3, 7)
+    println(p.x())
+}

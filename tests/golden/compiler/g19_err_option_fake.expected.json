@@ -1,0 +1,12 @@
+{
+  "source": "g19_err_option_fake.kf",
+  "expected": {
+    "exit_code": 1,
+    "first_diagnostic_code": "*"
+  },
+  "ast": null,
+  "symbols": null,
+  "semantic": null,
+  "ir": null,
+  "gap": "GW-AST-DUMP"
+}

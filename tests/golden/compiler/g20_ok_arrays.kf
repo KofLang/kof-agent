@@ -1,0 +1,5 @@
+main() {
+    var arr = new Int[3]
+    arr[0] = 9
+    assert(arr[0] == 9)
+}

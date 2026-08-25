@@ -1,0 +1,14 @@
+interface Speaker {
+    speak(): String
+}
+
+class Animal implements Speaker {
+    speak(): String {
+        return "..."
+    }
+}
+
+main() {
+    var a: Speaker = Animal()
+    println(a.speak())
+}

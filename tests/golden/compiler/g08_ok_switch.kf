@@ -1,0 +1,9 @@
+main() {
+    var d = 2
+    switch (d) {
+        case 1:
+            println("um")
+        case 2:
+            println("dois")
+    }
+}

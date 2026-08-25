@@ -1,0 +1,12 @@
+{
+  "source": "g20_ok_arrays.kf",
+  "expected": {
+    "exit_code": 0,
+    "first_diagnostic_code": "*"
+  },
+  "ast": null,
+  "symbols": null,
+  "semantic": null,
+  "ir": null,
+  "gap": "GW-AST-DUMP"
+}

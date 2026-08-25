@@ -1,0 +1,61 @@
+{
+  "_meta": {
+    "date": "2026-08-25T01:09:22.921035Z",
+    "kof": "0.0.14-alpha",
+    "target_of_agent": "native",
+    "gateway_host_target": "jvm (process.run indispon\u00edvel no native \u2014 GW001)",
+    "op_definition_A": "1 op = kof check de 1 arquivo via processo novo",
+    "op_definition_B": "1 JVM valida diret\u00f3rio com 10 arquivos; custo por arquivo amortizado"
+  },
+  "A_subprocess_per_op_ms": {
+    "n": 250,
+    "p50": 201,
+    "p95": 206,
+    "p99": 208,
+    "min": 195,
+    "max": 210,
+    "mean": 201.2
+  },
+  "B_resident_amortized": {
+    "batch_total_ms_10files": {
+      "n": 60,
+      "p50": 217,
+      "p95": 222,
+      "p99": 223,
+      "min": 211,
+      "max": 226,
+      "mean": 217.7
+    },
+    "per_file_us": {
+      "n": 60,
+      "p50": 21784,
+      "p95": 22285,
+      "p99": 22339,
+      "min": 21156,
+      "max": 22664,
+      "mean": 21822.5
+    },
+    "incremental_touch1_check_dir_ms": {
+      "n": 30,
+      "p50": 219,
+      "p95": 224,
+      "p99": 226,
+      "min": 214,
+      "max": 226,
+      "mean": 218.4
+    },
+    "large_project_50_files_ms": {
+      "n": 15,
+      "p50": 254,
+      "p95": 258,
+      "p99": 260,
+      "min": 247,
+      "max": 260,
+      "mean": 253.7
+    }
+  },
+  "C_embedded": {
+    "status": "BLOCKED",
+    "reason": "Kof 0.0.14 sem FFI/Java-interop para incorporar o compilador em bin\u00e1rio nativo (GW003)"
+  }
+}

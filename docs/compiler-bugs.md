@@ -18,6 +18,12 @@ Ambiente: kof 0.0.14-alpha, JDK 25 (build), binutils 2.46, Linux x86_64.
 | N7 | Native | `continue` dentro de `for-in`/`while` → **loop infinito** | loop com `if (x.length == 0) { continue }` | Proibido `continue`; reestruturar com flags/if aninhados |
 | N8 | Native | `||` e `&&` **sem curto-circuito**: lado direito avaliado mesmo quando o esquerdo decide | `s.length == 0 || s.substring(0,1) == "#"` com `s=""` → bounds error | Aninhar ifs sempre que o RHS puder falhar |
 | N9 | Native | Acúmulo com `+=` sobre String perde o acumulador (resultado = última atribuição) dentro de funções | `out += s.substring(i, i+1)` em while → retorna último char | Sempre `out = out + expr`; gate do check_compat |
+| J2 | JVM | `process.run(...)` → mesmo COMP001 do J1 (seção web do runtime-template corrompida é puxada por process) | `main(){ process.run("echo","hi") }` jvm | Gateway in-language bloqueado; ponte tooling (scripts/golden_compiler.sh) |
+| SC1 | ambos | Cobertura semântica: atribuição a variável inexistente compila limpa | `main(){ y = 5 }` | registrado GW-SEM-COVERAGE (upstream feature gap) |
+| SC2 | ambos | `Int x = "texto"` sem diagnóstico | declaração tipada com tipo errado | idem |
+| SC3 | ambos | chamada a método inexistente compila | `s.naoExiste()` | idem |
+| SC4 | ambos | construtor com aridade errada compila | `P()` para `record P(Int a)` | idem |
+| SC5 | ambos | redeclaração de variável local compila | `var x=1; var x=2` | idem |
 | N10 | Native | Miscompile **dependente de posição/tamanho**: mesma construção funciona num programa pequeno e gera `array index out of bounds` espúrio (condição Int correta) em programa grande | `parseInto` com `indexOf`+`substring` crashava só no artefato completo; isolado passava | Reescrever com `splitStr`; manter funções críticas pequenas; se sintoma reaparecer, bisect por truncamento do translation-unit |
 
 ## Notas
