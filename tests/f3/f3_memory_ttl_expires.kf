@@ -1,0 +1,15 @@
+test "memory put get" {
+    var m = MemoryLayer(FixedClock(100))
+    m.put("k1", "session", "v1", 0)
+    assert(m.get("k1") == "v1")
+}
+
+test "memory ttl expires" {
+    var c = FixedClock(100)
+    var m = MemoryLayer(c)
+    m.put("k", "s", "v", 50)
+    c.advance(51)
+    assert(m.get("k") == "")
+}
+main() {
+}

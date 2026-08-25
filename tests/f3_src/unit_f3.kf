@@ -1,0 +1,78 @@
+test "memory put get" {
+    var m = MemoryLayer(FixedClock(100))
+    m.put("k1", "session", "v1", 0)
+    assert(m.get("k1") == "v1")
+}
+
+test "memory ttl expires" {
+    var c = FixedClock(100)
+    var m = MemoryLayer(c)
+    m.put("k", "s", "v", 50)
+    c.advance(51)
+    assert(m.get("k") == "")
+}
+
+test "memory purge removes expired" {
+    var c = FixedClock(100)
+    var m = MemoryLayer(c)
+    m.put("a", "s", "1", 10)
+    m.put("b", "s", "2", 0)
+    c.advance(11)
+    var n = m.purgeExpired()
+    assert(n == 1 && m.get("b") == "2")
+}
+
+test "memory search finds by value" {
+    var m = MemoryLayer(FixedClock(1))
+    m.put("sym:spawn", "semantic", "doc sobre spawn", 0)
+    var r = memSearch(m, "spawn")
+    assert(r.size == 1)
+}
+
+test "memory snapshot restore roundtrip" {
+    var m = MemoryLayer(FixedClock(1))
+    m.put("x", "episodic", "hello world", 0)
+    assert(m.snapshotTo("build/mem_snap"))
+    var m2 = MemoryLayer(FixedClock(1))
+    assert(m2.restoreFrom("build/mem_snap"))
+    assert(m2.get("x") == "hello world")
+}
+
+test "conversation add and window" {
+    var cv = ConversationEngine(FixedClock(1))
+    var i = 0
+    while (i < 25) {
+        cv.add("user", "msg" + i)
+        i = i + 1
+    }
+    assert(cv.turns.size == 20)
+    var win = cv.contextWindow(5)
+    assert(win.size == 5)
+}
+
+test "summarize older returns removed prefix" {
+    var cv = ConversationEngine(FixedClock(1))
+    cv.add("user", "primeira")
+    cv.add("agent", "segunda")
+    var s = cv.summarizeOlder(1)
+    assert(s.contains("primeira"))
+}
+
+test "cite finds by seq" {
+    var cv = ConversationEngine(FixedClock(1))
+    cv.add("user", "encontrada")
+    assert(cv.cite(1).contains("encontrada"))
+    assert(cv.cite(999) == "")
+}
+
+test "prompt builder sections" {
+    mkFile("build/pb_corpus/x.md", "---\nid: pb-x\ntitle: X\n---\nconteudo x\n")
+    var ix = corpusLoad(freshBus(), "build/pb_corpus", FixedClock(1))
+    var cv = ConversationEngine(FixedClock(1))
+    cv.add("user", "pergunta sobre x")
+    var p = promptBuild(ix, cv, "x")
+    assert(p.contains("## Query"))
+    assert(p.contains("pb-x"))
+}
+main() {
+}

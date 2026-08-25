@@ -1,4 +1,19 @@
-record MemEntry(String key, String kind, String value, Int checksum, Long createdAt, Long expiresAt)
+class MemEntry {
+    String key = ""
+    String kind = ""
+    String value = ""
+    Int checksum = 0
+    Long createdAt = 0
+    Long expiresAt = 0
+    constructor(String k, String kd, String v, Int ck, Long ca, Long ea) {
+        key = k
+        kind = kd
+        value = v
+        checksum = ck
+        createdAt = ca
+        expiresAt = ea
+    }
+}
 
 class MemoryLayer {
     List<MemEntry> entries = listOf<MemEntry>()
@@ -10,7 +25,7 @@ class MemoryLayer {
 
     put(String key, String kind, String value, Long ttlMs) {
         remove(key)
-        var exp = 0
+        var exp: Long = 0
         if (ttlMs > 0) {
             exp = clock.nowMs() + ttlMs
         }
@@ -115,4 +130,18 @@ class MemoryLayer {
         }
         return "{\"episodic\":" + ep + ",\"semantic\":" + sem + ",\"session\":" + ses + ",\"total\":" + entries.size + "}"
     }
+}
+
+memSearch(MemoryLayer m, String needle): List<MemEntry> {
+    var out = listOf<MemEntry>()
+    for (var e in m.entries) {
+        if (e.value.contains(needle) || e.key.contains(needle)) {
+            out.add(e)
+        }
+    }
+    return out
+}
+
+interface EmbeddingsProvider {
+    embed(text: String): List<Int>
 }

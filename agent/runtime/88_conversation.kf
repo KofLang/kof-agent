@@ -21,7 +21,7 @@ class ConversationEngine {
         }
     }
 
-    summarizeOlder(keepRecent): String {
+    summarizeOlder(Int keepRecent): String {
         var out = ""
         var start = 0
         var cut = turns.size - keepRecent
@@ -69,4 +69,27 @@ class ConversationEngine {
     statsJson(): String {
         return "{\"turns\":" + turns.size + ",\"window\":" + windowSize + "}"
     }
+}
+
+class PromptBuilder {
+    List<String> parts = listOf<String>()
+    constructor() {
+    }
+    addSection(String title, String body) {
+        parts.add("## " + title + "\n" + body)
+    }
+    build(): String {
+        return wsJoin(parts, "\n\n")
+    }
+}
+
+promptBuild(CorpusIndex ix, ConversationEngine conv, String query): String {
+    var pb = PromptBuilder()
+    pb.addSection("Query", query)
+    pb.addSection("Historico", conv.summarizeOlder(10))
+    var hits = corpusSearchKeyword(ix, retLower(query))
+    for (var h in hits) {
+        pb.addSection(h.meta.id, h.body)
+    }
+    return pb.build()
 }

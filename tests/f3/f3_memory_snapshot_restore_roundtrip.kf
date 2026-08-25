@@ -1,0 +1,16 @@
+test "memory put get" {
+    var m = MemoryLayer(FixedClock(100))
+    m.put("k1", "session", "v1", 0)
+    assert(m.get("k1") == "v1")
+}
+
+test "memory snapshot restore roundtrip" {
+    var m = MemoryLayer(FixedClock(1))
+    m.put("x", "episodic", "hello world", 0)
+    assert(m.snapshotTo("build/mem_snap"))
+    var m2 = MemoryLayer(FixedClock(1))
+    assert(m2.restoreFrom("build/mem_snap"))
+    assert(m2.get("x") == "hello world")
+}
+main() {
+}

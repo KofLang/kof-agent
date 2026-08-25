@@ -43,3 +43,22 @@ orchFuse(CorpusIndex ix, MemoryLayer mem, String query, Int topK, Int maxChars):
     out = out + "]}"
     return out
 }
+
+orchExplain(String ctxJson): String {
+    return "Contexto montado por fusao corpus+memory com dedup por id e orcamento de caracteres. Fontes em ordem de score."
+}
+
+orchProvenance(String ctxJson): List<String> {
+    var prov = listOf<String>()
+    var parts = splitStr(ctxJson, "{\"source\":\"")
+    var i = 1
+    while (i < parts.size) {
+        var seg = parts.get(i)
+        var q1 = seg.indexOf("\"")
+        if (q1 > 0) {
+            prov.add(seg.substring(0, q1))
+        }
+        i = i + 1
+    }
+    return prov
+}

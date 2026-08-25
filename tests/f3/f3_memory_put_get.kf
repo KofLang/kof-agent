@@ -1,0 +1,13 @@
+test "memory put get" {
+    var m = MemoryLayer(FixedClock(100))
+    m.put("k1", "session", "v1", 0)
+    assert(m.get("k1") == "v1")
+}
+
+test "memory put get" {
+    var m = MemoryLayer(FixedClock(100))
+    m.put("k1", "session", "v1", 0)
+    assert(m.get("k1") == "v1")
+}
+main() {
+}

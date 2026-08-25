@@ -1,0 +1,17 @@
+test "memory put get" {
+    var m = MemoryLayer(FixedClock(100))
+    m.put("k1", "session", "v1", 0)
+    assert(m.get("k1") == "v1")
+}
+
+test "memory purge removes expired" {
+    var c = FixedClock(100)
+    var m = MemoryLayer(c)
+    m.put("a", "s", "1", 10)
+    m.put("b", "s", "2", 0)
+    c.advance(11)
+    var n = m.purgeExpired()
+    assert(n == 1 && m.get("b") == "2")
+}
+main() {
+}
