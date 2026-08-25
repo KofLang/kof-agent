@@ -1,0 +1,14 @@
+test "tokenizer splits words and digits" {
+    var t = tkTokenize("abc123 def")
+    assert(t.size == 2)
+    assert(t.get(0) == "abc123")
+}
+
+test "encode deterministic ids" {
+    var v = Vocab()
+    var a = tkEncode(v, "spawn spawn task")
+    assert(a.size == 3)
+    assert(a.get(0) == a.get(1))
+}
+main() {
+}

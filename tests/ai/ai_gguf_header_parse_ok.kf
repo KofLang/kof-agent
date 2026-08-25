@@ -1,0 +1,15 @@
+test "tokenizer splits words and digits" {
+    var t = tkTokenize("abc123 def")
+    assert(t.size == 2)
+    assert(t.get(0) == "abc123")
+}
+
+test "gguf header parse ok" {
+    mkFile("build/m.gguf", "GGUF03012rest")
+    var g = ggufParseHeader("build/m.gguf")
+    assert(g.magicOk)
+    assert(g.version == 3)
+    assert(g.nTensors == 12)
+}
+main() {
+}

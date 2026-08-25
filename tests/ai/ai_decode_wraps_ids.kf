@@ -1,0 +1,13 @@
+test "tokenizer splits words and digits" {
+    var t = tkTokenize("abc123 def")
+    assert(t.size == 2)
+    assert(t.get(0) == "abc123")
+}
+
+test "decode wraps ids" {
+    var ids = listOf<Int>()
+    ids.add(7)
+    assert(tkDecode(ids).contains("<7>"))
+}
+main() {
+}

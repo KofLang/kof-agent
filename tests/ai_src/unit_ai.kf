@@ -1,0 +1,77 @@
+test "tokenizer splits words and digits" {
+    var t = tkTokenize("abc123 def")
+    assert(t.size == 2)
+    assert(t.get(0) == "abc123")
+}
+
+test "tokenizer empty" {
+    assert(tkTokenize("").size == 0)
+}
+
+test "vocab build dedups" {
+    var ix = CorpusIndex()
+    var d = CorpusDoc()
+    d.meta.id = "v1"
+    d.meta.title = "alpha beta"
+    d.body = "alpha gamma"
+    ix.docs.add(d)
+    var v = vocabBuildFromCorpus(ix)
+    assert(v.size() == 3)
+}
+
+test "encode deterministic ids" {
+    var v = Vocab()
+    var a = tkEncode(v, "spawn spawn task")
+    assert(a.size == 3)
+    assert(a.get(0) == a.get(1))
+}
+
+test "decode wraps ids" {
+    var ids = listOf<Int>()
+    ids.add(7)
+    assert(tkDecode(ids).contains("<7>"))
+}
+
+test "sampler topk deterministic with same seed" {
+    var lg = new Int[4]
+    lg[0] = 5
+    lg[1] = 9
+    lg[2] = 1
+    lg[3] = 9
+    var a = samplerTopK(lg, 4, 2, 42)
+    var b = samplerTopK(lg, 4, 2, 42)
+    assert(a == b)
+    assert(a == 1 || a == 3)
+}
+
+test "tensor set get roundtrip" {
+    var t = tensorNew(2, 3)
+    tensorSet(t, 1, 2, 42)
+    assert(tensorGet(t, 1, 2) == 42)
+}
+
+test "tensor matmul identity" {
+    var i = tensorNew(2, 2)
+    tensorSet(i, 0, 0, 1)
+    tensorSet(i, 1, 1, 1)
+    var m = tensorNew(2, 2)
+    tensorSet(m, 0, 1, 5)
+    tensorSet(m, 1, 0, 7)
+    var r = tensorMatMul(i, m)
+    assert(tensorGet(r, 0, 1) == 5 && tensorGet(r, 1, 0) == 7)
+}
+
+test "gguf header parse ok" {
+    mkFile("build/m.gguf", "GGUF03012rest")
+    var g = ggufParseHeader("build/m.gguf")
+    assert(g.magicOk)
+    assert(g.version == 3)
+    assert(g.nTensors == 12)
+}
+
+test "gguf missing file not magic" {
+    var g = ggufParseHeader("build/nope.gguf")
+    assert(g.magicOk == false)
+}
+main() {
+}

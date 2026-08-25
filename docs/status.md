@@ -6,8 +6,8 @@
 > vence: implementação → testes → este arquivo → demais docs.
 
 **Última atualização:** 24 de agosto de 2026
-**Milestone corrente:** ESTABILIZAÇÃO pós-fixes upstream (baseline HEAD 4954622) → colher M3–M9 → depois M10 Runtime AI
-**Milestones:** M0 ✅ · M1 ✅ · M2–M9 🟡 (código completo; verificação nativa bloqueada por N10 PROGRESSIVO)
+**Milestone corrente:** M11 — Universal Compute HAL (M10 🟡 core verde 10/10)
+**Milestones:** M0 ✅ · M1 ✅ · M2–M9 🟡 · **M10 🟡 core 10/10 nativo**
 
 ---
 
@@ -146,6 +146,7 @@ N8 (&&/|| sem curto-circuito) · N9 (+= String perde acumulador) · N10
 | 2026-08-24 | M0 concluída; repo publicado; status.md criado |
 | 2026-08-24 | M1 concluída: runtime nativo completo, 11 suítes verdes, baselines registrados, 10 bugs do compilador documentados |
 | 2026-08-24 | M2 🟡: gateway tipado + ADR-001 (B' híbrido) + goldens 20/20 via ponte; J2 e SC1–SC5 descobertos; execução in-language aguarda upstream |
+| 2026-08-24 | M10 🟡: runtime ai core (tokenizer/vocab/sampler/tensor-int/gguf-header) 10/10 nativo |
 | 2026-08-24 | M9 🟡: executor/rollback/repair implementados; N10 revelado PROGRESSIVO (regressão de suítes verdes ao crescer TU) |
 | 2026-08-24 | M8 🟡: planner determinístico (estratégias/DAG/validações/rollback); 5/8 nativos |
 | 2026-08-24 | M7 🟡: brain PT-BR determinístico (intents/entidades/confidence/ambiguities); PENDENTE-N10 |

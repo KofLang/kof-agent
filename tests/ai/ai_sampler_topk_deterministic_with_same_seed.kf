@@ -1,0 +1,19 @@
+test "tokenizer splits words and digits" {
+    var t = tkTokenize("abc123 def")
+    assert(t.size == 2)
+    assert(t.get(0) == "abc123")
+}
+
+test "sampler topk deterministic with same seed" {
+    var lg = new Int[4]
+    lg[0] = 5
+    lg[1] = 9
+    lg[2] = 1
+    lg[3] = 9
+    var a = samplerTopK(lg, 4, 2, 42)
+    var b = samplerTopK(lg, 4, 2, 42)
+    assert(a == b)
+    assert(a == 1 || a == 3)
+}
+main() {
+}

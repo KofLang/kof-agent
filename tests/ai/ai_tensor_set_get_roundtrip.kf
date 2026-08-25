@@ -1,0 +1,13 @@
+test "tokenizer splits words and digits" {
+    var t = tkTokenize("abc123 def")
+    assert(t.size == 2)
+    assert(t.get(0) == "abc123")
+}
+
+test "tensor set get roundtrip" {
+    var t = tensorNew(2, 3)
+    tensorSet(t, 1, 2, 42)
+    assert(tensorGet(t, 1, 2) == 42)
+}
+main() {
+}

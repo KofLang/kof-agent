@@ -1,0 +1,18 @@
+test "tokenizer splits words and digits" {
+    var t = tkTokenize("abc123 def")
+    assert(t.size == 2)
+    assert(t.get(0) == "abc123")
+}
+
+test "vocab build dedups" {
+    var ix = CorpusIndex()
+    var d = CorpusDoc()
+    d.meta.id = "v1"
+    d.meta.title = "alpha beta"
+    d.body = "alpha gamma"
+    ix.docs.add(d)
+    var v = vocabBuildFromCorpus(ix)
+    assert(v.size() == 3)
+}
+main() {
+}

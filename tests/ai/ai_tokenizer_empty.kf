@@ -1,0 +1,11 @@
+test "tokenizer splits words and digits" {
+    var t = tkTokenize("abc123 def")
+    assert(t.size == 2)
+    assert(t.get(0) == "abc123")
+}
+
+test "tokenizer empty" {
+    assert(tkTokenize("").size == 0)
+}
+main() {
+}
