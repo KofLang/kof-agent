@@ -76,3 +76,18 @@ SECN002 (AES-GCM nativo) fechado — G10 completo. Não rastreado pelo agente (f
 | N16 | ❌ aberto — workaround (ordenação topológica PARTS) segue necessário |
 | N17 | ❌ aberto — `lt0=false` no native; kernels sem negativos mantidos |
 | M16 suite | ✅ 7/7 verde no novo HEAD |
+
+
+## J4 — COMP002 crash interno (ASM Frame.merge) compilando MemoryLayer.purgeExpired
+
+- **Commit:** a7949a5 · **Target:** jvm · **Categoria:** J Codegen/ASM
+- **Erro:** `ArrayIndexOutOfBoundsException Index 0 out of bounds for length 0` em `Frame.merge` → `COMP002 frame crash em MemoryLayer.purgeExpired`
+- **Repro:** `regressions/J4/repro_full.kf` (artefato completo; mínimo ainda não isolado — padrão suspeito: while com remove(i) + acesso a campo de record + `entries.size` sem parênteses)
+- **Impacto:** suite M10 inteira não compila em JVM
+- **Status:** CONFIRMED — minimização pendente
+
+## Reteste pós a7949a5 — M10
+
+- Suite M10 (`unit_ai2`) no **native**: 8/9 PASS (antes segfault N10-family). Restante: q8 roundtrip = vítima do **N17** (`v < 0` em load de Int[] dentro de quantizeQ8Block).
+- Suite M10 no **JVM**: bloqueada por **J4**.
+- Suite FASE 3 (`unit_f3`, 1.5MB asm): ainda segfault (139) → **N10-progressivo segue aberto**.
