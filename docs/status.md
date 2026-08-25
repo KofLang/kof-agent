@@ -198,3 +198,10 @@ aliviada** (ws_diff 100%, planner estável). Baseline movido ao HEAD.
 | Security G10 | ✅ bônus: PBKDF2/SHA-512/JWT nativos (SECN001/003/004 fechados) |
 
 Sweep completo do agente contra esta versão: pendente (próxima sessão).
+
+
+## Sessão M13–M15 (em curso)
+
+- Memory Layer / Conversation Engine / Context Orchestrator escritos (87/88/89).
+- 1 fix aplicado (contextWindow tipado). Build pendente de revalidação.
+- Specs M13/M14/M15 criadas. Status/TASKS: esta entrada.
