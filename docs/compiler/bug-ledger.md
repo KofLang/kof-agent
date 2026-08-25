@@ -6,12 +6,12 @@
 | J2 | JVM Runtime | process.run COMP001 | 4954622(prior) | — | Fixed | critico | ponte bash | Compiler |
 | N1 | Codegen Native | fn apos main nao linka | cc46da5 | — | Open | alto | defs-before-main | Compiler |
 | N2 | Stdlib | toInt sem simbolo | c822ed3 | c822ed3 | Fixed | alto | parseIntStr | Compiler |
-| N3 | Runtime Native | argv segfault | cc46da5 | — | Investigating | alto | .kofargs (ARG001) | Compiler |
-| N4 | Native Runtime | split segfault | cc46da5 | — | Open | alto | splitStr | Compiler |
-| N6 | Native Runtime | String==null segfault | cc46da5 | — | Open | critico | guards exists/isFile | Compiler |
-| N7 | Codegen Native | continue = hang | cc46da5 | — | Open | critico | flags/if aninhado | Compiler |
+| N3 | Runtime Native | argv segfault | cc46da5 | 8df415e+65f748f | Fixed | Investigating | alto | .kofargs (ARG001) | Compiler |
+| N4 | Native Runtime | split segfault | cc46da5 | 8df415e+65f748f | Partial (ainda segfault em alguns casos) | Open | alto | splitStr | Compiler |
+| N6 | Native Runtime | String==null segfault | cc46da5 | 8df415e+65f748f | Fixed | Open | critico | guards exists/isFile | Compiler |
+| N7 | Codegen Native | continue = hang | cc46da5 | 8df415e+65f748f | Fixed | Open | critico | flags/if aninhado | Compiler |
 | N8 | Codegen Native | &&/|| sem curto-circuito | cc46da5 | — | Open | critico | aninhar ifs | Compiler |
-| N9 | Codegen Native | += String perde acumulador | cc46da5 | — | Open | critico | x = x + e | Compiler |
+| N9 | Codegen Native | += String perde acumulador | cc46da5 | 8df415e+65f748f | Fixed | Open | critico | x = x + e | Compiler |
 | N10 | Codegen Native | miscompile progressivo por tamanho/posicao de TU | 005f47b | — | Open | CRITICA | partes pequenas+um-teste-por-processo | Compiler |
 | N11 | Stdlib Native | lastIndexOf ausente | 64db910(retestado) | — | Open (ainda falha) | medio | wsLastSpace | Compiler |
 | N12 | Codegen Native | record grande corrompe campos | cc46da5 | — | Partial | alto | classes p/ estruturas grandes | Compiler |
@@ -35,3 +35,14 @@ Repros: N1✅ N6✅ N7✅ N8✅ N9✅ N12✅ · N3❌ N4❌ N11❌ persistem · 
 ## Upstream 7afdbb5
 
 SECN002 (AES-GCM nativo) fechado — G10 completo. Não rastreado pelo agente (fora do nosso ledger), registrado como ganho do ecossistema.
+
+## Atualização pós 65f748f (reteste dirigido)
+
+| Bug | Status |
+|-----|--------|
+| N3 args | ✅ FIXED — argc=0 sem segfault |
+| N9 += String | ✅ FIXED — concat acumula corretamente |
+| N7 continue | ✅ FIXED — loop termina normalmente |
+| N6 null-compare | ✅ FIXED — retorna false |
+| N1 fwd-fn | ✅ FIXED — v=5 |
+| N4 split | ❌ ainda segfault em alguns padrões |
