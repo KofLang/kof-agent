@@ -13,7 +13,7 @@
 | N8 | Codegen Native | &&/|| sem curto-circuito | cc46da5 | — | Open | critico | aninhar ifs | Compiler |
 | N9 | Codegen Native | += String perde acumulador | cc46da5 | — | Open | critico | x = x + e | Compiler |
 | N10 | Codegen Native | miscompile progressivo por tamanho/posicao de TU | 005f47b | — | Open | CRITICA | partes pequenas+um-teste-por-processo | Compiler |
-| N11 | Stdlib Native | lastIndexOf ausente | cc46da5 | — | Open | medio | wsLastSpace | Compiler |
+| N11 | Stdlib Native | lastIndexOf ausente | 64db910(retestado) | — | Open (ainda falha) | medio | wsLastSpace | Compiler |
 | N12 | Codegen Native | record grande corrompe campos | cc46da5 | — | Partial | alto | classes p/ estruturas grandes | Compiler |
 | N13 | Codegen Native | Long delta em campo crasha posicional | cc46da5 | — | Investigating | alto | parte propria 03 | Compiler |
 | N14 | Native Linking | .Ljf_adv undefined (hello) | 4954622 | 4954622 | Fixed | critica | pin c822ed3 temporario | Compiler |
@@ -23,3 +23,11 @@
 | SC4 | Semantic | aridade construtor errada compila | db7320b | — | Open | medio | — | Compiler |
 | SC5 | Semantic | redeclaracao local compila | db7320b | 8df415e (SEM024) | Fixed | medio | — | Compiler |
 | J3 | Tooling JVM | runner JVM exige JavaFX em alguns artefatos | 634fe5f | — | Investigating | medio | suites nativas | Agent |
+
+## Auditoria v0.1.0-beta (8df415e) — evidências
+
+Repros dirigidos executados: N1✅ N6✅ N7✅ N8✅ N9✅ N12✅ corrigidos · N3❌N4❌ persistem · N11❌ · Security native E2E ✅ (pbkdf2/sha256/jwt).
+
+## Auditoria v0.1.0-beta (8df415e)
+
+Repros: N1✅ N6✅ N7✅ N8✅ N9✅ N12✅ · N3❌ N4❌ N11❌ persistem · Security native E2E ✅
