@@ -67,3 +67,12 @@ SECN002 (AES-GCM nativo) fechado — G10 completo. Não rastreado pelo agente (f
 - **Esperado:** true · **Obtido:** false (compara como unsigned; -1000000 > 0 → true)
 - **Workaround:** sem negativos em tensors: softmax racional positiva; máscara causal com penalidade positiva (+1e6)
 - **Status:** CONFIRMED — crítico para attention/softmax nativos
+
+
+## Reteste pós a7949a5
+
+| Bug | Status |
+|-----|--------|
+| N16 | ❌ aberto — workaround (ordenação topológica PARTS) segue necessário |
+| N17 | ❌ aberto — `lt0=false` no native; kernels sem negativos mantidos |
+| M16 suite | ✅ 7/7 verde no novo HEAD |
