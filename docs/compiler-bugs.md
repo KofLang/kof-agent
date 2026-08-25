@@ -38,7 +38,23 @@ Ambiente: kof 0.0.14-alpha, JDK 25 (build), binutils 2.46, Linux x86_64.
 | N2 | ✅ **CORRIGIDO** em c822ed3 (`"42".toInt()` nativo = 42) |
 | ~~N14 (NOVO)~~ | **REGRESSÃO no HEAD ef91b7e**: todo build native falha no link — `undefined reference to .Ljf_adv` dentro de `kof_json_find_value` (emitJsonFindValue emite label local não gerado). Repro: qualquer `main(){println("hello")}` → `kof run --target native`. **Hello world nativo quebrado globalmente no HEAD.** |
 
-**Atualização final:** HEAD 4954622 corrigiu N14+N2; N10-FAMILY PARCIALMENTE ALIVIADA
+**Atualização 2026-08-25 (baseline a7949a5):**
+
+| Bug | Estado |
+|-----|--------|
+| N3 argv vazio | ✅ FIXED (65f748f) |
+| N6 null-compare | ✅ FIXED |
+| N7 continue | ✅ FIXED |
+| N9 += String | ✅ FIXED |
+| N4 split | 🟡 residual em alguns padrões |
+| **N16** | 🔴 NOVO — SEM025 fwd-ref classe (regressão 3329323); workaround: PARTS topológico + helpers p/ 47_tools · repro `/tmp` perdido, recriar de `docs/compiler/bug-ledger.md` |
+| **N17** | 🔴 NOVO — cmp signed nativo quebrado p/ negativos de Int[]; mata Q8 quant; repro `regressions/N17/repro.kf` |
+| **J4** | 🔴 NOVO — COMP002 ASM Frame.merge em purgeExpired; repro `regressions/J4/repro_full.kf` |
+| N10-progressivo | ❌ aberto — unit_f3 (1.5MB asm) segue SIGSEGV 139 |
+
+M10 suite: native 8/9 (única falha = Q8 via N17). M16.1 entregue com 7 testes nativos verdes.
+
+**Histórico anterior:** HEAD 4954622 corrigiu N14+N2; N10-FAMILY PARCIALMENTE ALIVIADA
 (ws_diff 7/7 voltou a passar) mas segfaults residuais persistem em artefatos grandes
 (tools fs suite). Baseline movido para **HEAD 4954622**. Pendentes: N1?/N3/N4/N6/N7/
 N8/N9/N10-residual/N11/N12/N13, SC1–5.
