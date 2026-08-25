@@ -139,6 +139,12 @@ vai para "Questões em aberto" — nunca vira comportamento assumido.
 - **Decisão:** manifest registra o comportamento OBSERVADO; casos divergentes da doc são renomeados para `_gap_*` com nota e viram itens de upstream. Nada é "consertado" no agente nem mascarado nos testes.
 - **Consequências:** M9 (repair) só pode reparar o que o compilador diagnostica; a lista GW-SEM-COVERAGE vai ao upstream.
 
+## D0020 — Baseline do compilador pinado em c822ed3
+- **Data:** 2026-08-24 · **Status:** aceito (temporário)
+- **Contexto:** upstream fixou J1/J2 mas introduziu N14 (native HEAD sem link).
+- **Decisão:** clone Kof4j em branch `kofagent-baseline` = c822ed3; sweeps do agente rodam contra esse baseline; rebase assim que N14 fechar.
+- **Consequências:** ganhos J1/J2 aproveitáveis já agora (JVM target volta a ser opção p/ suites ws); N2/N10 etc seguem pendentes.
+
 ---
 
 # Questões em aberto

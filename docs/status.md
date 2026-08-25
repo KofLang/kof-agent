@@ -6,7 +6,7 @@
 > vence: implementação → testes → este arquivo → demais docs.
 
 **Última atualização:** 24 de agosto de 2026
-**Milestone corrente:** ESTABILIZAÇÃO anti-N10 (bloqueio central) → depois M10 Runtime AI
+**Milestone corrente:** ESTABILIZAÇÃO anti-N10 sobre baseline c822ed3 (pinado, D0020) → depois M10 Runtime AI
 **Milestones:** M0 ✅ · M1 ✅ · M2–M9 🟡 (código completo; verificação nativa bloqueada por N10 PROGRESSIVO)
 
 ---
@@ -19,7 +19,7 @@
 | Código | runtime completo em Kof: 9 partes + CLI (~2.6k linhas), compila no **Native** |
 | Suíte | **11/11 suítes verdes** (39 testes estruturados + 2 stress), target native |
 | Benchmarks | baseline `native-M01`: init **120 µs**, scheduler ~143k tasks/s, bus ~56k ops/s, logger ~19.6k l/s, pool ~141k t/s |
-| URGENTE | reportar upstream 15 achados; N10 confirmado PROGRESSIVO (regredir suítes verdes ao crescer o TU) |
+| URGENTE | reportar upstream (15 achados + **N14**: native HEAD quebrado); baseline pinado c822ed3 (D0020); J1/J2 confirmados CORRIGIDOS |
 | Workspace | índice+snapshot+diff+persistência implementados; aproximação lexical (D0018); 16/37 testes nativos (resto N10) |
 | Gateway Q1 | ✅ decidido (D0016): B' híbrido batch-subprocess — A=201ms/op, B'=21.8ms/arq, C bloqueado |
 

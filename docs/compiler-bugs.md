@@ -27,6 +27,20 @@ Ambiente: kof 0.0.14-alpha, JDK 25 (build), binutils 2.46, Linux x86_64.
 | N13 | Native | Atribuição `campoLong = a.nowMs() - t0` (subtração de calls Long → campo) dentro de função grande crasha; mesma expressão em contexto pequeno passa | toolExec durationMs | dur computada em variável local/parte própria; ainda posição-sensível |
 | N10 | Native | Miscompile **dependente de posição/tamanho**: mesma construção funciona num programa pequeno e gera `array index out of bounds` espúrio (condição Int correta) em programa grande | `parseInto` com `indexOf`+`substring` crashava só no artefato completo; isolado passava | Reescrever com `splitStr`; manter funções críticas pequenas; se sintoma reaparecer, bisect por truncamento do translation-unit |
 
+## Atualização 24/08 — reteste contra fix/compiler-bugs-0.0.14 (c822ed3..ef91b7e)
+
+| ID | Status pós-fix |
+|----|----------------|
+| J1 | ✅ **CORRIGIDO** (`now()` compila e roda no JVM) |
+| J2 | ✅ **CORRIGIDO** (`process.run` compila e executa no JVM) |
+| N1–N13 | presentes em c822ed3 (re-sweep idêntico ao anterior) |
+| **N14 (NOVO)** | **REGRESSÃO no HEAD ef91b7e**: todo build native falha no link — `undefined reference to .Ljf_adv` dentro de `kof_json_find_value` (emitJsonFindValue emite label local não gerado). Repro: qualquer `main(){println("hello")}` → `kof run --target native`. **Hello world nativo quebrado globalmente no HEAD.** |
+
+**Decisão D0020:** baseline do kof-agent pinado em **c822ed3** (branch
+`kofagent-baseline` no clone do compilador) — inclui multi-arquivo parcial
+(e462fcb) e os fixes JVM, sem a regressão N14. Retestar N1–N13/N10-family
+quando N14 fechar.
+
 ## Notas
 
 - N1/N4/N6/N7/N8/N9 foram descobertos por falhas **reais em execução**
