@@ -1,0 +1,13 @@
+mkCtx(): ToolCtx {
+    return ToolCtx(freshBus(), FixedClock(10))
+}
+
+test "revoke takes grant away" {
+    var c = mkCtx()
+    c.grant(PERM_FS_WRITE())
+    c.revoke(PERM_FS_WRITE())
+    var res = toolExec(defaultRegistry(), c, ToolCall("fs.write", "r8", "build/tt/x.kf", "y", 0))
+    assert(res.status == "denied")
+}
+main() {
+}

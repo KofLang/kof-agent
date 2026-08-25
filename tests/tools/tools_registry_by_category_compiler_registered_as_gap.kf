@@ -1,0 +1,11 @@
+test "registry size covers catalog" {
+    var r = defaultRegistry()
+    assert(r.size() >= 37)
+}
+
+test "by category compiler registered as gap" {
+    var r = defaultRegistry()
+    assert(r.byCategory("Compiler").size == 3)
+}
+main() {
+}

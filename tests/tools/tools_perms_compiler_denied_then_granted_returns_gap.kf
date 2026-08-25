@@ -1,0 +1,15 @@
+mkCtx(): ToolCtx {
+    return ToolCtx(freshBus(), FixedClock(10))
+}
+
+test "compiler denied then granted returns gap" {
+    var c = mkCtx()
+    var d = toolExec(defaultRegistry(), c, ToolCall("compiler.check", "r3", "x.kf", "", 0))
+    assert(d.status == "denied")
+    c.grant(PERM_COMPILER_EXEC())
+    var g = toolExec(defaultRegistry(), c, ToolCall("compiler.check", "r4", "x.kf", "", 0))
+    assert(g.status == "gap")
+    assert(g.data.contains("GW-EXEC"))
+}
+main() {
+}

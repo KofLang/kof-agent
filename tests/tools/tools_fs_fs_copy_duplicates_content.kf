@@ -1,0 +1,20 @@
+mkCtx(): ToolCtx {
+    return ToolCtx(freshBus(), FixedClock(10))
+}
+
+mkCtxGrant(): ToolCtx {
+    var c = mkCtx()
+    c.grant(PERM_FS_WRITE())
+    return c
+}
+
+test "fs copy duplicates content" {
+    mkFile("build/tt/orig.txt", "copie-me\n")
+    var c = mkCtx()
+    c.grant(PERM_FS_WRITE())
+    toolExec(defaultRegistry(), c, ToolCall("fs.copy", "t7", "build/tt/orig.txt", "build/tt/copy.txt", 0))
+    var r = toolExec(defaultRegistry(), c, ToolCall("fs.read", "t7b", "build/tt/copy.txt", "", 0))
+    assert(r.data.contains("copie-me"))
+}
+main() {
+}

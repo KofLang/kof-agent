@@ -7,6 +7,7 @@ KOF="${KOF:-${KOF_BIN:-/home/luna/kof/Kof4j/bin/kof}}"
 
 PARTS=(
   agent/runtime/00_core.kf
+  agent/runtime/03_tool_exec.kf
   agent/runtime/05_log.kf
   agent/runtime/10_config.kf
   agent/runtime/20_scheduler.kf
@@ -14,6 +15,7 @@ PARTS=(
   agent/runtime/30_lifecycle.kf
   agent/runtime/40_workspace.kf
   agent/runtime/45_windex.kf
+  agent/runtime/47_tools.kf
   agent/runtime/50_metrics.kf
   agent/runtime/90_runtime.kf
 )

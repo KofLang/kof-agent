@@ -1,0 +1,11 @@
+mkCtx(): ToolCtx {
+    return ToolCtx(freshBus(), FixedClock(10))
+}
+
+test "denied without grant fs.write" {
+    var res = toolExec(defaultRegistry(), mkCtx(), ToolCall("fs.write", "r1", "build/tt/nada.kf", "x", 0))
+    assert(res.status == "denied")
+    assert(res.data == PERM_FS_WRITE())
+}
+main() {
+}

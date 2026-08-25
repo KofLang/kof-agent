@@ -1,0 +1,22 @@
+WS_T(): String { return "build/tt_ws" }
+
+setupWsT(): ToolCtx {
+    mkFile("build/tt_ws/lib.kf", "record Shared(Int v)\n")
+    mkFile("build/tt_ws/app.kf", "import Shared\n\nmain() {\n}\n")
+    var c = mkCtx()
+    c.wsi = WorkspaceIndex(WS_T(), c.bus, FixedClock(5))
+    c.wsi.fullRescan()
+    return c
+}
+
+test "patch.replace swaps all occurrences with backup" {
+    mkFile("build/tt_ws/rep.txt", "foo e foo\n")
+    var res = toolExec(defaultRegistry(), setupWsTPatch(), ToolCall("patch.replace", "w9a", "build/tt_ws/rep.txt", "foo|bar"))
+    var parts = splitStr(res.data, ":")
+    assert(res.status == "ok")
+    assert(parts.get(1) == "{\"replacements\":2")
+    assert(File("build/tt_ws/rep.txt").readText() == "bar e bar\n")
+    assert(File(res.rollback.backupPath).exists())
+}
+main() {
+}

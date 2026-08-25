@@ -1,0 +1,18 @@
+mkCtx(): ToolCtx {
+    return ToolCtx(freshBus(), FixedClock(10))
+}
+
+mkCtxGrant(): ToolCtx {
+    var c = mkCtx()
+    c.grant(PERM_FS_WRITE())
+    return c
+}
+
+test "fs write over existing keeps backup" {
+    mkFile("build/tt/ex.txt", "v1\n")
+    var res = toolExec(defaultRegistry(), mkCtxGrant(), ToolCall("fs.write", "t10", "build/tt/ex.txt", "v2\n", 0))
+    assert(res.rollback.kind == "restore")
+    assert(File(res.rollback.backupPath).readText().contains("v1"))
+}
+main() {
+}

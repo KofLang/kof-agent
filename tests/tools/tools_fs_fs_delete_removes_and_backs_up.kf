@@ -1,0 +1,19 @@
+mkCtx(): ToolCtx {
+    return ToolCtx(freshBus(), FixedClock(10))
+}
+
+mkCtxGrant(): ToolCtx {
+    var c = mkCtx()
+    c.grant(PERM_FS_WRITE())
+    return c
+}
+
+test "fs delete removes and backs up" {
+    mkFile("build/tt/del.txt", "sumir\n")
+    var res = toolExec(defaultRegistry(), mkCtxGrant(), ToolCall("fs.delete", "t11", "build/tt/del.txt", "", 0))
+    assert(res.status == "ok")
+    assert(File("build/tt/del.txt").exists() == false)
+    assert(File(res.rollback.backupPath).exists())
+}
+main() {
+}

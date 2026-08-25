@@ -1,0 +1,12 @@
+mkCtx(): ToolCtx {
+    return ToolCtx(freshBus(), FixedClock(10))
+}
+
+test "hasGrant reflects state" {
+    var c = mkCtx()
+    assert(c.hasGrant(PERM_GIT_WRITE()) == false)
+    c.grant(PERM_GIT_WRITE())
+    assert(c.hasGrant(PERM_GIT_WRITE()))
+}
+main() {
+}

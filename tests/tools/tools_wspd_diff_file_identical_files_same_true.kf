@@ -1,0 +1,19 @@
+WS_T(): String { return "build/tt_ws" }
+
+setupWsT(): ToolCtx {
+    mkFile("build/tt_ws/lib.kf", "record Shared(Int v)\n")
+    mkFile("build/tt_ws/app.kf", "import Shared\n\nmain() {\n}\n")
+    var c = mkCtx()
+    c.wsi = WorkspaceIndex(WS_T(), c.bus, FixedClock(5))
+    c.wsi.fullRescan()
+    return c
+}
+
+test "diff.file identical files same true" {
+    mkFile("build/tt_ws/d1.txt", "a\nb\n")
+    mkFile("build/tt_ws/d2.txt", "a\nb\n")
+    var r = toolExec(defaultRegistry(), setupWsT(), ToolCall("diff.file", "w12", "build/tt_ws/d1.txt", "build/tt_ws/d2.txt"))
+    assert(r.data.contains("\"same\":true"))
+}
+main() {
+}

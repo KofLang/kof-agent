@@ -1,0 +1,11 @@
+test "registry size covers catalog" {
+    var r = defaultRegistry()
+    assert(r.size() >= 37)
+}
+
+test "registry size covers catalog" {
+    var r = defaultRegistry()
+    assert(r.size() >= 37)
+}
+main() {
+}

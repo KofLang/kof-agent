@@ -1,0 +1,20 @@
+WS_T(): String { return "build/tt_ws" }
+
+setupWsT(): ToolCtx {
+    mkFile("build/tt_ws/lib.kf", "record Shared(Int v)\n")
+    mkFile("build/tt_ws/app.kf", "import Shared\n\nmain() {\n}\n")
+    var c = mkCtx()
+    c.wsi = WorkspaceIndex(WS_T(), c.bus, FixedClock(5))
+    c.wsi.fullRescan()
+    return c
+}
+
+test "compiler tools report structured gap" {
+    var c = setupWsT()
+    c.grant(PERM_COMPILER_EXEC())
+    var r = toolExec(defaultRegistry(), c, ToolCall("ast.findNode", "w14", "", "", 0))
+    assert(r.status == "gap")
+    assert(r.data.contains("GW-AST-DUMP"))
+}
+main() {
+}

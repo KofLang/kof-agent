@@ -1,0 +1,18 @@
+test "tool started and finished events fire" {
+    mkFile("build/tt/e1.txt", "x\n")
+    var rec = RecordingHandler()
+    var bus = freshBus()
+    bus.subscribe("tool.started", rec)
+    bus.subscribe("tool.finished", rec)
+    var c = ToolCtx(bus, FixedClock(3))
+    toolExec(defaultRegistry(), c, ToolCall("fs.read", "m1", "build/tt/e1.txt", "", 0))
+    assert(rec.seen.size == 2)
+}
+
+test "git.log counts reflog entries" {
+    mkFile("build/tt_g2/.git/logs/HEAD", "e1\n\ne2\n")
+    var r = toolExec(defaultRegistry(), mkCtx(), ToolCall("git.log", "m8", "build/tt_g2"))
+    assert(r.data.contains("\"entries\":2"))
+}
+main() {
+}

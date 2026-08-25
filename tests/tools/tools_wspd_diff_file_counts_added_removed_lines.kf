@@ -1,0 +1,20 @@
+WS_T(): String { return "build/tt_ws" }
+
+setupWsT(): ToolCtx {
+    mkFile("build/tt_ws/lib.kf", "record Shared(Int v)\n")
+    mkFile("build/tt_ws/app.kf", "import Shared\n\nmain() {\n}\n")
+    var c = mkCtx()
+    c.wsi = WorkspaceIndex(WS_T(), c.bus, FixedClock(5))
+    c.wsi.fullRescan()
+    return c
+}
+
+test "diff.file counts added removed lines" {
+    mkFile("build/tt_ws/d3.txt", "a\nb\nc\nd\n")
+    mkFile("build/tt_ws/d4.txt", "a\nx\nc\n")
+    var r = toolExec(defaultRegistry(), setupWsT(), ToolCall("diff.file", "w13", "build/tt_ws/d3.txt", "build/tt_ws/d4.txt"))
+    assert(r.data.contains("\"addedLines\":1"))
+    assert(r.data.contains("\"removedLines\":1"))
+}
+main() {
+}

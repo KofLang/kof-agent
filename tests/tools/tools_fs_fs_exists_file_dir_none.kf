@@ -1,0 +1,22 @@
+mkCtx(): ToolCtx {
+    return ToolCtx(freshBus(), FixedClock(10))
+}
+
+mkCtxGrant(): ToolCtx {
+    var c = mkCtx()
+    c.grant(PERM_FS_WRITE())
+    return c
+}
+
+test "fs exists file dir none" {
+    mkFile("build/tt/e.kf", "x\n")
+    var c = mkCtx()
+    var rf = toolExec(defaultRegistry(), c, ToolCall("fs.exists", "t3a", "build/tt/e.kf", "", 0))
+    assert(rf.data.contains("\"kind\":\"file\""))
+    var rd = toolExec(defaultRegistry(), c, ToolCall("fs.exists", "t3b", "build/tt", "", 0))
+    assert(rd.data.contains("\"kind\":\"dir\""))
+    var rn = toolExec(defaultRegistry(), c, ToolCall("fs.exists", "t3c", "build/tt/nada.xyz", "", 0))
+    assert(rn.data.contains("false"))
+}
+main() {
+}

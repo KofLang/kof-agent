@@ -1,0 +1,13 @@
+test "registry size covers catalog" {
+    var r = defaultRegistry()
+    assert(r.size() >= 37)
+}
+
+test "find by id returns spec fields" {
+    var r = defaultRegistry()
+    var e = r.findById("fs.write")
+    assert(e.spec.permission == PERM_FS_WRITE())
+    assert(e.version == 1)
+}
+main() {
+}

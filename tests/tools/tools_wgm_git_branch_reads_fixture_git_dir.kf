@@ -1,0 +1,20 @@
+test "tool started and finished events fire" {
+    mkFile("build/tt/e1.txt", "x\n")
+    var rec = RecordingHandler()
+    var bus = freshBus()
+    bus.subscribe("tool.started", rec)
+    bus.subscribe("tool.finished", rec)
+    var c = ToolCtx(bus, FixedClock(3))
+    toolExec(defaultRegistry(), c, ToolCall("fs.read", "m1", "build/tt/e1.txt", "", 0))
+    assert(rec.seen.size == 2)
+}
+
+test "git.branch reads fixture git dir" {
+    mkFile("build/tt_g/.git/HEAD", "ref: refs/heads/main\n")
+    mkFile("build/tt_g/.git/refs/heads/main", "deadbeef\n")
+    var r = toolExec(defaultRegistry(), mkCtx(), ToolCall("git.branch", "m7", "build/tt_g", "", 0))
+    assert(r.data.contains("\"branch\":\"main\""))
+    assert(r.data.contains("deadbeef"))
+}
+main() {
+}

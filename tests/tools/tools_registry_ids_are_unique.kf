@@ -1,0 +1,19 @@
+test "registry size covers catalog" {
+    var r = defaultRegistry()
+    assert(r.size() >= 37)
+}
+
+test "ids are unique" {
+    var r = defaultRegistry()
+    var dup = 0
+    for (var a in r.entries) {
+        for (var b in r.entries) {
+            if (a.spec.id == b.spec.id) {
+                dup = dup + 1
+            }
+        }
+    }
+    assert(dup == r.size())
+}
+main() {
+}

@@ -1,0 +1,12 @@
+mkCtx(): ToolCtx {
+    return ToolCtx(freshBus(), FixedClock(10))
+}
+
+test "granted fs.write executes" {
+    var c = mkCtx()
+    c.grant(PERM_FS_WRITE())
+    var res = toolExec(defaultRegistry(), c, ToolCall("fs.write", "r2", "build/tt/w.kf", "data", 0))
+    assert(res.status == "ok")
+}
+main() {
+}

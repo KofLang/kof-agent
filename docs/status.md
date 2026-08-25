@@ -6,8 +6,8 @@
 > vence: implementação → testes → este arquivo → demais docs.
 
 **Última atualização:** 24 de agosto de 2026
-**Milestone corrente:** M4 — Tool API (não iniciada)
-**Milestones:** M0 ✅ · M1 ✅ · M2 🟡 · **M3 🟡 Parcial (implementação completa; 16/37 testes nativos verdes; resto bloqueado por N10)**
+**Milestone corrente:** M5 — Corpus Engine (não iniciada)
+**Milestones:** M0 ✅ · M1 ✅ · M2 🟡 · M3 🟡 · **M4 🟡 Parcial (46 tools registradas; execução nativa aguarda N10)**
 
 ---
 
@@ -19,7 +19,7 @@
 | Código | runtime completo em Kof: 9 partes + CLI (~2.6k linhas), compila no **Native** |
 | Suíte | **11/11 suítes verdes** (39 testes estruturados + 2 stress), target native |
 | Benchmarks | baseline `native-M01`: init **120 µs**, scheduler ~143k tasks/s, bus ~56k ops/s, logger ~19.6k l/s, pool ~141k t/s |
-| Próxima ação | M4: specs/TOOL_API.md + Filesystem/Search/Patch/Diff/Compiler tools |
+| Próxima ação | M5: corpus loader/metadata/checksum/index (roda nos artefatos pequenos viáveis) |
 | Workspace | índice+snapshot+diff+persistência implementados; aproximação lexical (D0018); 16/37 testes nativos (resto N10) |
 | Gateway Q1 | ✅ decidido (D0016): B' híbrido batch-subprocess — A=201ms/op, B'=21.8ms/arq, C bloqueado |
 
@@ -142,4 +142,5 @@ N8 (&&/|| sem curto-circuito) · N9 (+= String perde acumulador) · N10
 | 2026-08-24 | M0 concluída; repo publicado; status.md criado |
 | 2026-08-24 | M1 concluída: runtime nativo completo, 11 suítes verdes, baselines registrados, 10 bugs do compilador documentados |
 | 2026-08-24 | M2 🟡: gateway tipado + ADR-001 (B' híbrido) + goldens 20/20 via ponte; J2 e SC1–SC5 descobertos; execução in-language aguarda upstream |
+| 2026-08-24 | M4 🟡: Tool API completa em código (46 tools, perms, rollback, eventos); execução aguarda N10 |
 | 2026-08-24 | M3 🟡: workspace intelligence completa em código; N11/N12/J1-presença descobertos; 16/37 testes nativos, resto N10 |

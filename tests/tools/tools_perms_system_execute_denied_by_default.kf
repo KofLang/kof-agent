@@ -1,0 +1,10 @@
+mkCtx(): ToolCtx {
+    return ToolCtx(freshBus(), FixedClock(10))
+}
+
+test "system.execute denied by default" {
+    var d = toolExec(defaultRegistry(), mkCtx(), ToolCall("system.exec", "r5", "ls", "", 0))
+    assert(d.status == "denied")
+}
+main() {
+}

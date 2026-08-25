@@ -1,0 +1,19 @@
+mkCtx(): ToolCtx {
+    return ToolCtx(freshBus(), FixedClock(10))
+}
+
+mkCtxGrant(): ToolCtx {
+    var c = mkCtx()
+    c.grant(PERM_FS_WRITE())
+    return c
+}
+
+test "fs mkdir creates and is idempotent" {
+    var c = mkCtx()
+    c.grant(PERM_FS_WRITE())
+    var r1 = toolExec(defaultRegistry(), c, ToolCall("fs.mkdir", "t8a", "build/tt/deep/dir", "", 0))
+    var r2 = toolExec(defaultRegistry(), c, ToolCall("fs.mkdir", "t8b", "build/tt/deep/dir", "", 0))
+    assert(r1.status == "ok" && r2.status == "ok")
+}
+main() {
+}

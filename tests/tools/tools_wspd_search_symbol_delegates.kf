@@ -1,0 +1,17 @@
+WS_T(): String { return "build/tt_ws" }
+
+setupWsT(): ToolCtx {
+    mkFile("build/tt_ws/lib.kf", "record Shared(Int v)\n")
+    mkFile("build/tt_ws/app.kf", "import Shared\n\nmain() {\n}\n")
+    var c = mkCtx()
+    c.wsi = WorkspaceIndex(WS_T(), c.bus, FixedClock(5))
+    c.wsi.fullRescan()
+    return c
+}
+
+test "search.symbol delegates" {
+    var r = toolExec(defaultRegistry(), setupWsT(), ToolCall("search.symbol", "w8", "Shared", "", 0))
+    assert(r.data.contains("Shared"))
+}
+main() {
+}

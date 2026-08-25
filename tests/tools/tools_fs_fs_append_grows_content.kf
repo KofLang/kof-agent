@@ -1,0 +1,20 @@
+mkCtx(): ToolCtx {
+    return ToolCtx(freshBus(), FixedClock(10))
+}
+
+mkCtxGrant(): ToolCtx {
+    var c = mkCtx()
+    c.grant(PERM_FS_WRITE())
+    return c
+}
+
+test "fs append grows content" {
+    mkFile("build/tt/ap.txt", "um\n")
+    var c = mkCtx()
+    c.grant(PERM_FS_WRITE())
+    toolExec(defaultRegistry(), c, ToolCall("fs.append", "t6a", "build/tt/ap.txt", "dois\n", 0))
+    var r = toolExec(defaultRegistry(), c, ToolCall("fs.read", "t6b", "build/tt/ap.txt", "", 0))
+    assert(r.data.contains("dois"))
+}
+main() {
+}

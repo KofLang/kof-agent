@@ -1,0 +1,70 @@
+test "registry size covers catalog" {
+    var r = defaultRegistry()
+    assert(r.size() >= 37)
+}
+
+test "has id hit and miss" {
+    var r = defaultRegistry()
+    assert(r.hasId("fs.read"))
+    assert(r.hasId("nao.existe") == false)
+}
+
+test "by category filesystem" {
+    var r = defaultRegistry()
+    assert(r.byCategory("Filesystem").size >= 12)
+}
+
+test "by category compiler registered as gap" {
+    var r = defaultRegistry()
+    assert(r.byCategory("Compiler").size == 3)
+}
+
+test "find by id returns spec fields" {
+    var r = defaultRegistry()
+    var e = r.findById("fs.write")
+    assert(e.spec.permission == PERM_FS_WRITE())
+    assert(e.version == 1)
+}
+
+test "ids are unique" {
+    var r = defaultRegistry()
+    var dup = 0
+    for (var a in r.entries) {
+        for (var b in r.entries) {
+            if (a.spec.id == b.spec.id) {
+                dup = dup + 1
+            }
+        }
+    }
+    assert(dup == r.size())
+}
+
+test "every spec has category" {
+    var r = defaultRegistry()
+    var emptyCat = 0
+    for (var e in r.entries) {
+        if (e.spec.category.length == 0) {
+            emptyCat = emptyCat + 1
+        }
+    }
+    assert(emptyCat == 0)
+}
+
+test "manifest sync with registry" {
+    var mf = File("scripts/tools_manifest.csv")
+    assert(mf.exists())
+    var lines = splitStr(mf.readText(), "\n")
+    var r = defaultRegistry()
+    var checked = 0
+    for (var ln in lines) {
+        if (ln.length > 0) {
+            var cols = splitStr(ln, "|")
+            assert(r.hasId(cols.get(0)))
+            checked = checked + 1
+        }
+    }
+    assert(checked >= 35)
+}
+
+main() {
+}

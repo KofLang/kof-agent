@@ -1,0 +1,69 @@
+mkCtx(): ToolCtx {
+    return ToolCtx(freshBus(), FixedClock(10))
+}
+
+test "denied without grant fs.write" {
+    var res = toolExec(defaultRegistry(), mkCtx(), ToolCall("fs.write", "r1", "build/tt/nada.kf", "x", 0))
+    assert(res.status == "denied")
+    assert(res.data == PERM_FS_WRITE())
+}
+
+test "granted fs.write executes" {
+    var c = mkCtx()
+    c.grant(PERM_FS_WRITE())
+    var res = toolExec(defaultRegistry(), c, ToolCall("fs.write", "r2", "build/tt/w.kf", "data", 0))
+    assert(res.status == "ok")
+}
+
+test "compiler denied then granted returns gap" {
+    var c = mkCtx()
+    var d = toolExec(defaultRegistry(), c, ToolCall("compiler.check", "r3", "x.kf", "", 0))
+    assert(d.status == "denied")
+    c.grant(PERM_COMPILER_EXEC())
+    var g = toolExec(defaultRegistry(), c, ToolCall("compiler.check", "r4", "x.kf", "", 0))
+    assert(g.status == "gap")
+    assert(g.data.contains("GW-EXEC"))
+}
+
+test "system.execute denied by default" {
+    var d = toolExec(defaultRegistry(), mkCtx(), ToolCall("system.exec", "r5", "ls", "", 0))
+    assert(d.status == "denied")
+}
+
+test "web.network denied by default" {
+    var res = toolExec(defaultRegistry(), mkCtx(), ToolCall("web.request", "r6", "http://x", "", 0))
+    assert(res.status == "denied")
+}
+
+test "read-only tools need no grant" {
+    mkFile("build/tt/r.kf", "ola\n")
+    var res = toolExec(defaultRegistry(), mkCtx(), ToolCall("fs.read", "r7", "build/tt/r.kf", "", 0))
+    assert(res.status == "ok")
+}
+
+test "revoke takes grant away" {
+    var c = mkCtx()
+    c.grant(PERM_FS_WRITE())
+    c.revoke(PERM_FS_WRITE())
+    var res = toolExec(defaultRegistry(), c, ToolCall("fs.write", "r8", "build/tt/x.kf", "y", 0))
+    assert(res.status == "denied")
+}
+
+test "hasGrant reflects state" {
+    var c = mkCtx()
+    assert(c.hasGrant(PERM_GIT_WRITE()) == false)
+    c.grant(PERM_GIT_WRITE())
+    assert(c.hasGrant(PERM_GIT_WRITE()))
+}
+
+test "denied emits tool.denied event" {
+    var rec = RecordingHandler()
+    var bus = freshBus()
+    bus.subscribe("tool.denied", rec)
+    var c = ToolCtx(bus, FixedClock(1))
+    toolExec(defaultRegistry(), c, ToolCall("fs.delete", "r9", "zzz", "", 0))
+    assert(rec.seen.size == 1)
+}
+
+main() {
+}

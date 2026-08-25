@@ -1,0 +1,11 @@
+mkCtx(): ToolCtx {
+    return ToolCtx(freshBus(), FixedClock(10))
+}
+
+test "read-only tools need no grant" {
+    mkFile("build/tt/r.kf", "ola\n")
+    var res = toolExec(defaultRegistry(), mkCtx(), ToolCall("fs.read", "r7", "build/tt/r.kf", "", 0))
+    assert(res.status == "ok")
+}
+main() {
+}

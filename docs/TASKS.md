@@ -1,7 +1,7 @@
 # TASKS — Milestone corrente
 
-**Milestone atual:** M4 — Tool API (não iniciada)
-**Milestones:** M0 ✅ · M1 ✅ · M2 🟡 · M3 🟡 (bloqueio N10 documentado)
+**Milestone atual:** M5 — Corpus Engine (não iniciada)
+**Milestones:** M0 ✅ · M1 ✅ · M2 🟡 · M3 🟡 · M4 🟡 (N10)
 **Última atualização:** 24 de agosto de 2026
 
 ---

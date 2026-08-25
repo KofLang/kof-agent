@@ -1,0 +1,114 @@
+mkCtx(): ToolCtx {
+    return ToolCtx(freshBus(), FixedClock(10))
+}
+
+mkCtxGrant(): ToolCtx {
+    var c = mkCtx()
+    c.grant(PERM_FS_WRITE())
+    return c
+}
+
+test "fs read ok" {
+    mkFile("build/tt/a.kf", "conteudo\n")
+    var r = toolExec(defaultRegistry(), mkCtx(), ToolCall("fs.read", "t1", "build/tt/a.kf", "", 0))
+    assert(r.status == "ok")
+}
+
+test "fs read missing errors" {
+    var r = toolExec(defaultRegistry(), mkCtx(), ToolCall("fs.read", "t2", "build/tt/missing.kf", "", 0))
+    assert(r.status == "error")
+    assert(r.data.contains("FS-NOTFOUND"))
+}
+
+test "fs exists file dir none" {
+    mkFile("build/tt/e.kf", "x\n")
+    var c = mkCtx()
+    var rf = toolExec(defaultRegistry(), c, ToolCall("fs.exists", "t3a", "build/tt/e.kf", "", 0))
+    assert(rf.data.contains("\"kind\":\"file\""))
+    var rd = toolExec(defaultRegistry(), c, ToolCall("fs.exists", "t3b", "build/tt", "", 0))
+    assert(rd.data.contains("\"kind\":\"dir\""))
+    var rn = toolExec(defaultRegistry(), c, ToolCall("fs.exists", "t3c", "build/tt/nada.xyz", "", 0))
+    assert(rn.data.contains("false"))
+}
+
+test "fs metadata size and hash" {
+    mkFile("build/tt/m.kf", "12345\n")
+    var r = toolExec(defaultRegistry(), mkCtx(), ToolCall("fs.metadata", "t4", "build/tt/m.kf", "", 0))
+    assert(r.data.contains("\"size\":6"))
+}
+
+test "fs list returns entries" {
+    mkFile("build/tt/l1.kf", "a\n")
+    var r = toolExec(defaultRegistry(), mkCtx(), ToolCall("fs.list", "t5", "build/tt", "", 0))
+    assert(r.status == "ok")
+    assert(r.data.contains("l1.kf"))
+}
+
+test "fs append grows content" {
+    mkFile("build/tt/ap.txt", "um\n")
+    var c = mkCtx()
+    c.grant(PERM_FS_WRITE())
+    toolExec(defaultRegistry(), c, ToolCall("fs.append", "t6a", "build/tt/ap.txt", "dois\n", 0))
+    var r = toolExec(defaultRegistry(), c, ToolCall("fs.read", "t6b", "build/tt/ap.txt", "", 0))
+    assert(r.data.contains("dois"))
+}
+
+test "fs copy duplicates content" {
+    mkFile("build/tt/orig.txt", "copie-me\n")
+    var c = mkCtx()
+    c.grant(PERM_FS_WRITE())
+    toolExec(defaultRegistry(), c, ToolCall("fs.copy", "t7", "build/tt/orig.txt", "build/tt/copy.txt", 0))
+    var r = toolExec(defaultRegistry(), c, ToolCall("fs.read", "t7b", "build/tt/copy.txt", "", 0))
+    assert(r.data.contains("copie-me"))
+}
+
+test "fs mkdir creates and is idempotent" {
+    var c = mkCtx()
+    c.grant(PERM_FS_WRITE())
+    var r1 = toolExec(defaultRegistry(), c, ToolCall("fs.mkdir", "t8a", "build/tt/deep/dir", "", 0))
+    var r2 = toolExec(defaultRegistry(), c, ToolCall("fs.mkdir", "t8b", "build/tt/deep/dir", "", 0))
+    assert(r1.status == "ok" && r2.status == "ok")
+}
+
+test "fs write new file rollback delete-created" {
+    var res = toolExec(defaultRegistry(), mkCtxGrant(), ToolCall("fs.write", "t9", "build/tt/new.txt", "v1", 0))
+    assert(res.status == "ok")
+    assert(res.rollback.kind == "delete-created")
+    File("build/tt/new.txt").delete()
+}
+
+test "fs write over existing keeps backup" {
+    mkFile("build/tt/ex.txt", "v1\n")
+    var res = toolExec(defaultRegistry(), mkCtxGrant(), ToolCall("fs.write", "t10", "build/tt/ex.txt", "v2\n", 0))
+    assert(res.rollback.kind == "restore")
+    assert(File(res.rollback.backupPath).readText().contains("v1"))
+}
+
+test "fs delete removes and backs up" {
+    mkFile("build/tt/del.txt", "sumir\n")
+    var res = toolExec(defaultRegistry(), mkCtxGrant(), ToolCall("fs.delete", "t11", "build/tt/del.txt", "", 0))
+    assert(res.status == "ok")
+    assert(File("build/tt/del.txt").exists() == false)
+    assert(File(res.rollback.backupPath).exists())
+}
+
+test "fs rename moves content" {
+    mkFile("build/tt/rn1.txt", "mudou\n")
+    var res = toolExec(defaultRegistry(), mkCtxGrant(), ToolCall("fs.rename", "t12", "build/tt/rn1.txt", "build/tt/rn2.txt", 0))
+    assert(res.status == "ok")
+    assert(File("build/tt/rn1.txt").exists() == false)
+    assert(File("build/tt/rn2.txt").readText().contains("mudou"))
+}
+
+test "rollback restores previous version" {
+    var c = mkCtxGrant()
+    toolExec(defaultRegistry(), c, ToolCall("patch.file", "t13a", "build/tt/rb.txt", "versao-um\n", 0))
+    var r2 = toolExec(defaultRegistry(), c, ToolCall("patch.file", "t13b", "build/tt/rb.txt", "versao-dois\n", 0))
+    var rr = toolExec(defaultRegistry(), c, ToolCall("fs.rollbackRestore", "t13c", r2.rollback.backupPath, "build/tt/rb.txt", 0))
+    assert(rr.status == "ok")
+    var back = toolExec(defaultRegistry(), c, ToolCall("fs.read", "t13d", "build/tt/rb.txt", "", 0))
+    assert(back.data.contains("versao-um"))
+}
+
+main() {
+}

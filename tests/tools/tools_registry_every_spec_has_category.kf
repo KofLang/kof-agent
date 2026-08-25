@@ -1,0 +1,17 @@
+test "registry size covers catalog" {
+    var r = defaultRegistry()
+    assert(r.size() >= 37)
+}
+
+test "every spec has category" {
+    var r = defaultRegistry()
+    var emptyCat = 0
+    for (var e in r.entries) {
+        if (e.spec.category.length == 0) {
+            emptyCat = emptyCat + 1
+        }
+    }
+    assert(emptyCat == 0)
+}
+main() {
+}

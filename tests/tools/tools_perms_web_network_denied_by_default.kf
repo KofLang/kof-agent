@@ -1,0 +1,10 @@
+mkCtx(): ToolCtx {
+    return ToolCtx(freshBus(), FixedClock(10))
+}
+
+test "web.network denied by default" {
+    var res = toolExec(defaultRegistry(), mkCtx(), ToolCall("web.request", "r6", "http://x", "", 0))
+    assert(res.status == "denied")
+}
+main() {
+}

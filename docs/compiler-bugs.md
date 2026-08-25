@@ -24,6 +24,7 @@ Ambiente: kof 0.0.14-alpha, JDK 25 (build), binutils 2.46, Linux x86_64.
 | SC3 | ambos | chamada a método inexistente compila | `s.naoExiste()` | idem |
 | SC4 | ambos | construtor com aridade errada compila | `P()` para `record P(Int a)` | idem |
 | SC5 | ambos | redeclaração de variável local compila | `var x=1; var x=2` | idem |
+| N13 | Native | Atribuição `campoLong = a.nowMs() - t0` (subtração de calls Long → campo) dentro de função grande crasha; mesma expressão em contexto pequeno passa | toolExec durationMs | dur computada em variável local/parte própria; ainda posição-sensível |
 | N10 | Native | Miscompile **dependente de posição/tamanho**: mesma construção funciona num programa pequeno e gera `array index out of bounds` espúrio (condição Int correta) em programa grande | `parseInto` com `indexOf`+`substring` crashava só no artefato completo; isolado passava | Reescrever com `splitStr`; manter funções críticas pequenas; se sintoma reaparecer, bisect por truncamento do translation-unit |
 
 ## Notas

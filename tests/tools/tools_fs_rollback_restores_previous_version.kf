@@ -1,0 +1,21 @@
+mkCtx(): ToolCtx {
+    return ToolCtx(freshBus(), FixedClock(10))
+}
+
+mkCtxGrant(): ToolCtx {
+    var c = mkCtx()
+    c.grant(PERM_FS_WRITE())
+    return c
+}
+
+test "rollback restores previous version" {
+    var c = mkCtxGrant()
+    toolExec(defaultRegistry(), c, ToolCall("patch.file", "t13a", "build/tt/rb.txt", "versao-um\n", 0))
+    var r2 = toolExec(defaultRegistry(), c, ToolCall("patch.file", "t13b", "build/tt/rb.txt", "versao-dois\n", 0))
+    var rr = toolExec(defaultRegistry(), c, ToolCall("fs.rollbackRestore", "t13c", r2.rollback.backupPath, "build/tt/rb.txt", 0))
+    assert(rr.status == "ok")
+    var back = toolExec(defaultRegistry(), c, ToolCall("fs.read", "t13d", "build/tt/rb.txt", "", 0))
+    assert(back.data.contains("versao-um"))
+}
+main() {
+}

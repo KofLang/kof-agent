@@ -1,0 +1,14 @@
+mkCtx(): ToolCtx {
+    return ToolCtx(freshBus(), FixedClock(10))
+}
+
+test "denied emits tool.denied event" {
+    var rec = RecordingHandler()
+    var bus = freshBus()
+    bus.subscribe("tool.denied", rec)
+    var c = ToolCtx(bus, FixedClock(1))
+    toolExec(defaultRegistry(), c, ToolCall("fs.delete", "r9", "zzz", "", 0))
+    assert(rec.seen.size == 1)
+}
+main() {
+}

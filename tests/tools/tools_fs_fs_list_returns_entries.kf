@@ -1,0 +1,18 @@
+mkCtx(): ToolCtx {
+    return ToolCtx(freshBus(), FixedClock(10))
+}
+
+mkCtxGrant(): ToolCtx {
+    var c = mkCtx()
+    c.grant(PERM_FS_WRITE())
+    return c
+}
+
+test "fs list returns entries" {
+    mkFile("build/tt/l1.kf", "a\n")
+    var r = toolExec(defaultRegistry(), mkCtx(), ToolCall("fs.list", "t5", "build/tt", "", 0))
+    assert(r.status == "ok")
+    assert(r.data.contains("l1.kf"))
+}
+main() {
+}

@@ -1,0 +1,23 @@
+test "tool started and finished events fire" {
+    mkFile("build/tt/e1.txt", "x\n")
+    var rec = RecordingHandler()
+    var bus = freshBus()
+    bus.subscribe("tool.started", rec)
+    bus.subscribe("tool.finished", rec)
+    var c = ToolCtx(bus, FixedClock(3))
+    toolExec(defaultRegistry(), c, ToolCall("fs.read", "m1", "build/tt/e1.txt", "", 0))
+    assert(rec.seen.size == 2)
+}
+
+test "request id flows into started event" {
+    var rec = RecordingHandler()
+    var bus = freshBus()
+    bus.subscribe("tool.started", rec)
+    mkFile("build/tt/rid.txt", "q\n")
+    var c = ToolCtx(bus, FixedClock(9))
+    c.requestId = "req-77"
+    toolExec(defaultRegistry(), c, ToolCall("fs.read", "m6", "build/tt/rid.txt", "", 0))
+    assert(rec.seen.get(0).contains("req-77"))
+}
+main() {
+}

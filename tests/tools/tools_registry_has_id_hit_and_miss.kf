@@ -1,0 +1,12 @@
+test "registry size covers catalog" {
+    var r = defaultRegistry()
+    assert(r.size() >= 37)
+}
+
+test "has id hit and miss" {
+    var r = defaultRegistry()
+    assert(r.hasId("fs.read"))
+    assert(r.hasId("nao.existe") == false)
+}
+main() {
+}

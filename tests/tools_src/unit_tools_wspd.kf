@@ -1,0 +1,113 @@
+WS_T(): String { return "build/tt_ws" }
+
+setupWsT(): ToolCtx {
+    mkFile("build/tt_ws/lib.kf", "record Shared(Int v)\n")
+    mkFile("build/tt_ws/app.kf", "import Shared\n\nmain() {\n}\n")
+    var c = mkCtx()
+    c.wsi = WorkspaceIndex(WS_T(), c.bus, FixedClock(5))
+    c.wsi.fullRescan()
+    return c
+}
+
+test "ws.open reindexes" {
+    var r = toolExec(defaultRegistry(), setupWsT(), ToolCall("ws.open", "w1", "", "", 0))
+    assert(r.data.contains("\"files\":2"))
+}
+
+test "ws.snapshot persists" {
+    var r = toolExec(defaultRegistry(), setupWsT(), ToolCall("ws.snapshot", "w2", "", "", 0))
+    assert(r.status == "ok")
+    assert(File(joinPath(joinPath(WS_T(), "build"), "workspace.idx")).exists())
+}
+
+test "ws.diff zero when clean" {
+    var r = toolExec(defaultRegistry(), setupWsT(), ToolCall("ws.diff", "w3", "", "", 0))
+    assert(r.data.contains("\"added\":0"))
+}
+
+test "ws.findSymbol hits Shared" {
+    var r = toolExec(defaultRegistry(), setupWsT(), ToolCall("ws.findSymbol", "w4", "Shared", "", 0))
+    assert(r.data.contains("Shared"))
+}
+
+test "ws.findFile by substring" {
+    var r = toolExec(defaultRegistry(), setupWsT(), ToolCall("ws.findFile", "w5", "lib", "", 0))
+    assert(r.data.contains("lib.kf"))
+}
+
+test "ws.graph edges and no cycles" {
+    var r = toolExec(defaultRegistry(), setupWsT(), ToolCall("ws.graph", "w6", "", "", 0))
+    assert(r.data.contains("\"edges\":1"))
+    assert(r.data.contains("\"cycles\":0"))
+}
+
+test "search.text counts occurrences" {
+    mkFile("build/tt_ws/hay.kf", "agulha aqui\nagulha la\n")
+    var c = setupWsT()
+    c.wsi.fullRescan()
+    var r = toolExec(defaultRegistry(), c, ToolCall("search.text", "w7", "agulha", "", 0))
+    assert(r.status == "ok")
+    assert(r.data.contains("hay.kf"))
+    assert(r.data.contains("\"count\":2"))
+}
+
+test "search.symbol delegates" {
+    var r = toolExec(defaultRegistry(), setupWsT(), ToolCall("search.symbol", "w8", "Shared", "", 0))
+    assert(r.data.contains("Shared"))
+}
+
+test "patch.replace swaps all occurrences with backup" {
+    mkFile("build/tt_ws/rep.txt", "foo e foo\n")
+    var res = toolExec(defaultRegistry(), setupWsTPatch(), ToolCall("patch.replace", "w9a", "build/tt_ws/rep.txt", "foo|bar"))
+    var parts = splitStr(res.data, ":")
+    assert(res.status == "ok")
+    assert(parts.get(1) == "{\"replacements\":2")
+    assert(File("build/tt_ws/rep.txt").readText() == "bar e bar\n")
+    assert(File(res.rollback.backupPath).exists())
+}
+
+test "patch.replace missing target errors" {
+    mkFile("build/tt_ws/rep2.txt", "abc\n")
+    var res = toolExec(defaultRegistry(), setupWsTPatch(), ToolCall("patch.replace", "w10", "build/tt_ws/rep2.txt", "zzz|y"))
+    assert(res.status == "error")
+    assert(res.data.contains("PATCH-TARGET-MISSING"))
+}
+
+setupWsTPatch(): ToolCtx {
+    var c = setupWsT()
+    c.grant(PERM_FS_WRITE())
+    return c
+}
+
+test "patch.append appends content" {
+    mkFile("build/tt_ws/ap.txt", "linha1\n")
+    var res = toolExec(defaultRegistry(), setupWsTPatch(), ToolCall("patch.append", "w11", "build/tt_ws/ap.txt", "linha2\n"))
+    assert(res.status == "ok")
+    assert(File("build/tt_ws/ap.txt").readText().contains("linha2"))
+}
+
+test "diff.file identical files same true" {
+    mkFile("build/tt_ws/d1.txt", "a\nb\n")
+    mkFile("build/tt_ws/d2.txt", "a\nb\n")
+    var r = toolExec(defaultRegistry(), setupWsT(), ToolCall("diff.file", "w12", "build/tt_ws/d1.txt", "build/tt_ws/d2.txt"))
+    assert(r.data.contains("\"same\":true"))
+}
+
+test "diff.file counts added removed lines" {
+    mkFile("build/tt_ws/d3.txt", "a\nb\nc\nd\n")
+    mkFile("build/tt_ws/d4.txt", "a\nx\nc\n")
+    var r = toolExec(defaultRegistry(), setupWsT(), ToolCall("diff.file", "w13", "build/tt_ws/d3.txt", "build/tt_ws/d4.txt"))
+    assert(r.data.contains("\"addedLines\":1"))
+    assert(r.data.contains("\"removedLines\":1"))
+}
+
+test "compiler tools report structured gap" {
+    var c = setupWsT()
+    c.grant(PERM_COMPILER_EXEC())
+    var r = toolExec(defaultRegistry(), c, ToolCall("ast.findNode", "w14", "", "", 0))
+    assert(r.status == "gap")
+    assert(r.data.contains("GW-AST-DUMP"))
+}
+
+main() {
+}
