@@ -1,26 +1,31 @@
-test "header valid v3 via file" {
+test "header valid v3 via accessors" {
     var h = openGGUF("fixtures/tiny.gguf")
-    assert(h.header.version == 3)
-    assert(h.header.tensorCount == 2)
+    assert(ggufVersion(h) == 3)
+    assert(ggufTensorCount(h) == 2)
 }
 
 test "bad magic yields error" {
     var h = openGGUF("fixtures/bad_magic.gguf")
-    assert(h.errors.size() >= 1)
+    assert(ggufErrorCount(h) >= 1)
 }
 
 test "bad version yields error" {
     var h = openGGUF("fixtures/bad_version.gguf")
-    assert(h.errors.size() >= 1)
+    assert(ggufErrorCount(h) >= 1)
 }
 
 test "metadata typed read bos" {
-    var mv = getMetadata(openGGUF("fixtures/tiny.gguf"), "tokenizer.bos_id")
-    assert(mv.intVal == 1)
+    var h = openGGUF("fixtures/tiny.gguf")
+    var mv = getMetadata(h, "tokenizer.bos_id")
+    var iv = mv.intVal
+    assert(iv == 1)
 }
 
 test "metadata missing kind -1" {
-    assert(getMetadata(openGGUF("fixtures/tiny.gguf"), "nope").kind == -1)
+    var h = openGGUF("fixtures/tiny.gguf")
+    var mv = getMetadata(h, "nope")
+    var k = mv.kind
+    assert(k == -1)
 }
 
 test "tensor lookup by name" {
@@ -30,25 +35,37 @@ test "tensor lookup by name" {
 }
 
 test "list tensors two entries" {
-    assert(listTensors(openGGUF("fixtures/tiny.gguf")).size() == 2)
+    var h = openGGUF("fixtures/tiny.gguf")
+    var l = listTensors(h)
+    var n = l.size()
+    assert(n == 2)
 }
 
 test "lazy tensor hex decoded" {
-    var b = getTensorLazy(openGGUF("fixtures/tiny.gguf"), "tok_embd")
-    assert(b.length == 32)
-    assert(b[31] == 31)
+    var h = openGGUF("fixtures/tiny.gguf")
+    var b = getTensorLazy(h, "tok_embd")
+    var len = b.length
+    var last = b[31]
+    assert(len == 32)
+    assert(last == 31)
 }
 
 test "missing file typed error" {
     var h = openGGUF("fixtures/nope.gguf")
-    assert(h.errors.size() == 1)
+    var n = ggufErrorCount(h)
+    assert(n == 1)
 }
 
 test "tokenizer info bos eos" {
-    var ti = tokenizerInfo(openGGUF("fixtures/tiny.gguf"))
-    assert(ti.bosId == 1)
+    var h = openGGUF("fixtures/tiny.gguf")
+    var ti = tokenizerInfo(h)
+    var bos = ti.bosId
+    assert(bos == 1)
 }
 
 test "rope ctx len" {
-    assert(ropeInfo(openGGUF("fixtures/tiny.gguf")).ctxLen == 512)
+    var h = openGGUF("fixtures/tiny.gguf")
+    var ri = ropeInfo(h)
+    var ctx = ri.ctxLen
+    assert(ctx == 512)
 }

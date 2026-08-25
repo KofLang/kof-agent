@@ -1,0 +1,12 @@
+test "zz errh" {
+    var e0 = listOf<MetaValue>()
+    var e1 = listOf<String>()
+    var e2 = listOf<TensorEntry>()
+    var e3 = listOf<Int[]>()
+    var errs = listOf<String>()
+    errs.add("E_MAGIC")
+    println("pre")
+    var h = GgufHandle(GgufHeader(3, 0, 0, 32), e0, e1, e2, e3, errs)
+    var n = ggufErrorCount(h)
+    println("post=" + n)
+}

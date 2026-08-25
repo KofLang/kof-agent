@@ -5,7 +5,7 @@ record RopeMetadataRec(Int dims, Int freqBase, String scaling, Int ctxLen)
 record GgufHeader(Int version, Int tensorCount, Int metaCount, Int align)
 record MetaValue(Int kind, Int intVal, String strVal)
 record TensorEntry(String name, Int nDims, Int d0, Int d1, Int dtype, Int offset, Int size)
-record GgufHandle(GgufHeader header, List<MetaValue> metaKeys, List<String> metaNames, List<TensorEntry> tensors, List<Int[]> blobs, List<String> errors)
+record GgufHandle(GgufHeader header, List<MetaValue> metaKeys, List<String> metaNames, List<TensorEntry> tensors, List<Int[]> blobs, Int errorCount, String errorCode)
 
 fn ggufHexVal(Char c): Int {
     if (c >= '0' && c <= '9') { return c - '0' }
@@ -39,10 +39,12 @@ ggufParsePairs(String metaLine): List<MetaPair> {
     var i = 0
     while (i < raw.size()) {
         var kv = splitStr(raw.get(i), "=")
-        if (kv.size() == 3) {
-            out.add(MetaPair(kv.get(0), parseIntStr(kv.get(1)), parseIntStr(kv.get(2))))
+        if (kv.size() == 2 && i + 1 < raw.size()) {
+            out.add(MetaPair(kv.get(0), parseIntStr(kv.get(1)), parseIntStr(raw.get(i + 1))))
+            i = i + 2
+        } else {
+            i = i + 1
         }
-        i = i + 1
     }
     return out
 }
@@ -53,18 +55,20 @@ ggufParseTensors(String dirLine): List<TensorSpec> {
     var out = listOf<TensorSpec>()
     var dparts = splitStr(dirLine, "|")
     var align = 32
-    if (dparts.size() > 0) {
-        align = parseIntStr(dparts.get(dparts.size() - 1))
+    var nSpecs = dparts.size()
+    if (nSpecs > 0) {
+        align = parseIntStr(dparts.get(nSpecs - 1))
+        nSpecs = nSpecs - 1
     }
     var i = 0
-    while (i + 1 < dparts.size()) {
+    while (i < nSpecs) {
         var tp = splitStr(dparts.get(i), ",")
         if (tp.size() == 6) {
             var off = parseIntStr(tp.get(5))
             var sz = parseIntStr(tp.get(4))
             out.add(TensorSpec(tp.get(0), parseIntStr(tp.get(2)), parseIntStr(tp.get(3)), sz, sz, off))
         }
-        i = i + 2
+        i = i + 1
     }
     return out
 }
@@ -110,27 +114,30 @@ ggufParse(String magicLine, String metaLine, String dirLine, String blobLine): G
         blobs.add(arr)
     }
     var align = 32
-    return GgufHandle(GgufHeader(ver, tensors.size(), pairs.size(), align), vals, names, tensors, blobs, errs)
+    var ec = errs.size()
+    var code = ""
+    if (ec > 0) {
+        code = errs.get(0)
+    }
+    return GgufHandle(GgufHeader(ver, tensors.size(), pairs.size(), align), vals, names, tensors, blobs, ec, code)
 }
 
 openGGUF(String specPath): GgufHandle {
     var f = File(specPath)
     if (!f.exists()) {
-        var e1 = listOf<String>()
-        e1.add("E_FILE_NOT_FOUND")
-        return GgufHandle(GgufHeader(0, 0, 0, 32), listOf<MetaValue>(), listOf<String>(), listOf<TensorEntry>(), listOf<Int[]>(), e1)
+        return GgufHandle(GgufHeader(0, 0, 0, 32), listOf<MetaValue>(), listOf<String>(), listOf<TensorEntry>(), listOf<Int[]>(), 1, "E_FILE_NOT_FOUND")
     }
     var lines = splitStr(f.readText(), "\n")
     if (lines.size() < 4) {
-        var e2 = listOf<String>()
-        e2.add("E_FORMAT")
-        return GgufHandle(GgufHeader(0, 0, 0, 32), listOf<MetaValue>(), listOf<String>(), listOf<TensorEntry>(), listOf<Int[]>(), e2)
+        return GgufHandle(GgufHeader(0, 0, 0, 32), listOf<MetaValue>(), listOf<String>(), listOf<TensorEntry>(), listOf<Int[]>(), 1, "E_FORMAT")
     }
     var blob = ""
-    if (lines.size() > 4) {
-        blob = lines.get(4)
-    } else {
-        blob = lines.get(3)
+    var li = 0
+    while (li < lines.size()) {
+        if (lines.get(li).startsWith("HEX")) {
+            blob = lines.get(li)
+        }
+        li = li + 1
     }
     return ggufParse(lines.get(0), lines.get(1), lines.get(2), blob)
 }
@@ -193,4 +200,32 @@ ropeInfo(GgufHandle h): RopeMetadataRec {
     var scaling = getMetadata(h, "rope.scaling.type")
     var ctx = getMetadata(h, "context_length")
     return RopeMetadataRec(dim.intVal, freq.intVal, scaling.strVal, ctx.intVal)
+}
+
+ggufVersion(GgufHandle h): Int {
+    var hdr = h.header
+    return hdr.version
+}
+
+ggufTensorCount(GgufHandle h): Int {
+    var hdr = h.header
+    return hdr.tensorCount
+}
+
+ggufErrorCount(GgufHandle h): Int {
+    return h.errorCount
+}
+
+ggufErrorCode(GgufHandle h): String {
+    return h.errorCode
+}
+
+ggufMetaCount(GgufHandle h): Int {
+    var hdr = h.header
+    return hdr.metaCount
+}
+
+ggufTensorCount2(GgufHandle h): Int {
+    var n = listTensors(h)
+    return n.size()
 }

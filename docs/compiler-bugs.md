@@ -95,3 +95,13 @@ N16 ✅ · N17 ✅ · **N13 ✅ NOVO FIX** · N11 ❌ · N12 ❌ (9º campo=0) �
 ## N18-SUSPECT (2026-08-25, 416ff4b)
 
 Instabilidade tipo-N10 evoluída: outcome nativo muda (PASS/assert-fail/SIGSEGV) conforme padrão de acesso a campos de record-com-List-fields retornado de função. Repro: regressions/N18-SUSPECT/. Minimização pendente.
+
+
+## N18 — CONFIRMED (2026-08-25, 416ff4b): record com múltiplos List fields corrompe memória no native
+
+- **Backend:** native · **Categoria:** N Codegen
+- **Repro mínimo:** `regressions/N18-SUSPECT/repro_minimal.kf` — construção de record c/ 5 List fields onde o último tem 1 elemento → SIGSEGV após entry
+- **Sintomas adicionais:** acesso aninhado `h.header.x` de escopo externo retorna lixo; via função acessora funciona
+- **Workaround APLICADO (M17):** GgufHandle usa `Int errorCount` + `String errorCode` em vez de `List<String> errors`; acessores ggufVersion/ggufTensorCount/ggufErrorCount para todo acesso aninhado
+- **Resultado:** suite GGUF 2/11 → **11/11 nativo**
+- **Status:** CONFIRMED — reportar upstream com prioridade alta
