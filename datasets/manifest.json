@@ -1,10 +1,12 @@
 {
   "version": 1,
-  "count": 26,
+  "count": 39,
   "skipped_invalid": 0,
   "by_type": {
     "retrieval": 2,
     "positive": 20,
-    "negative": 4
+    "negative": 4,
+    "planning": 8,
+    "execution": 5
   }
 }

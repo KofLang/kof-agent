@@ -1,0 +1,7 @@
+{
+  "bug": "SC1",
+  "state": "Open",
+  "target": "semantics",
+  "mode": "observed",
+  "note": "testes Open validam comportamento ATUAL documentado; viram teste fixado quando upstream corrigir"
+}

@@ -1,0 +1,17 @@
+test "tv slice rows reads base" {
+    var t = tensorNew(2, 3)
+    tensorSet(t, 1, 0, 7)
+    var v = tvSliceRows(t, 1, 1)
+    assert(tvGet(v, 0, 0) == 7)
+}
+
+test "concat rows stacks" {
+    var a = tensorNew(1, 2)
+    tensorSet(a, 0, 0, 1)
+    var b = tensorNew(1, 2)
+    tensorSet(b, 0, 0, 2)
+    var c = tensorConcatRows(a, b)
+    assert(c.rows == 2 && tensorGet(c, 1, 0) == 2)
+}
+main() {
+}

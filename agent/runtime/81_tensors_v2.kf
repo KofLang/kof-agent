@@ -1,0 +1,157 @@
+record TVView(TensorR base, Int offR, Int offC, Int rows, Int cols)
+
+tvGet(TVView v, Int r, Int c): Int {
+    return tensorGet(v.base, v.offR + r, v.offC + c)
+}
+
+tvSet(TVView v, Int r, Int c2, Int newVal) {
+    tensorSet(v.base, v.offR + r, v.offC + c2, newVal)
+}
+
+tvSliceRows(TensorR t, Int offR, Int rows): TVView {
+    return TVView(t, offR, 0, rows, t.cols)
+}
+
+tvBroadcast(Int fill, Int rows, Int cols): TensorR {
+    var t = tensorNew(rows, cols)
+    var r = 0
+    while (r < rows) {
+        var c2 = 0
+        while (c2 < cols) {
+            tensorSet(t, r, c2, fill)
+            c2 = c2 + 1
+        }
+        r = r + 1
+    }
+    return t
+}
+
+tensorReshape(TensorR t, Int rows, Int cols): TensorR {
+    var o = tensorNew(rows, cols)
+    var i = 0
+    while (i < rows * cols && i < t.data.length) {
+        o.data[i] = t.data[i]
+        i = i + 1
+    }
+    return o
+}
+
+tensorConcatRows(TensorR a, TensorR b): TensorR {
+    var o = tensorNew(a.rows + b.rows, a.cols)
+    var r = 0
+    while (r < a.rows) {
+        var c2 = 0
+        while (c2 < a.cols) {
+            tensorSet(o, r, c2, tensorGet(a, r, c2))
+            c2 = c2 + 1
+        }
+        r = r + 1
+    }
+    r = 0
+    while (r < b.rows) {
+        var c3 = 0
+        while (c3 < b.cols) {
+            tensorSet(o, a.rows + r, c3, tensorGet(b, r, c3))
+            c3 = c3 + 1
+        }
+        r = r + 1
+    }
+    return o
+}
+
+class Arena {
+    Int[] buf = new Int[1024]
+    Int used = 0
+    constructor() {
+    }
+    alloc(Int n): Int {
+        var at = used
+        if (used + n > buf.length) {
+            return -1
+        }
+        used = used + n
+        return at
+    }
+    reset() {
+        used = 0
+    }
+    capacity(): Int {
+        return buf.length
+    }
+    utilization(): Int {
+        return used
+    }
+}
+
+Q8_BLOCK(): Int { return 32 }
+
+quantizeQ8Block(Int[] src, Int off): Int[] {
+    var out = new Int[Q8_BLOCK() + 1]
+    var maxAbs = 0
+    var i = 0
+    while (i < Q8_BLOCK()) {
+        var v = src[off + i]
+        if (v < 0) {
+            if ((0 - v) > maxAbs) {
+                maxAbs = 0 - v
+            }
+        } else {
+            if (v > maxAbs) {
+                maxAbs = v
+            }
+        }
+        i = i + 1
+    }
+    out[0] = maxAbs
+    i = 0
+    while (i < Q8_BLOCK()) {
+        var v = src[off + i]
+        var q = 0
+        if (maxAbs > 0) {
+            q = v * 127 / maxAbs
+        }
+        out[i + 1] = q
+        i = i + 1
+    }
+    return out
+}
+
+dequantizeQ8Block(Int[] blk): Int[] {
+    var o = new Int[Q8_BLOCK()]
+    var scale = blk[0]
+    var i = 0
+    while (i < Q8_BLOCK()) {
+        var v = blk[i + 1]
+        if (scale > 0) {
+            v = v * scale / 127
+        }
+        o[i] = v
+        i = i + 1
+    }
+    return o
+}
+
+class KVCache {
+    List<Int[]> keys = listOf<Int[]>()
+    List<Int[]> vals = listOf<Int[]>()
+    Int window = 64
+    Int evictions = 0
+    constructor() {
+    }
+    append(Int[] k, Int[] v) {
+        keys.add(k)
+        vals.add(v)
+        if (keys.size > window) {
+            keys.remove(0)
+            vals.remove(0)
+            evictions = evictions + 1
+        }
+    }
+    size(): Int {
+        return keys.size
+    }
+    compact() {
+        keys = keys
+        vals = vals
+    }
+}

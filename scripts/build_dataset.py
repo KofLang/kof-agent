@@ -45,6 +45,15 @@ for kf in sorted((ROOT/"tests/golden/compiler").glob("*.kf")):
         "checksum": chk(kf.read_text()),
     })
 
+for kf in sorted((ROOT/"tests/planner").glob("*.kf")):
+    rows.append({"type":"planning","id":kf.stem,"instruction":kf.stem,"output":kf.read_text()[:400],"source":str(kf.relative_to(ROOT)),"checksum":chk(kf.read_text())})
+for kf in sorted((ROOT/"tests/exec").glob("*.kf")):
+    rows.append({"type":"execution","id":kf.stem,"instruction":kf.stem,"output":kf.read_text()[:400],"source":str(kf.relative_to(ROOT)),"checksum":chk(kf.read_text())})
+seen=set(); uniq=[]
+for r in rows:
+    if r["checksum"] in seen: continue
+    seen.add(r["checksum"]); uniq.append(r)
+rows=uniq
 manifest = {"version": 1, "count": len(rows), "skipped_invalid": skipped,
             "by_type": {}}
 for r in rows: manifest["by_type"][r["type"]] = manifest["by_type"].get(r["type"],0)+1
@@ -52,4 +61,9 @@ out = OUT/"kof-dataset.jsonl"
 with out.open("w") as fh:
     for r in rows: fh.write(json.dumps(r, ensure_ascii=False)+"\n")
 (OUT/"manifest.json").write_text(json.dumps(manifest, indent=2))
+csv = OUT/"kof-dataset.csv"
+with csv.open("w") as fh:
+    fh.write("type,id,instruction,checksum\n")
+    for r in rows:
+        fh.write(f"{r['type']},{r['id']},{r['checksum']}\n")
 print(json.dumps(manifest))

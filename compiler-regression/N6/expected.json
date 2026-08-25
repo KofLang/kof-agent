@@ -1,0 +1,7 @@
+{
+  "bug": "N6",
+  "state": "Investigating",
+  "target": "native",
+  "mode": "observed",
+  "note": "testes Open validam comportamento ATUAL documentado; viram teste fixado quando upstream corrigir"
+}

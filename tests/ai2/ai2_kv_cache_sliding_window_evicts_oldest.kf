@@ -1,0 +1,22 @@
+test "tv slice rows reads base" {
+    var t = tensorNew(2, 3)
+    tensorSet(t, 1, 0, 7)
+    var v = tvSliceRows(t, 1, 1)
+    assert(tvGet(v, 0, 0) == 7)
+}
+
+test "kv cache sliding window evicts oldest" {
+    var kv = KVCache()
+    var k = new Int[1]
+    k[0] = 1
+    var i = 0
+    while (i < 70) {
+        k[0] = i
+        kv.append(k, k)
+        i = i + 1
+    }
+    assert(kv.size() == 64)
+    assert(kv.evictions == 6)
+}
+main() {
+}

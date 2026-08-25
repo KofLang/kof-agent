@@ -1,0 +1,76 @@
+test "tv slice rows reads base" {
+    var t = tensorNew(2, 3)
+    tensorSet(t, 1, 0, 7)
+    var v = tvSliceRows(t, 1, 1)
+    assert(tvGet(v, 0, 0) == 7)
+}
+
+test "tv set writes through" {
+    var t = tensorNew(3, 3)
+    var v = tvSliceRows(t, 1, 2)
+    tvSet(v, 0, 1, 9)
+    assert(tensorGet(t, 1, 1) == 9)
+}
+
+test "broadcast fills value" {
+    var t = tvBroadcast(5, 2, 2)
+    assert(tensorGet(t, 1, 1) == 5 && tensorGet(t, 0, 0) == 5)
+}
+
+test "reshape keeps linear data" {
+    var t = tensorNew(2, 3)
+    tensorSet(t, 1, 0, 42)
+    var r = tensorReshape(t, 3, 2)
+    assert(r.data[3] == 42)
+}
+
+test "concat rows stacks" {
+    var a = tensorNew(1, 2)
+    tensorSet(a, 0, 0, 1)
+    var b = tensorNew(1, 2)
+    tensorSet(b, 0, 0, 2)
+    var c = tensorConcatRows(a, b)
+    assert(c.rows == 2 && tensorGet(c, 1, 0) == 2)
+}
+
+test "arena alloc sequential offsets" {
+    var ar = Arena()
+    var o1 = ar.alloc(10)
+    var o2 = ar.alloc(20)
+    assert(o1 == 0 && o2 == 10)
+}
+
+test "arena overflow returns -1" {
+    var ar = Arena()
+    assert(ar.alloc(2000) == -1)
+}
+
+test "q8 quant dequant roundtrip approx" {
+    var src = new Int[Q8_BLOCK()]
+    var i = 0
+    while (i < Q8_BLOCK()) {
+        src[i] = i - 16
+        i = i + 1
+    }
+    var q = quantizeQ8Block(src, 0)
+    assert(q[0] == 16)
+    var back = dequantizeQ8Block(q)
+    assert(back[31] >= 14 && back[31] <= 16)
+    assert(back[16] == 0)
+}
+
+test "kv cache sliding window evicts oldest" {
+    var kv = KVCache()
+    var k = new Int[1]
+    k[0] = 1
+    var i = 0
+    while (i < 70) {
+        k[0] = i
+        kv.append(k, k)
+        i = i + 1
+    }
+    assert(kv.size() == 64)
+    assert(kv.evictions == 6)
+}
+main() {
+}

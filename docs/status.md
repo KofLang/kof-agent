@@ -146,6 +146,7 @@ N8 (&&/|| sem curto-circuito) · N9 (+= String perde acumulador) · N10
 | 2026-08-24 | M0 concluída; repo publicado; status.md criado |
 | 2026-08-24 | M1 concluída: runtime nativo completo, 11 suítes verdes, baselines registrados, 10 bugs do compilador documentados |
 | 2026-08-24 | M2 🟡: gateway tipado + ADR-001 (B' híbrido) + goldens 20/20 via ponte; J2 e SC1–SC5 descobertos; execução in-language aguarda upstream |
+| 2026-08-24 | FASE 2: M10.1 (tensor v2/arena/q8/kv 8/9), M11.1 (/proc host info, hal 5/5), M12.1 (dataset 39 exemplos c/ csv+dedup), Compatibility Center automation (3 scripts + 20 repros + regression suite + ledger/matrix) |
 | 2026-08-24 | M12 🟡→✅-núcleo: dataset builder JSONL 26 exemplos, manifest+checksums |
 | 2026-08-24 | M11 🟡: HAL v1 CPU real (copy/scale/dot) + seleção c/ override; 5/5 |
 | 2026-08-24 | M10 🟡: runtime ai core (tokenizer/vocab/sampler/tensor-int/gguf-header) 10/10 nativo |

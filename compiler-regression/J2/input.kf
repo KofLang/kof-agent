@@ -1,0 +1,4 @@
+main() {
+    var r = process.run("echo", "hi")
+    println(r.stdout)
+}

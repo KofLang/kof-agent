@@ -16,4 +16,4 @@
 | M11 GPU HAL | ambos | 🟡 contratos | Q2 |
 | M12 Datasets | native/jvm | 🟡 emissor pronto | — |
 
-Baseline: HEAD 4954622 · Comparacao sempre contra HEAD anterior do compilador.
+Baseline: 4954622 · atualizado 2026-08-25T06:08:06Z

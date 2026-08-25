@@ -1,0 +1,15 @@
+test "tv slice rows reads base" {
+    var t = tensorNew(2, 3)
+    tensorSet(t, 1, 0, 7)
+    var v = tvSliceRows(t, 1, 1)
+    assert(tvGet(v, 0, 0) == 7)
+}
+
+test "arena alloc sequential offsets" {
+    var ar = Arena()
+    var o1 = ar.alloc(10)
+    var o2 = ar.alloc(20)
+    assert(o1 == 0 && o2 == 10)
+}
+main() {
+}

@@ -1,0 +1,5 @@
+main() {
+    var s = "x"
+    var n = s == null
+    println(n)
+}

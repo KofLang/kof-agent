@@ -1,0 +1,15 @@
+test "tv slice rows reads base" {
+    var t = tensorNew(2, 3)
+    tensorSet(t, 1, 0, 7)
+    var v = tvSliceRows(t, 1, 1)
+    assert(tvGet(v, 0, 0) == 7)
+}
+
+test "tv set writes through" {
+    var t = tensorNew(3, 3)
+    var v = tvSliceRows(t, 1, 2)
+    tvSet(v, 0, 1, 9)
+    assert(tensorGet(t, 1, 1) == 9)
+}
+main() {
+}

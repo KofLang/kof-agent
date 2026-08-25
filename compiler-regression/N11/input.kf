@@ -1,0 +1,3 @@
+main() {
+    println("a b c".lastIndexOf("b"))
+}

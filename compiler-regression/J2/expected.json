@@ -1,0 +1,7 @@
+{
+  "bug": "J2",
+  "state": "Fixed",
+  "target": "jvm",
+  "mode": "fixed",
+  "note": "testes Open validam comportamento ATUAL documentado; viram teste fixado quando upstream corrigir"
+}

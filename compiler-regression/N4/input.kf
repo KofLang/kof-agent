@@ -1,0 +1,4 @@
+main() {
+    var s = "a=b"
+    println(s.split("=").size)
+}

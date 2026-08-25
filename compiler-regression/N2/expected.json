@@ -1,0 +1,7 @@
+{
+  "bug": "N2",
+  "state": "Fixed",
+  "target": "native",
+  "mode": "fixed",
+  "note": "testes Open validam comportamento ATUAL documentado; viram teste fixado quando upstream corrigir"
+}

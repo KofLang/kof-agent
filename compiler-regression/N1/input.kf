@@ -1,0 +1,7 @@
+later(): Int {
+    return 5
+}
+
+main() {
+    println("v=" + later())
+}

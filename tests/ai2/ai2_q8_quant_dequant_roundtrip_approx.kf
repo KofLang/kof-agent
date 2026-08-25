@@ -1,0 +1,22 @@
+test "tv slice rows reads base" {
+    var t = tensorNew(2, 3)
+    tensorSet(t, 1, 0, 7)
+    var v = tvSliceRows(t, 1, 1)
+    assert(tvGet(v, 0, 0) == 7)
+}
+
+test "q8 quant dequant roundtrip approx" {
+    var src = new Int[Q8_BLOCK()]
+    var i = 0
+    while (i < Q8_BLOCK()) {
+        src[i] = i - 16
+        i = i + 1
+    }
+    var q = quantizeQ8Block(src, 0)
+    assert(q[0] == 16)
+    var back = dequantizeQ8Block(q)
+    assert(back[31] >= 14 && back[31] <= 16)
+    assert(back[16] == 0)
+}
+main() {
+}
