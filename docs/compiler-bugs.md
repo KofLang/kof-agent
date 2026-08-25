@@ -90,3 +90,8 @@ quando N14 fechar.
 ## Sweep final 416ff4b (REPORT_COMPILER_HEAD_416ff4b.md)
 
 N16 ✅ · N17 ✅ · **N13 ✅ NOVO FIX** · N11 ❌ · N12 ❌ (9º campo=0) · J4 🟡 parcial · N10 ❌
+
+
+## N18-SUSPECT (2026-08-25, 416ff4b)
+
+Instabilidade tipo-N10 evoluída: outcome nativo muda (PASS/assert-fail/SIGSEGV) conforme padrão de acesso a campos de record-com-List-fields retornado de função. Repro: regressions/N18-SUSPECT/. Minimização pendente.

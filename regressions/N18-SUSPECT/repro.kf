@@ -1,0 +1,4 @@
+test "zz probe" {
+    var h = openGGUF("fixtures/tiny.gguf")
+    println("v=" + h.header.version + " tc=" + h.header.tensorCount + " errs=" + h.errors.size() + " names=" + h.metaNames.size())
+}

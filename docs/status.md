@@ -12,8 +12,8 @@
 | FASE 1 (M0–M9) | ✅ código completo · verificação parcial (N10-residual) |
 | FASE 2 (M10–M12) | 🟡 M10 native **9/9** ✅ (Q8 destravado c/ fix N17) · JVM segue J4-residual |
 | FASE 3 (M13–M15) | 🟡 código pronto · N10-progressivo persiste (1.5MB asm → 139) |
-| FASE 3 (M16–M20) | 🟡 M17 🟡 núcleo entregue (84_gguf.kf, 2/11 verdes, --only anti-N10); M16.1+M16.2 ✅ (RoPE/KV/Sampler/bench): M16.1 TensorArena/softmax/RMSNorm/GELU/SiLU/causal (7t) + M16.2 RoPE V2/KVCacheV2/Q4/SamplerV3 (14t) + benchmark nativo (`2164230`) |
-| Próxima sessão | **M17.1** (fechar 9 testes, bench real) (RoPE/KV Cache/Quantização/Sampler V3) · reportar J4+repro upstream |
+| FASE 3 (M16–M20) | 🟡 M17 🟡 M17.1: suíte reescrita c/ fixtures, N18-SUSPECT descoberto (instabilidade N10-evolved bloqueia 9 testes); M16.1+M16.2 ✅ (RoPE/KV/Sampler/bench): M16.1 TensorArena/softmax/RMSNorm/GELU/SiLU/causal (7t) + M16.2 RoPE V2/KVCacheV2/Q4/SamplerV3 (14t) + benchmark nativo (`2164230`) |
+| Próxima sessão | reportar **N18-SUSPECT** upstream + workaround retorno-por-campos (fechar 9 testes, bench real) (RoPE/KV Cache/Quantização/Sampler V3) · reportar J4+repro upstream |
 
 ## Bloqueios ativos
 
