@@ -1,0 +1,19 @@
+test "rmsnorm approx scales" {
+    var x = new Int[2]
+    x[0] = 10
+    x[1] = 20
+    var r = nnRMSNormApprox(x)
+    assert(r.length == 2)
+}
+test "attention scores per key" {
+    var q = new Int[1]
+    q[0] = 2
+    var ks = listOf<Int[]>()
+    var k1 = new Int[1]
+    k1[0] = 3
+    ks.add(k1)
+    var sc = nnAttentionScoresInt(q, ks)
+    assert(sc.get(0) == 6)
+}
+main() {
+}

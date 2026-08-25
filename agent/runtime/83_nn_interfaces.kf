@@ -1,0 +1,120 @@
+record NNLimitsRec(Int ropeDims, Int heads, Int kvLayers)
+
+nnRMSNormApprox(Int[] x): Int[] {
+    var acc = 0
+    var i = 0
+    while (i < x.length) {
+        acc = acc + x[i] * x[i]
+        i = i + 1
+    }
+    var mean = 0
+    if (x.length > 0) {
+        mean = acc / x.length
+    }
+    var scale = mean / 4 + 1
+    var out = new Int[x.length]
+    i = 0
+    while (i < x.length) {
+        out[i] = x[i] * 1000 / scale
+        i = i + 1
+    }
+    return out
+}
+
+nnLayerNormApprox(Int[] x): Int[] {
+    return nnRMSNormApprox(x)
+}
+
+nnRopeRotatePairs(Int[] q): Int[] {
+    var out = new Int[q.length]
+    var i = 0
+    while (i + 1 < q.length) {
+        out[i] = q[i + 1]
+        out[i + 1] = 0 - q[i]
+        i = i + 2
+    }
+    if (q.length % 2 == 1) {
+        out[q.length - 1] = q[q.length - 1]
+    }
+    return out
+}
+
+nnFeedForwardInt(Int[] x, Int mult): Int[] {
+    var o = new Int[x.length]
+    var i = 0
+    while (i < x.length) {
+        o[i] = x[i] * mult
+        i = i + 1
+    }
+    return o
+}
+
+nnResidual(Int[] a, Int[] b): Int[] {
+    var o = new Int[a.length]
+    var i = 0
+    while (i < a.length && i < b.length) {
+        o[i] = a[i] + b[i]
+        i = i + 1
+    }
+    return o
+}
+
+nnAttentionScoresInt(Int[] q, List<Int[]> ks): List<Int> {
+    var scores = listOf<Int>()
+    for (var k in ks) {
+        scores.add(halDot(q, k))
+    }
+    return scores
+}
+
+samplerRepeatPenalty(Int[] logits, List<Int> recent, Int penaltyNum, Int penaltyDen): Int[] {
+    var out = new Int[logits.length]
+    var i = 0
+    while (i < logits.length) {
+        out[i] = logits[i]
+        var seen = false
+        for (var r in recent) {
+            if (r == i) {
+                seen = true
+            }
+        }
+        if (seen && out[i] > 0) {
+            out[i] = out[i] * penaltyDen / penaltyNum
+        }
+        i = i + 1
+    }
+    return out
+}
+
+samplerTopPApprox(Int[] logits, Int n, Int topPPermille, Int seed): Int {
+    var total = 0
+    var i = 0
+    while (i < n) {
+        if (logits[i] > 0) {
+            total = total + logits[i]
+        }
+        i = i + 1
+    }
+    if (total == 0) {
+        return samplerTopK(logits, n, 1, seed)
+    }
+    var threshold = total * topPPermille / 1000
+    var cum = 0
+    var pick = 0
+    i = 0
+    while (i < n) {
+        if (logits[i] > 0) {
+            cum = cum + logits[i]
+            if (cum >= threshold) {
+                pick = i
+                i = n
+            }
+        }
+        i = i + 1
+    }
+    return pick
+}
+
+ggufMeta(String path, String key): String {
+    return metaField(wsReadVersioned(path, "GGUFT"), key)
+}

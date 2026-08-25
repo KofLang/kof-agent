@@ -1,0 +1,15 @@
+test "rmsnorm approx scales" {
+    var x = new Int[2]
+    x[0] = 10
+    x[1] = 20
+    var r = nnRMSNormApprox(x)
+    assert(r.length == 2)
+}
+test "topp approx picks within mass" {
+    var lg = new Int[2]
+    lg[0] = 8
+    lg[1] = 2
+    assert(samplerTopPApprox(lg, 2, 500, 1) == 0)
+}
+main() {
+}

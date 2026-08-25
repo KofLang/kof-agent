@@ -1,0 +1,16 @@
+{
+  "segfaults": [
+    "N3",
+    "N4",
+    "N6",
+    "N10-varios"
+  ],
+  "hangs": [
+    "N7"
+  ],
+  "link_errors": [
+    "N1",
+    "N2(resolvido)",
+    "N14(resolvido)"
+  ]
+}

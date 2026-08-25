@@ -1,0 +1,18 @@
+test "rmsnorm approx scales" {
+    var x = new Int[2]
+    x[0] = 10
+    x[1] = 20
+    var r = nnRMSNormApprox(x)
+    assert(r.length == 2)
+}
+test "repeat penalty reduces seen positive logits" {
+    var lg = new Int[2]
+    lg[0] = 10
+    lg[1] = 10
+    var recent = listOf<Int>()
+    recent.add(0)
+    var out = samplerRepeatPenalty(lg, recent, 13, 10)
+    assert(out[0] < out[1])
+}
+main() {
+}

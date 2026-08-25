@@ -1,0 +1,19 @@
+{
+  "head": "4954622",
+  "updated": "2026-08-25T08:59:52.428765Z",
+  "suites": {
+    "m1_core": 9,
+    "m3_ws_diff": 7,
+    "m3_ws_partial": true,
+    "m8_planner": 5,
+    "ai": 10,
+    "hal": 5
+  },
+  "known_crashes": [
+    "N3",
+    "N4",
+    "N6",
+    "N7",
+    "N10"
+  ]
+}

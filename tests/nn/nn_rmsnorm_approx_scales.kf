@@ -1,0 +1,16 @@
+test "rmsnorm approx scales" {
+    var x = new Int[2]
+    x[0] = 10
+    x[1] = 20
+    var r = nnRMSNormApprox(x)
+    assert(r.length == 2)
+}
+test "rmsnorm approx scales" {
+    var x = new Int[2]
+    x[0] = 10
+    x[1] = 20
+    var r = nnRMSNormApprox(x)
+    assert(r.length == 2)
+}
+main() {
+}

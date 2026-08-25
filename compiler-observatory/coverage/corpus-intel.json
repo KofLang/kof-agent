@@ -1,0 +1,22 @@
+{
+  "docs": 6,
+  "by_category": {
+    "stdlib": 1,
+    "diagnostics": 2,
+    "language": 2,
+    "recipes": 1
+  },
+  "symbols": {
+    "json.decode": 1,
+    "json.encode": 1,
+    "record": 1,
+    "spawn": 1
+  },
+  "builtin_coverage": {
+    "json.decode": true,
+    "json.encode": true,
+    "record": true,
+    "spawn": true
+  },
+  "orphan_symbols": []
+}

@@ -1,0 +1,8 @@
+{
+  "baselines": {
+    "init_us": 120,
+    "scheduler_tasks_per_s": 143000,
+    "events_ops_per_s": 56000,
+    "note": "M1 baselines nativos; FP pendente Q2"
+  }
+}

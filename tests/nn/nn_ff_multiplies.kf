@@ -1,0 +1,14 @@
+test "rmsnorm approx scales" {
+    var x = new Int[2]
+    x[0] = 10
+    x[1] = 20
+    var r = nnRMSNormApprox(x)
+    assert(r.length == 2)
+}
+test "ff multiplies" {
+    var x = new Int[1]
+    x[0] = 7
+    assert(nnFeedForwardInt(x, 2)[0] == 14)
+}
+main() {
+}

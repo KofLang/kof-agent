@@ -1,0 +1,10 @@
+{
+  "parser": "via-compilador",
+  "semantic": "PARTIAL SC1-5",
+  "native": "BLOQUEADO-N10-residual",
+  "jvm": "OK exceto J3",
+  "workspace": "16/37+",
+  "corpus": "engine ok/testes pendentes",
+  "planner": "5/8",
+  "executor": "implementado-bloqueado"
+}

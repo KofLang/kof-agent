@@ -1,0 +1,17 @@
+test "rmsnorm approx scales" {
+    var x = new Int[2]
+    x[0] = 10
+    x[1] = 20
+    var r = nnRMSNormApprox(x)
+    assert(r.length == 2)
+}
+test "residual adds" {
+    var a = new Int[1]
+    var b = new Int[1]
+    a[0] = 2
+    b[0] = 3
+    var r = nnResidual(a, b)
+    assert(r[0] == 5)
+}
+main() {
+}
