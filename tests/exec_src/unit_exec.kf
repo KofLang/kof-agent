@@ -1,0 +1,73 @@
+mkCtx(): ToolCtx {
+    return ToolCtx(freshBus(), FixedClock(10))
+}
+
+mkCtxGrant(): ToolCtx {
+    var c = mkCtx()
+    c.grant(PERM_FS_WRITE())
+    return c
+}
+
+mkExec(): ToolCtx {
+    var c = mkCtxGrant()
+    c.wsi = WorkspaceIndex("build/tt_exec", c.bus, FixedClock(2))
+    return c
+}
+
+test "exec plan creates file end to end" {
+    var plan0 = ExecutionPlan()
+    plan0.id = "p-ok"
+    plan0.intent = "CreateWebsite"
+    plan0.strategy = "Web"
+    plTask(plan0.tasks, "p-ok", 1, "CreateDir", "fs.mkdir", "build/tt_exec/dir1", "", "", "dir-exists")
+    plTask(plan0.tasks, "p-ok", 2, "CreateFile", "fs.write", "build/tt_exec/dir1/main.kf", "main() {\n}\n", "p-ok-t1", "file-exists")
+    var r = exExecutePlan(defaultRegistry(), mkExec(), plan0, 0)
+    assert(r.ok)
+    assert(r.executed == 2)
+    assert(File("build/tt_exec/dir1/main.kf").readText().contains("main"))
+}
+
+test "failed task rolls back content" {
+    mkFile("build/tt_exec/rb.txt", "original\n")
+    var reg = defaultRegistry()
+    var ctx = mkExec()
+    var badReg = ToolRegistry()
+    toolExec(badReg, ctx, ToolCall("noop-reg", "x", "", "", 0))
+    var plan0 = ExecutionPlan()
+    plan0.id = "p-rb"
+    plTask(plan0.tasks, "p-rb", 1, "WriteV1", "patch.file", "build/tt_exec/rb.txt", "v1\n", "", "file-exists")
+    plTask(plan0.tasks, "p-rb", 2, "BrokenTool", "nao.existe", "x", "", "p-rb-t1", "")
+    var r = exExecutePlan(reg, ctx, plan0, 0)
+    assert(r.ok == false)
+    assert(File("build/tt_exec/rb.txt").exists())
+}
+
+test "dep failure skips dependent" {
+    var plan0 = ExecutionPlan()
+    plan0.id = "p-skip"
+    plTask(plan0.tasks, "p-skip", 1, "Broken", "nao.existe", "", "", "", "")
+    plTask(plan0.tasks, "p-skip", 2, "Dependent", "fs.write", "build/tt_exec/skip.kf", "x", "p-skip-t1", "")
+    var r = exExecutePlan(defaultRegistry(), mkExec(), plan0, 0)
+    assert(r.failed == 1)
+}
+
+test "repair attempts counted and bounded" {
+    var plan0 = ExecutionPlan()
+    plan0.id = "p-rep"
+    plTask(plan0.tasks, "p-rep", 1, "Broken", "nao.existe", "", "", "", "")
+    var r = exExecutePlan(defaultRegistry(), mkExec(), plan0, 3)
+    assert(r.repairs == 3)
+    assert(r.ok == false)
+}
+
+test "cancelled context yields cancelled" {
+    var c = mkExec()
+    c.cancelled = true
+    var plan0 = ExecutionPlan()
+    plan0.id = "p-can"
+    plTask(plan0.tasks, "p-can", 1, "A", "fs.read", "", "", "", "")
+    var r = exExecutePlan(defaultRegistry(), c, plan0, 0)
+    assert(r.executed == 0 && r.failed == 0)
+}
+main() {
+}

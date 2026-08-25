@@ -68,7 +68,7 @@ Projeto em fase de fundação (**Milestone 0** — documentação de engenharia)
 | M6 | Retrieval Engine | 🟡 (N10) |
 | M7 | Kof Brain | 🟡 (N10) |
 | M8 | Planner | 🟡 (N10 parcial) |
-| M9 | Executor + Repair Loop | ⬜ |
+| M9 | Executor + Repair Loop | 🟡 (N10) |
 | M10 | Runtime AI | ⬜ |
 | M11 | GPU Universal | ⬜ |
 | M12 | Dataset + Futuro SLM | ⬜ |

@@ -1,0 +1,32 @@
+mkCtxGrant(): ToolCtx {
+    var c = ToolCtx(freshBus(), FixedClock(10))
+    c.grant(PERM_FS_WRITE())
+    return c
+}
+
+mkCtx(): ToolCtx {
+    return ToolCtx(freshBus(), FixedClock(10))
+}
+
+mkExec(): ToolCtx {
+    var c = mkCtxGrant()
+    c.wsi = WorkspaceIndex("build/tt_exec", c.bus, FixedClock(2))
+    return c
+}
+
+test "failed task rolls back content" {
+    mkFile("build/tt_exec/rb.txt", "original\n")
+    var reg = defaultRegistry()
+    var ctx = mkExec()
+    var badReg = ToolRegistry()
+    toolExec(badReg, ctx, ToolCall("noop-reg", "x", "", "", 0))
+    var plan0 = ExecutionPlan()
+    plan0.id = "p-rb"
+    plTask(plan0.tasks, "p-rb", 1, "WriteV1", "patch.file", "build/tt_exec/rb.txt", "v1\n", "", "file-exists")
+    plTask(plan0.tasks, "p-rb", 2, "BrokenTool", "nao.existe", "x", "", "p-rb-t1", "")
+    var r = exExecutePlan(reg, ctx, plan0, 0)
+    assert(r.ok == false)
+    assert(File("build/tt_exec/rb.txt").exists())
+}
+main() {
+}

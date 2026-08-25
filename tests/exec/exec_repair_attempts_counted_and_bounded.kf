@@ -1,0 +1,26 @@
+mkCtxGrant(): ToolCtx {
+    var c = ToolCtx(freshBus(), FixedClock(10))
+    c.grant(PERM_FS_WRITE())
+    return c
+}
+
+mkCtx(): ToolCtx {
+    return ToolCtx(freshBus(), FixedClock(10))
+}
+
+mkExec(): ToolCtx {
+    var c = mkCtxGrant()
+    c.wsi = WorkspaceIndex("build/tt_exec", c.bus, FixedClock(2))
+    return c
+}
+
+test "repair attempts counted and bounded" {
+    var plan0 = ExecutionPlan()
+    plan0.id = "p-rep"
+    plTask(plan0.tasks, "p-rep", 1, "Broken", "nao.existe", "", "", "", "")
+    var r = exExecutePlan(defaultRegistry(), mkExec(), plan0, 3)
+    assert(r.repairs == 3)
+    assert(r.ok == false)
+}
+main() {
+}

@@ -1,0 +1,158 @@
+record ExecTaskState(String taskId, String state)
+record RepairAttemptRec(Int attempt, String diagCode)
+
+EXEC_READY(): String { return "READY" }
+EXEC_RUNNING(): String { return "RUNNING" }
+EXEC_SUCCESS(): String { return "SUCCESS" }
+EXEC_FAILED(): String { return "FAILED" }
+EXEC_SKIPPED(): String { return "SKIPPED" }
+EXEC_ROLLED_BACK(): String { return "ROLLED_BACK" }
+
+class ExecResult {
+    Bool ok = true
+    Int executed = 0
+    Int failed = 0
+    Int rolledBack = 0
+    Int repairs = 0
+    String lastError = ""
+    constructor() {
+    }
+}
+
+exRollback(ToolCtx c, ToolResult r): Bool {
+    if (r.rollback.kind == "restore") {
+        var rr = toolExec(defaultRegistry(), c, ToolCall("fs.rollbackRestore", c.requestId, r.rollback.backupPath, "", 0))
+        return rr.status == "ok"
+    }
+    if (r.rollback.kind == "delete-created") {
+        var f = File(r.rollback.backupPath)
+        if (f.exists()) {
+            f.delete()
+        }
+        return true
+    }
+    return false
+}
+
+exValidate(ToolCtx c, PlanTaskRec t): PlanValidationRec {
+    return plValidateTask(defaultRegistry(), c, t)
+}
+
+exRepairAttempt(ToolCtx c, PlanTaskRec t, Int attempt): ToolResult {
+    c.bus.publish("repair.started", t.id + " attempt=" + attempt)
+    var diagCode = ""
+    if (t.argA != "") {
+        for (var code in listOf<String>("ARITH001", "SEM011", "SEM015", "SEM010")) {
+            if (c.requestId.contains(code)) {
+                diagCode = code
+            }
+        }
+    }
+    var r = toolErr("REPAIR-NOPATCH", "nenhum patch deterministico disponivel para " + diagCode)
+    c.bus.publish("repair.finished", t.id)
+    return r
+}
+
+exExecutePlan(ToolRegistry reg, ToolCtx ctx, ExecutionPlan plan, Int maxRepairs): ExecResult {
+    ctx.bus.publish("plan.started", plan.id + " tasks=" + plan.tasks.size)
+    var res = ExecResult()
+    var states = listOf<ExecTaskState>()
+    var i = 0
+    while (i < plan.tasks.size) {
+        states.add(ExecTaskState(plan.tasks.get(i).id, EXEC_READY()))
+        i = i + 1
+    }
+    i = 0
+    while (i < plan.tasks.size) {
+        var t = plan.tasks.get(i)
+        var depsOk = true
+        if (t.depsCsv != "") {
+            var j = 0
+            while (j < i) {
+                if (plan.tasks.get(j).id == t.depsCsv && states.get(j).state != EXEC_SUCCESS()) {
+                    depsOk = false
+                }
+                j = j + 1
+            }
+        }
+        var skipIt = false
+        if (!depsOk) {
+            skipIt = true
+        }
+        if (!skipIt) {
+            states.get(i).state = EXEC_RUNNING()
+            ctx.bus.publish("task.started", t.id)
+            var r = toolExec(reg, ctx, ToolCall(t.toolId, ctx.requestId, t.argA, t.argB, 0))
+            if (r.status != "ok") {
+                states.get(i).state = EXEC_FAILED()
+                res.failed = res.failed + 1
+                res.lastError = r.data
+                ctx.bus.publish("task.failed", t.id + ":" + r.data)
+                var attempt = 1
+                var repaired = false
+                while (attempt <= maxRepairs) {
+                    res.repairs = res.repairs + 1
+                    var pr = exRepairAttempt(ctx, t, attempt)
+                    if (pr.status == "ok") {
+                        r = pr
+                        repaired = true
+                        attempt = maxRepairs + 1
+                    }
+                    attempt = attempt + 1
+                }
+                if (!repaired && r.rollback.kind != "") {
+                    ctx.bus.publish("rollback.started", t.id)
+                    if (exRollback(ctx, r)) {
+                        states.get(i).state = EXEC_ROLLED_BACK()
+                        res.rolledBack = res.rolledBack + 1
+                    }
+                    ctx.bus.publish("rollback.finished", t.id)
+                }
+            } else {
+                states.get(i).state = EXEC_SUCCESS()
+                res.executed = res.executed + 1
+                ctx.bus.publish("task.completed", t.id)
+            }
+            if (!skipIt) {
+            }
+        }
+        states.get(i).state = EXEC_RUNNING()
+        ctx.bus.publish("task.started", t.id)
+        var r = toolExec(reg, ctx, ToolCall(t.toolId, ctx.requestId, t.argA, t.argB, 0))
+        if (r.status != "ok") {
+            states.get(i).state = EXEC_FAILED()
+            res.failed = res.failed + 1
+            res.lastError = r.data
+            ctx.bus.publish("task.failed", t.id + ":" + r.data)
+            var attempt = 1
+            while (attempt <= maxRepairs) {
+                res.repairs = res.repairs + 1
+                var pr = exRepairAttempt(ctx, t, attempt)
+                if (pr.status == "ok") {
+                    r = pr
+                    break
+                }
+                attempt = attempt + 1
+            }
+            if (r.status != "ok" && r.rollback.kind != "") {
+                ctx.bus.publish("rollback.started", t.id)
+                if (exRollback(ctx, r)) {
+                    states.get(i).state = EXEC_ROLLED_BACK()
+                    res.rolledBack = res.rolledBack + 1
+                }
+                ctx.bus.publish("rollback.finished", t.id)
+            }
+        } else {
+            states.get(i).state = EXEC_SUCCESS()
+            res.executed = res.executed + 1
+            ctx.bus.publish("task.completed", t.id)
+        }
+        i = i + 1
+    }
+    if (res.failed > 0) {
+        res.ok = false
+    }
+    ctx.met.incByName("tasks.completed")
+    ctx.bus.publish("plan.finished", plan.id + " ok=" + res.ok)
+    return res
+}

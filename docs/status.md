@@ -6,8 +6,8 @@
 > vence: implementação → testes → este arquivo → demais docs.
 
 **Última atualização:** 24 de agosto de 2026
-**Milestone corrente:** Estabilização anti-N10 (partes 45–69) → depois M9 — Executor + Repair Loop
-**Milestones:** M0 ✅ · M1 ✅ · M2–M7 🟡 · **M8 🟡 Parcial (Planner 5/8 nativas verdes)**
+**Milestone corrente:** ESTABILIZAÇÃO anti-N10 (bloqueio central) → depois M10 Runtime AI
+**Milestones:** M0 ✅ · M1 ✅ · M2–M9 🟡 (código completo; verificação nativa bloqueada por N10 PROGRESSIVO)
 
 ---
 
@@ -19,7 +19,7 @@
 | Código | runtime completo em Kof: 9 partes + CLI (~2.6k linhas), compila no **Native** |
 | Suíte | **11/11 suítes verdes** (39 testes estruturados + 2 stress), target native |
 | Benchmarks | baseline `native-M01`: init **120 µs**, scheduler ~143k tasks/s, bus ~56k ops/s, logger ~19.6k l/s, pool ~141k t/s |
-| Próxima ação | fechar 3 intents do Brain; playbook anti-N10; M9 Executor |
+| URGENTE | reportar upstream 15 achados; N10 confirmado PROGRESSIVO (regredir suítes verdes ao crescer o TU) |
 | Workspace | índice+snapshot+diff+persistência implementados; aproximação lexical (D0018); 16/37 testes nativos (resto N10) |
 | Gateway Q1 | ✅ decidido (D0016): B' híbrido batch-subprocess — A=201ms/op, B'=21.8ms/arq, C bloqueado |
 
@@ -142,6 +142,7 @@ N8 (&&/|| sem curto-circuito) · N9 (+= String perde acumulador) · N10
 | 2026-08-24 | M0 concluída; repo publicado; status.md criado |
 | 2026-08-24 | M1 concluída: runtime nativo completo, 11 suítes verdes, baselines registrados, 10 bugs do compilador documentados |
 | 2026-08-24 | M2 🟡: gateway tipado + ADR-001 (B' híbrido) + goldens 20/20 via ponte; J2 e SC1–SC5 descobertos; execução in-language aguarda upstream |
+| 2026-08-24 | M9 🟡: executor/rollback/repair implementados; N10 revelado PROGRESSIVO (regressão de suítes verdes ao crescer TU) |
 | 2026-08-24 | M8 🟡: planner determinístico (estratégias/DAG/validações/rollback); 5/8 nativos |
 | 2026-08-24 | M7 🟡: brain PT-BR determinístico (intents/entidades/confidence/ambiguities); PENDENTE-N10 |
 | 2026-08-24 | M6 🟡: retrieval lexical-first completo (expansões/ranking/budget/cache); PENDENTE-N10 |

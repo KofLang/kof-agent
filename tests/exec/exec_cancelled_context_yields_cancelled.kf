@@ -1,0 +1,27 @@
+mkCtxGrant(): ToolCtx {
+    var c = ToolCtx(freshBus(), FixedClock(10))
+    c.grant(PERM_FS_WRITE())
+    return c
+}
+
+mkCtx(): ToolCtx {
+    return ToolCtx(freshBus(), FixedClock(10))
+}
+
+mkExec(): ToolCtx {
+    var c = mkCtxGrant()
+    c.wsi = WorkspaceIndex("build/tt_exec", c.bus, FixedClock(2))
+    return c
+}
+
+test "cancelled context yields cancelled" {
+    var c = mkExec()
+    c.cancelled = true
+    var plan0 = ExecutionPlan()
+    plan0.id = "p-can"
+    plTask(plan0.tasks, "p-can", 1, "A", "fs.read", "", "", "", "")
+    var r = exExecutePlan(defaultRegistry(), c, plan0, 0)
+    assert(r.executed == 0 && r.failed == 0)
+}
+main() {
+}

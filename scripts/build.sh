@@ -21,6 +21,7 @@ PARTS=(
   agent/runtime/67_retrieval.kf
   agent/runtime/68_brain.kf
   agent/runtime/69_planner.kf
+  agent/runtime/71_executor.kf
   agent/runtime/90_runtime.kf
 )
 
