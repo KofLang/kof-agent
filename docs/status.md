@@ -8,16 +8,23 @@
 
 | Item | Estado |
 |------|--------|
-| Compilador | **v0.1.0-beta (8df415e)** · branch `kofagent-baseline` |
+| Compilador | **HEAD origin/main @ a7949a5** · kof 0.1.0-alpha-report |
 | FASE 1 (M0–M9) | ✅ código completo · verificação parcial (N10-residual) |
-| FASE 2 (M10–M12) | 🟡 núcleo entregue · FP aguarda Q2 |
-| FASE 3 (M13–M15) | 🟡 código escrito · PENDENTE-N10 (TU 1.3MB+) |
-| FASE 3 (M16–M20) | ⬜ **não iniciado** — specs pendentes |
-| Próxima sessão | **M16 Runtime AI v2** + colheita anti-N10 das partes 87/88/89 |
+| FASE 2 (M10–M12) | 🟡 M10 native **8/9** (restante=N17) · JVM bloqueado por J4 |
+| FASE 3 (M13–M15) | 🟡 código pronto · N10-progressivo persiste (1.5MB asm → 139) |
+| FASE 3 (M16–M20) | 🟡 M16.1 entregue: TensorArena/softmax/RMSNorm/GELU/SiLU/causal + 7 testes nativos verdes (`8fd73e9`) |
+| Próxima sessão | **M16.2** (RoPE/KV Cache/Quantização/Sampler V3) · reportar J4+repro upstream |
 
-## Bloqueio central
+## Bloqueios ativos
 
-**N10-progressivo**: translation units > ~800KB asm crasham (segfault/bounds
+| ID | Impacto |
+|----|---------|
+| **N10-progressivo** | TU > ~800KB asm → SIGSEGV; bloqueia FASE 3 (unit_f3, 9 testes) e suítes grandes |
+| **N17** | cmp signed nativo quebrado p/ negativos vindos de `Int[]`; mata Q8 quant (81_tensors_v2.kf:92); workaround: kernels sem negativos |
+| **J4** | COMP002 ASM Frame.merge crash em MemoryLayer.purgeExpired; suite M10 não compila em JVM |
+| **N16** | SEM025 fwd-ref classe; workaround: PARTS em ordem topológica + helpers movidos p/ 47_tools |
+
+Histórico: **N10-progressivo**: translation units > ~800KB asm crasham (segfault/bounds
 espúrio). Cada parte nova empurra módulos antes verdes para o limite.
 Playbook de bisect em `docs/compiler-bugs.md`.
 
