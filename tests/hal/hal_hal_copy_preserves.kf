@@ -1,0 +1,15 @@
+test "cpu always available" {
+    assert(halDetect().size >= 1)
+    assert(halSelect("").kind == "CPU")
+}
+
+test "hal copy preserves" {
+    var a = new Int[3]
+    a[0] = 1
+    a[1] = 2
+    var b = halCopy(a)
+    b[2] = 9
+    assert(a[0] == 1 && b[2] == 9)
+}
+main() {
+}

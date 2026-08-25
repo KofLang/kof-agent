@@ -1,0 +1,11 @@
+test "cpu always available" {
+    assert(halDetect().size >= 1)
+    assert(halSelect("").kind == "CPU")
+}
+
+test "cpu always available" {
+    assert(halDetect().size >= 1)
+    assert(halSelect("").kind == "CPU")
+}
+main() {
+}

@@ -1,0 +1,5 @@
+hal_cpu_always_available.kf
+hal_override_selects_backend_when_present.kf
+hal_hal_copy_preserves.kf
+hal_hal_scale.kf
+hal_hal_dot_product.kf

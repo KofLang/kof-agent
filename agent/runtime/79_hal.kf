@@ -1,0 +1,63 @@
+record DeviceRec(String name, String kind, Int priority, Bool available)
+
+HAL_CPU(): DeviceRec {
+    return DeviceRec("cpu-simd", "CPU", 99, true)
+}
+
+halDetect(): List<DeviceRec> {
+    var out = listOf<DeviceRec>()
+    out.add(HAL_CPU())
+    return out
+}
+
+halSelect(String overrideKind): DeviceRec {
+    var devs = halDetect()
+    if (overrideKind != "") {
+        for (var d in devs) {
+            if (d.kind == overrideKind) {
+                return d
+            }
+        }
+    }
+    var best = HAL_CPU()
+    for (var d in devs) {
+        if (d.available && d.priority < best.priority) {
+            best = d
+        }
+    }
+    return best
+}
+
+halCopy(Int[] src): Int[] {
+    var o = new Int[src.length]
+    var i = 0
+    while (i < src.length) {
+        o[i] = src[i]
+        i = i + 1
+    }
+    return o
+}
+
+halScale(Int[] src, Int k): Int[] {
+    var o = new Int[src.length]
+    var i = 0
+    while (i < src.length) {
+        o[i] = src[i] * k
+        i = i + 1
+    }
+    return o
+}
+
+halDot(Int[] a, Int[] b): Int {
+    var acc = 0
+    var n = a.length
+    if (b.length < n) {
+        n = b.length
+    }
+    var i = 0
+    while (i < n) {
+        acc = acc + a[i] * b[i]
+        i = i + 1
+    }
+    return acc
+}

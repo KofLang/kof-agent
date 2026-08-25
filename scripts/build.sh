@@ -20,6 +20,7 @@ PARTS=(
   agent/runtime/57_corpus.kf
   agent/runtime/67_retrieval.kf
   agent/runtime/77_runtime_ai.kf
+  agent/runtime/79_hal.kf
   agent/runtime/68_brain.kf
   agent/runtime/69_planner.kf
   agent/runtime/71_executor.kf

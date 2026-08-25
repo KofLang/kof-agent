@@ -1,0 +1,14 @@
+test "cpu always available" {
+    assert(halDetect().size >= 1)
+    assert(halSelect("").kind == "CPU")
+}
+
+test "hal scale" {
+    var a = new Int[2]
+    a[0] = 3
+    a[1] = 4
+    var r = halScale(a, 2)
+    assert(r[0] == 6 && r[1] == 8)
+}
+main() {
+}
