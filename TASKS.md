@@ -10,3 +10,12 @@
 - [~] Sampler V3: greedy/top-k/multinomial-seed ok; top-p/min-p/penalties pendentes
 - [ ] 25 testes
 - [ ] benchmark baseline
+
+## M17 — GGUF Loader
+
+- [x] Parser V2/V3 header+metadata+tensor directory
+- [x] APIs tipadas (openGGUF/getMetadata/hasTensor/listTensors/tokenizerInfo/ropeInfo)
+- [x] Fixture golden tiny.gguf
+- [~] Testes 2/11 (9 a fechar em M17.1)
+- [ ] Checksum SHA256, cache/unload, mmap interface
+- [ ] Benchmark real

@@ -1,0 +1,61 @@
+test "header valid v3" {
+    var h = ggufParse("GGUF3", "1|k=1|1|1", "a,2,4,8,0,32|32", "HEX:00ff")
+    assert(h.header.version == 3)
+    assert(h.header.tensorCount == 1)
+    assert(h.errors.size() == 0)
+}
+
+test "header bad magic" {
+    var h = ggufParse("XXXX3", "0", "32", "HEX:00")
+    assert(h.errors.get(0) == "E_MAGIC")
+}
+
+test "header bad version" {
+    var h = ggufParse("GGUF9", "0", "32", "HEX:00")
+    assert(h.errors.size() >= 1)
+    assert(h.errors.get(0) == "E_VERSION")
+}
+
+test "metadata typed read" {
+    var h = ggufParse("GGUF3", "1|ctx=1|4096", "32", "x")
+    var mv = getMetadata(h, "ctx")
+    assert(mv.kind == 1)
+    assert(mv.intVal == 4096)
+}
+
+test "metadata missing returns kind -1" {
+    var h = ggufParse("GGUF3", "0", "32", "HEX:00")
+    assert(getMetadata(h, "nope").kind == -1)
+}
+
+test "tensor lookup by name" {
+    var h = openGGUF("fixtures/tiny.gguf")
+    assert(hasTensor(h, "tok_embd"))
+    assert(!hasTensor(h, "nope"))
+}
+
+test "list tensors has two entries" {
+    var l = listTensors(openGGUF("fixtures/tiny.gguf"))
+    assert(l.size() == 2)
+}
+
+test "lazy tensor bytes decoded from hex" {
+    var b = getTensorLazy(openGGUF("fixtures/tiny.gguf"), "tok_embd")
+    assert(b.length == 32)
+    assert(b[31] == 31)
+}
+
+test "open missing file errors typed" {
+    var h = openGGUF("fixtures/nope.gguf")
+    assert(h.errors.size() == 1)
+}
+
+test "tokenizer info extracted bos" {
+    var ti = tokenizerInfo(openGGUF("fixtures/tiny.gguf"))
+    assert(ti.bosId == 1)
+}
+
+test "rope info context length" {
+    var ri = ropeInfo(openGGUF("fixtures/tiny.gguf"))
+    assert(ri.ctxLen == 512)
+}

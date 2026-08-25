@@ -1,0 +1,4 @@
+GGUF3
+3|tokenizer.bos_id=1|1|tokenizer.eos_id=2|2|context_length=512|512
+tok_embd,2,4,8,0,32|out_proj,2,4,8,0,32|32
+HEX:000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f

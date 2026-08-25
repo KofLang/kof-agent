@@ -28,6 +28,7 @@ PARTS=(
   agent/runtime/79_hal.kf
   agent/runtime/83_m16_v2.kf
   agent/runtime/83_nn_interfaces.kf
+  agent/runtime/84_gguf.kf
   agent/runtime/68_brain.kf
   agent/runtime/69_planner.kf
   agent/runtime/71_executor.kf
@@ -43,6 +44,7 @@ SELECTED=("${PARTS[@]}")
 for flag in "${@:3}"; do
   case "$flag" in
     --with-gateway) SELECTED+=("agent/runtime/95_gateway.kf") ;;
+    --only=*) SELECTED=(); for f in $(echo "$flag" | cut -d= -f2 | tr ',' ' '); do SELECTED+=("agent/runtime/$f"); done ;;
     --native-clock) SELECTED+=("agent/runtime/98_native_clock.kf") ;;
     --no-native-clock) ;;
     *) echo "unknown flag $flag" >&2 ;;

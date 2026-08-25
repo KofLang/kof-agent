@@ -1,0 +1,7 @@
+{
+  "milestone": "M17",
+  "target": "native",
+  "compiler": "Kof4j origin/main @ 416ff4b",
+  "status": "PARCIAL — medicoes bloqueadas por N10-residual em artifact completo",
+  "planned": ["open_file", "header_parse", "meta_lookup", "tensor_lookup", "lazy_load", "cache_hit", "checksum"]
+}
