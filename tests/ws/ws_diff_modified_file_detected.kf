@@ -1,0 +1,17 @@
+WS_ROOT_E(): String { return "build/ws_e" }
+
+setupE(): WorkspaceIndex {
+    mkFile("build/ws_e/one.kf", "record One(Int v)\n")
+    var idx = WorkspaceIndex(WS_ROOT_E(), freshBus(), FixedClock(77))
+    idx.fullRescan()
+    return idx
+}
+
+test "modified file detected" {
+    var idx = setupE()
+    mkFile("build/ws_e/one.kf", "record One(Int v, Int extra)\n")
+    var d = idx.diffVsCurrent()
+    assert(d.modified.size == 1)
+}
+main() {
+}

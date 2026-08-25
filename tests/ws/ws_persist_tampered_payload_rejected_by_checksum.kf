@@ -1,0 +1,30 @@
+WS_ROOT_D(): String { return "build/ws_d" }
+
+setupD(): WorkspaceIndex {
+    mkFile("build/ws_d/base.kf", "record Base(Int v)\n\nmain() {\n}\n")
+    var idx = WorkspaceIndex(WS_ROOT_D(), freshBus(), FixedClock(77))
+    idx.fullRescan()
+    idx.save()
+    return idx
+}
+
+test "tampered payload rejected by checksum" {
+    var p = joinPath(joinPath(WS_ROOT_D(), "build"), "workspace.idx")
+    var f = File(p)
+    var txt = f.readText()
+    var lines = splitStr(txt, "\n")
+    var head = lines.get(0)
+    var body = ""
+    var i = 1
+    while (i < lines.size) {
+        body = body + lines.get(i) + "\n"
+        i = i + 1
+    }
+    f.delete()
+    f.writeText(head + "X" + body)
+    var idx3 = WorkspaceIndex(WS_ROOT_D(), freshBus(), FixedClock(77))
+    assert(idx3.load() == false)
+    assert(idx3.loaded == false)
+}
+main() {
+}

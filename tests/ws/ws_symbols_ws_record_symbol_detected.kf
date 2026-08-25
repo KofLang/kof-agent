@@ -1,0 +1,12 @@
+WS_ROOT_B(): String { return "build/ws_b" }
+
+test "ws record symbol detected" {
+    mkFile("build/ws_b/rec.kf", "record Point(Int x, Int y)\n")
+    var idx = WorkspaceIndex(WS_ROOT_B(), freshBus(), FixedClock(77))
+    var snap = idx.fullRescan()
+    assert(snap.symbols.size == 1)
+    assert(snap.symbols.get(0).name == "Point")
+    assert(snap.symbols.get(0).kind == "record")
+}
+main() {
+}

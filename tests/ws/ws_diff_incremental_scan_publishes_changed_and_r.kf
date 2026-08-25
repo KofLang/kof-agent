@@ -1,0 +1,22 @@
+WS_ROOT_E(): String { return "build/ws_e" }
+
+setupE(): WorkspaceIndex {
+    mkFile("build/ws_e/one.kf", "record One(Int v)\n")
+    var idx = WorkspaceIndex(WS_ROOT_E(), freshBus(), FixedClock(77))
+    idx.fullRescan()
+    return idx
+}
+
+test "incremental scan publishes changed and reuses state" {
+    var counter = EventCounter()
+    var bus = freshBus()
+    bus.subscribe("workspace.changed", counter)
+    var idx = WorkspaceIndex(WS_ROOT_E(), bus)
+    idx.fullRescan()
+    mkFile("build/ws_e/three.kf", "record Three(Int v)\n")
+    var snap = idx.incremental()
+    assert(snap.files.size == 2)
+    assert(counter.count >= 1)
+}
+main() {
+}

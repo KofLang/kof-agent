@@ -1,0 +1,20 @@
+WS_ROOT_D(): String { return "build/ws_d" }
+
+setupD(): WorkspaceIndex {
+    mkFile("build/ws_d/base.kf", "record Base(Int v)\n\nmain() {\n}\n")
+    var idx = WorkspaceIndex(WS_ROOT_D(), freshBus(), FixedClock(77))
+    idx.fullRescan()
+    idx.save()
+    return idx
+}
+
+test "load roundtrip preserves state" {
+    var idx2 = WorkspaceIndex(WS_ROOT_D(), freshBus(), FixedClock(77))
+    var ok = idx2.load()
+    assert(ok)
+    assert(idx2.current.files.size == 1)
+    assert(idx2.current.symbols.size >= 1)
+    assert(idx2.loaded)
+}
+main() {
+}

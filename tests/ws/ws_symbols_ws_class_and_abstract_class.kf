@@ -1,0 +1,16 @@
+WS_ROOT_B(): String { return "build/ws_b" }
+
+test "ws class and abstract class" {
+    mkFile("build/ws_b/cls.kf", "class Car {\n}\n\nabstract class Shape {\n}\n")
+    var idx = WorkspaceIndex(WS_ROOT_B(), freshBus(), FixedClock(77))
+    var snap = idx.fullRescan()
+    var classes = 0
+    for (var s in snap.symbols) {
+        if (s.kind == "class") {
+            classes = classes + 1
+        }
+    }
+    assert(classes == 2)
+}
+main() {
+}

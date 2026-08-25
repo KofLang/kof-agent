@@ -1,0 +1,19 @@
+WS_ROOT_E(): String { return "build/ws_e" }
+
+setupE(): WorkspaceIndex {
+    mkFile("build/ws_e/one.kf", "record One(Int v)\n")
+    var idx = WorkspaceIndex(WS_ROOT_E(), freshBus(), FixedClock(77))
+    idx.fullRescan()
+    return idx
+}
+
+test "unchanged diff is empty" {
+    var idx = setupE()
+    var d = idx.diffVsCurrent()
+    assert(d.added.size == 0)
+    assert(d.modified.size == 0)
+    assert(d.deleted.size == 0)
+    assert(d.renamedOld.size == 0)
+}
+main() {
+}

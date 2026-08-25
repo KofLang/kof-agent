@@ -1,0 +1,58 @@
+WS_ROOT_C(): String { return "build/ws_c" }
+
+setupC(): WorkspaceIndex {
+    mkFile("build/ws_c/lib.kf", "record Shared(Int v)\n")
+    var idx = WorkspaceIndex(WS_ROOT_C(), freshBus(), FixedClock(77))
+    idx.fullRescan()
+    return idx
+}
+
+test "dep edge from import to declaring file" {
+    mkFile("build/ws_c/app.kf", "import Shared\n\nmain() {\n}\n")
+    var idx = setupC()
+    assert(idx.depsFrom(joinPath(WS_ROOT_C(), "app.kf")).size == 1)
+    assert(idx.depsFrom(joinPath(WS_ROOT_C(), "lib.kf")).size == 0)
+}
+
+test "unknown import produces no edge" {
+    mkFile("build/ws_c/ext.kf", "import java.util.List\n\nmain() {\n}\n")
+    var idx = setupC()
+    var deps = idx.depsFrom(joinPath(WS_ROOT_C(), "ext.kf"))
+    assert(deps.size == 0)
+}
+
+test "cycle detected between two files" {
+    mkFile("build/ws_c/ca.kf", "import TypeB\n\nrecord TypeA(Int v)\n")
+    mkFile("build/ws_c/cb.kf", "import TypeA\n\nrecord TypeB(Int v)\n")
+    var idx = WorkspaceIndex(WS_ROOT_C(), freshBus(), FixedClock(77))
+    idx.fullRescan()
+    var cyc = idx.cycles()
+    assert(cyc.size > 0)
+}
+
+test "acyclic graph has no cycle" {
+    var idx = setupC()
+    assert(idx.cycles().size == 0)
+}
+
+test "unused import flagged" {
+    mkFile("build/ws_c/unused.kf", "import Shared\nimport NeverUsed\n\nmain() {\n}\n")
+    var idx = WorkspaceIndex(WS_ROOT_C(), freshBus(), FixedClock(77))
+    idx.fullRescan()
+    var unused = idx.unusedImports()
+    var foundNever = false
+    var foundSharedUnused = false
+    for (var u in unused) {
+        if (u.name == "NeverUsed") {
+            foundNever = true
+        }
+        if (u.file.contains("unused.kf") && u.name == "Shared") {
+            foundSharedUnused = true
+        }
+    }
+    assert(foundNever)
+    assert(foundSharedUnused)
+}
+
+main() {
+}

@@ -1,0 +1,16 @@
+WS_ROOT_B(): String { return "build/ws_b" }
+
+test "ws expression body function" {
+    mkFile("build/ws_b/expr.kf", "Bool positivo(Int x) = x > 0\n")
+    var idx = WorkspaceIndex(WS_ROOT_B(), freshBus(), FixedClock(77))
+    var snap = idx.fullRescan()
+    var found = false
+    for (var s in snap.symbols) {
+        if (s.name == "positivo") {
+            found = true
+        }
+    }
+    assert(found)
+}
+main() {
+}

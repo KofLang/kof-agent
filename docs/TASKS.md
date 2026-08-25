@@ -1,7 +1,7 @@
 # TASKS — Milestone corrente
 
-**Milestone atual:** M3 — Workspace Intelligence (não iniciada)
-**Milestones:** M0 ✅ · M1 ✅ · M2 🟡 (fechada com bloqueios upstream documentados)
+**Milestone atual:** M4 — Tool API (não iniciada)
+**Milestones:** M0 ✅ · M1 ✅ · M2 🟡 · M3 🟡 (bloqueio N10 documentado)
 **Última atualização:** 24 de agosto de 2026
 
 ---
@@ -62,9 +62,23 @@ os documentos. **M0 fechada em 24/08/2026.**
 | 2.6 | Execução in-language do gateway | ❌ bloqueado J2+GW001 (pontes: golden_compiler.sh / bench harness) |
 | 2.7 | REPORT_M02 + status.md | ✅ |
 
-Backlog M3 (rascunho): spec WORKSPACE realista (sem parser paralelo —
-símbolos só quando GW-AST-DUMP abrir), índice incremental por checksum,
-consultas por arquivo/dir, benchmarks de indexação, REPORT_M03.
+## M3 — Workspace Intelligence 🟡 (24/08/2026)
+
+| # | Tarefa | Resultado |
+|---|--------|-----------|
+| 3.1 | specs WORKSPACE_INDEX + SNAPSHOT_FORMAT | ✅ |
+| 3.2 | Snapshot completo (git/target/config/files/symbols/deps/id/ts) | ✅ |
+| 3.3 | Índice persistente versionado c/ checksum + cacheInvalid | ✅ |
+| 3.4 | Incremental scan + diff estruturado + rename por hash | ✅ |
+| 3.5 | Dependency graph (edges/ciclos/unused imports) | ✅ |
+| 3.6 | Symbol cache lexical (D0018) + diag cache | ✅ |
+| 3.7 | Eventos workspace (9 tipos) | ✅ |
+| 3.8 | Testes ≥30 | 🟡 37 gerados, 16 PASS nativos; 21 bloqueados N10 |
+| 3.9 | Benchmarks cold/warm/export | 🟡 harness pronto; números PENDENTES-N10 |
+| 3.10 | REPORT_M03 + status | ✅ |
+
+Backlog M4 (rascunho): spec TOOL_API; Filesystem/Search/Patch/Diff/Compiler;
+Editor Protocol esqueleto; issues upstream (J2/N10-N12/SC1-5).
 
 ## Backlog M1 — Core Runtime (rascunho; será refinado ao abrir a milestone)
 

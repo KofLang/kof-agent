@@ -1,0 +1,92 @@
+WS_ROOT_D(): String { return "build/ws_d" }
+
+setupD(): WorkspaceIndex {
+    mkFile("build/ws_d/base.kf", "record Base(Int v)\n\nmain() {\n}\n")
+    var idx = WorkspaceIndex(WS_ROOT_D(), freshBus(), FixedClock(77))
+    idx.fullRescan()
+    idx.save()
+    return idx
+}
+
+test "persist writes three files" {
+    setupD()
+    assert(File(joinPath(joinPath(WS_ROOT_D(), "build"), "workspace.idx")).exists())
+    assert(File(joinPath(joinPath(WS_ROOT_D(), "build"), "workspace.snapshot")).exists())
+    assert(File(joinPath(joinPath(WS_ROOT_D(), "build"), "workspace.hashes")).exists())
+}
+
+test "load roundtrip preserves state" {
+    var idx2 = WorkspaceIndex(WS_ROOT_D(), freshBus(), FixedClock(77))
+    var ok = idx2.load()
+    assert(ok)
+    assert(idx2.current.files.size == 1)
+    assert(idx2.current.symbols.size >= 1)
+    assert(idx2.loaded)
+}
+
+test "tampered payload rejected by checksum" {
+    var p = joinPath(joinPath(WS_ROOT_D(), "build"), "workspace.idx")
+    var f = File(p)
+    var txt = f.readText()
+    var lines = splitStr(txt, "\n")
+    var head = lines.get(0)
+    var body = ""
+    var i = 1
+    while (i < lines.size) {
+        body = body + lines.get(i) + "\n"
+        i = i + 1
+    }
+    f.delete()
+    f.writeText(head + "X" + body)
+    var idx3 = WorkspaceIndex(WS_ROOT_D(), freshBus(), FixedClock(77))
+    assert(idx3.load() == false)
+    assert(idx3.loaded == false)
+}
+
+test "future version header rejected" {
+    var p = joinPath(joinPath(WS_ROOT_D(), "build"), "workspace.idx")
+    var f = File(p)
+    var txt = f.readText()
+    var nl = txt.indexOf("\n")
+    f.delete()
+    f.writeText("WSIDX|999|123\njunk")
+    var idx4 = WorkspaceIndex(WS_ROOT_D(), freshBus(), FixedClock(77))
+    assert(idx4.load() == false)
+}
+
+test "wrong magic rejected" {
+    var p = joinPath(joinPath(WS_ROOT_D(), "build"), "workspace.idx")
+    var f = File(p)
+    var txt = f.readText()
+    var nl = txt.indexOf("\n")
+    f.delete()
+    f.writeText("NOPE|3|1\njunk")
+    var idx5 = WorkspaceIndex(WS_ROOT_D(), freshBus(), FixedClock(77))
+    assert(idx5.load() == false)
+}
+
+test "hashes cache is versioned binary container" {
+    var hp = joinPath(joinPath(WS_ROOT_D(), "build"), "workspace.hashes")
+    var f = File(hp)
+    assert(f.exists())
+    var head = f.readText().substring(0, 5)
+    assert(head.startsWith("WSHSH"))
+}
+
+test "missing index triggers cacheInvalid event" {
+    mkFile("build/ws_d/extra.kf", "main() {\n}\n")
+    var counter = EventCounter()
+    var bus = freshBus()
+    bus.subscribe("workspace.cacheInvalid", counter)
+    var freshRoot = WS_ROOT_D()
+    var idx6 = WorkspaceIndex(freshRoot, bus)
+    var before = File(joinPath(joinPath(freshRoot, "build"), "workspace.idx"))
+    if (before.exists()) {
+        before.delete()
+    }
+    assert(idx6.load() == false)
+    assert(counter.count == 1)
+}
+
+main() {
+}

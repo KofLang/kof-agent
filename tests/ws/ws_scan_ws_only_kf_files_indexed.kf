@@ -1,0 +1,16 @@
+WS_ROOT_A(): String { return "build/ws_a" }
+
+test "ws only kf files indexed" {
+    mkFile("build/ws_a/notkf.txt", "class Fake(Int v)\n")
+    var idx = WorkspaceIndex("build/ws_a", freshBus())
+    var snap = idx.fullRescan()
+    var foundFake = false
+    for (var f in snap.files) {
+        if (f.path.contains("notkf")) {
+            foundFake = true
+        }
+    }
+    assert(foundFake == false)
+}
+main() {
+}

@@ -1,0 +1,9 @@
+WS_ROOT_A(): String { return "build/ws_a" }
+
+test "ws timestamp positive" {
+    var idx = WorkspaceIndex("build/ws_a", freshBus())
+    var snap = idx.fullRescan()
+    assert(snap.timestamp > 0)
+}
+main() {
+}

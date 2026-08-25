@@ -1,0 +1,14 @@
+WS_ROOT_A(): String { return "build/ws_a" }
+
+test "ws empty workspace scans zero files" {
+    var d = Directory("build/ws_empty")
+    if (!d.exists()) {
+        d.createDirectories()
+    }
+    var idx = WorkspaceIndex("build/ws_empty", freshBus(), FixedClock(77))
+    var snap = idx.fullRescan()
+    assert(snap.files.size == 0)
+    assert(snap.symbols.size == 0)
+}
+main() {
+}

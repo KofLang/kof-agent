@@ -1,0 +1,18 @@
+WS_ROOT_D(): String { return "build/ws_d" }
+
+setupD(): WorkspaceIndex {
+    mkFile("build/ws_d/base.kf", "record Base(Int v)\n\nmain() {\n}\n")
+    var idx = WorkspaceIndex(WS_ROOT_D(), freshBus(), FixedClock(77))
+    idx.fullRescan()
+    idx.save()
+    return idx
+}
+
+test "persist writes three files" {
+    setupD()
+    assert(File(joinPath(joinPath(WS_ROOT_D(), "build"), "workspace.idx")).exists())
+    assert(File(joinPath(joinPath(WS_ROOT_D(), "build"), "workspace.snapshot")).exists())
+    assert(File(joinPath(joinPath(WS_ROOT_D(), "build"), "workspace.hashes")).exists())
+}
+main() {
+}

@@ -1,0 +1,16 @@
+WS_ROOT_B(): String { return "build/ws_b" }
+
+test "ws top-level function heuristic" {
+    mkFile("build/ws_b/fn.kf", "Int soma(Int a, Int b) {\n    return a + b\n}\n")
+    var idx = WorkspaceIndex(WS_ROOT_B(), freshBus(), FixedClock(77))
+    var snap = idx.fullRescan()
+    var foundFn = false
+    for (var s in snap.symbols) {
+        if (s.name == "soma") {
+            foundFn = true
+        }
+    }
+    assert(foundFn)
+}
+main() {
+}

@@ -1,0 +1,11 @@
+WS_ROOT_A(): String { return "build/ws_a" }
+
+test "ws git branch and commit parsed" {
+    mkFile("build/ws_a/.git/refs/heads/main", "abc123def456\n")
+    var idx = WorkspaceIndex("build/ws_a", freshBus())
+    var snap = idx.fullRescan()
+    assert(snap.gitBranch == "main")
+    assert(snap.gitCommit == "abc123def456")
+}
+main() {
+}

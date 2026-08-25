@@ -1,0 +1,28 @@
+main() {
+    var root = "build/wsbench/l"
+    var d = Directory(root)
+    if (!d.exists()) {
+        d.createDirectories()
+    }
+    var i = 0
+    while (i < 150) {
+        mkFile(joinPath(root, "f" + i + ".kf"), "record R" + i + "(Int v)\n\nmain() {\n}\n")
+        i = i + 1
+    }
+    var bus = freshBus()
+    var t0 = now()
+    var snap = wsFullScan(bus, root, FixedClock(1))
+    var dt = now() - t0
+    println("{\"benchmark\":\"ws_cold_l\",\"files\":" + 150 + ",\"ms\":" + dt + ",\"symbols\":" + snap.symbols.size + ",\"target\":\"native\"}")
+    var t1 = now()
+    var idxPath = joinPath(root, "workspace.idx")
+    var ok = wsSaveAll(bus, root, snap)
+    var dtSave = now() - t1
+    var t2 = now()
+    var loadedSnap = wsLoadIndex(idxPath)
+    var dtLoad = now() - t2
+    assert(ok)
+    assert(loadedSnap.files.size == 150)
+    println("{\"benchmark\":\"ws_warm_l\",\"load_ms\":" + dtLoad + ",\"save_ms\":" + dtSave + ",\"target\":\"native\"}")
+    process.exit(0)
+}

@@ -1,0 +1,95 @@
+WS_ROOT_B(): String { return "build/ws_b" }
+
+test "ws record symbol detected" {
+    mkFile("build/ws_b/rec.kf", "record Point(Int x, Int y)\n")
+    var idx = WorkspaceIndex(WS_ROOT_B(), freshBus(), FixedClock(77))
+    var snap = idx.fullRescan()
+    assert(snap.symbols.size == 1)
+    assert(snap.symbols.get(0).name == "Point")
+    assert(snap.symbols.get(0).kind == "record")
+}
+
+test "ws class and abstract class" {
+    mkFile("build/ws_b/cls.kf", "class Car {\n}\n\nabstract class Shape {\n}\n")
+    var idx = WorkspaceIndex(WS_ROOT_B(), freshBus(), FixedClock(77))
+    var snap = idx.fullRescan()
+    var classes = 0
+    for (var s in snap.symbols) {
+        if (s.kind == "class") {
+            classes = classes + 1
+        }
+    }
+    assert(classes == 2)
+}
+
+test "ws interface and entity" {
+    mkFile("build/ws_b/iface.kf", "interface Speaker {\n}\n\nentity User {\n}\n")
+    var idx = WorkspaceIndex(WS_ROOT_B(), freshBus(), FixedClock(77))
+    var snap = idx.fullRescan()
+    var kinds = ""
+    for (var s in snap.symbols) {
+        kinds = kinds + s.kind
+    }
+    assert(kinds.contains("interface"))
+    assert(kinds.contains("entity"))
+}
+
+test "ws top-level function heuristic" {
+    mkFile("build/ws_b/fn.kf", "Int soma(Int a, Int b) {\n    return a + b\n}\n")
+    var idx = WorkspaceIndex(WS_ROOT_B(), freshBus(), FixedClock(77))
+    var snap = idx.fullRescan()
+    var foundFn = false
+    for (var s in snap.symbols) {
+        if (s.name == "soma") {
+            foundFn = true
+        }
+    }
+    assert(foundFn)
+}
+
+test "ws expression body function" {
+    mkFile("build/ws_b/expr.kf", "Bool positivo(Int x) = x > 0\n")
+    var idx = WorkspaceIndex(WS_ROOT_B(), freshBus(), FixedClock(77))
+    var snap = idx.fullRescan()
+    var found = false
+    for (var s in snap.symbols) {
+        if (s.name == "positivo") {
+            found = true
+        }
+    }
+    assert(found)
+}
+
+test "ws lexical approximation captures methods too WORKAROUND" {
+    mkFile("build/ws_b/meth.kf", "class Service {\n    handle(): Int {\n        return 1\n    }\n}\n")
+    var idx = WorkspaceIndex(WS_ROOT_B(), freshBus(), FixedClock(77))
+    var snap = idx.fullRescan()
+    var fnCount = 0
+    for (var s in snap.symbols) {
+        if (s.kind == "function" && s.name == "handle") {
+            fnCount = fnCount + 1
+        }
+    }
+    assert(fnCount == 1)
+}
+
+test "ws imports extracted" {
+    mkFile("build/ws_b/imp.kf", "import java.util.List\nimport kof.web\n\nmain() {\n}\n")
+    var idx = WorkspaceIndex(WS_ROOT_B(), freshBus(), FixedClock(77))
+    var snap = idx.fullRescan()
+    assert(snap.imports.size == 2)
+    assert(snap.imports.get(0).name == "java.util.List")
+}
+
+test "ws findSymbol across files" {
+    mkFile("build/ws_b/a.kf", "record Alpha(Int v)\n")
+    mkFile("build/ws_b/b.kf", "class Alpha2 {\n}\n")
+    var idx = WorkspaceIndex(WS_ROOT_B(), freshBus(), FixedClock(77))
+    idx.fullRescan()
+    assert(idx.findSymbol("Alpha").size == 1)
+    assert(idx.findSymbol("Nada").size == 0)
+    assert(idx.symbolsOf(joinPath(WS_ROOT_B(), "a.kf")).size >= 1)
+}
+
+main() {
+}

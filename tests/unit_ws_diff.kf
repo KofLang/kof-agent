@@ -1,0 +1,83 @@
+WS_ROOT_E(): String { return "build/ws_e" }
+
+setupE(): WorkspaceIndex {
+    mkFile("build/ws_e/one.kf", "record One(Int v)\n")
+    var idx = WorkspaceIndex(WS_ROOT_E(), freshBus(), FixedClock(77))
+    idx.fullRescan()
+    return idx
+}
+
+test "unchanged diff is empty" {
+    var idx = setupE()
+    var d = idx.diffVsCurrent()
+    assert(d.added.size == 0)
+    assert(d.modified.size == 0)
+    assert(d.deleted.size == 0)
+    assert(d.renamedOld.size == 0)
+}
+
+test "added file detected" {
+    var idx = setupE()
+    mkFile("build/ws_e/two.kf", "record Two(Int v)\n")
+    var d = idx.diffVsCurrent()
+    assert(d.added.size == 1)
+}
+
+test "modified file detected" {
+    var idx = setupE()
+    mkFile("build/ws_e/one.kf", "record One(Int v, Int extra)\n")
+    var d = idx.diffVsCurrent()
+    assert(d.modified.size == 1)
+}
+
+test "deleted file detected" {
+    var idx = setupE()
+    var f = File(joinPath(WS_ROOT_E(), "one.kf"))
+    f.delete()
+    var d = idx.diffVsCurrent()
+    assert(d.deleted.size == 1)
+}
+
+test "rename detected as pair via content hash" {
+    var idx = setupE()
+    var old = File(joinPath(WS_ROOT_E(), "one.kf"))
+    var body = old.readText()
+    old.delete()
+    mkFile("build/ws_e/renamed.kf", body)
+    var d = idx.diffVsCurrent()
+    assert(d.renamedOld.size == 1)
+    assert(d.renamedNew.get(0).contains("renamed.kf"))
+    assert(d.added.size == 0)
+    assert(d.deleted.size == 0)
+}
+
+test "incremental scan publishes changed and reuses state" {
+    var counter = EventCounter()
+    var bus = freshBus()
+    bus.subscribe("workspace.changed", counter)
+    var idx = WorkspaceIndex(WS_ROOT_E(), bus)
+    idx.fullRescan()
+    mkFile("build/ws_e/three.kf", "record Three(Int v)\n")
+    var snap = idx.incremental()
+    assert(snap.files.size == 2)
+    assert(counter.count >= 1)
+}
+
+test "incremental on cold index falls back to full" {
+    var idx = WorkspaceIndex(WS_ROOT_E(), freshBus(), FixedClock(77))
+    var snap = idx.incremental()
+    assert(snap.files.size >= 1)
+}
+
+test "diagnostic cache put fetch hit and miss" {
+    var idx = WorkspaceIndex(WS_ROOT_E(), freshBus(), FixedClock(77))
+    idx.putDiag("a.kf", 111, 2, "SEM011|SEM015")
+    var hit = idx.cachedDiag("a.kf", 111)
+    assert(hit.diagCount == 2)
+    assert(hit.codes.contains("ARITH") == false)
+    var miss = idx.cachedDiag("zz", 1)
+    assert(miss.diagCount == -1)
+}
+
+main() {
+}

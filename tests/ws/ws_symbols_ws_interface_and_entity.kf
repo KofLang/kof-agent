@@ -1,0 +1,15 @@
+WS_ROOT_B(): String { return "build/ws_b" }
+
+test "ws interface and entity" {
+    mkFile("build/ws_b/iface.kf", "interface Speaker {\n}\n\nentity User {\n}\n")
+    var idx = WorkspaceIndex(WS_ROOT_B(), freshBus(), FixedClock(77))
+    var snap = idx.fullRescan()
+    var kinds = ""
+    for (var s in snap.symbols) {
+        kinds = kinds + s.kind
+    }
+    assert(kinds.contains("interface"))
+    assert(kinds.contains("entity"))
+}
+main() {
+}

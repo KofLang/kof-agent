@@ -1,0 +1,10 @@
+WS_ROOT_A(): String { return "build/ws_a" }
+
+test "ws target from config" {
+    mkFile("build/ws_a/kof.config", "target = jvm\n")
+    var idx = WorkspaceIndex("build/ws_a", freshBus())
+    var snap = idx.fullRescan()
+    assert(snap.target == "jvm")
+}
+main() {
+}

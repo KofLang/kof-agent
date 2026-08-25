@@ -82,6 +82,17 @@ Exit codes: 0 ok · 1 uso inválido · 2 falha funcional (doctor/status).
 Baselines: `benchmarks/baselines/native-M01.json` · runs crus em
 `benchmarks/results/native-M01/`.
 
+## 4b. Workspace Intelligence (M3)
+
+`WorkspaceIndex` + `WsSnap`: modelo persistente do projeto (files+hashes,
+symbols lexicais aproximados — D0018 —, imports, DAG de deps, git sem
+processo, target via kof.config). Persistência WSIDX/WSSNP/WSHSH v3 com CRC.
+Diff estruturado com rename por hash. Diag cache por hash para o repair loop.
+Eventos: workspace.indexed/changed, file.added/modified/removed/renamed,
+snapshot.created/diff.computed/workspace.cacheInvalid. Specs:
+WORKSPACE_INDEX.md/SNAPSHOT_FORMAT.md. Bloqueio honesto: 21/37 testes nativos
+aguardam fix N10 do compilador (isolamento por-processo documentado).
+
 ## 5. Testes
 
 11 suítes verdes (`scripts/test.sh`, target native): unit_core (7),

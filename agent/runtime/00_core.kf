@@ -4,14 +4,6 @@ interface TimeSource {
     nowMs(): Long
 }
 
-class RealTimeClock implements TimeSource {
-    constructor() {
-    }
-    nowMs(): Long {
-        return now()
-    }
-}
-
 class FixedClock implements TimeSource {
     Long value = 0
     constructor(Long v) {
@@ -154,4 +146,53 @@ sortInts(Int[] a, Int n) {
         a[j + 1] = key
         i = i + 1
     }
+}
+
+mkFile(String path, String content): Bool {
+    var parent = ""
+    var parts = splitStr(path, "/")
+    if (parts.size > 1) {
+        var i = 0
+        while (i < parts.size - 1) {
+            if (parent == "") {
+                parent = parts.get(i)
+            } else {
+                parent = joinPath(parent, parts.get(i))
+            }
+            i = i + 1
+        }
+        var d = Directory(parent)
+        if (!d.exists()) {
+            d.createDirectories()
+        }
+    }
+    var f = File(path)
+    if (f.exists()) {
+        f.delete()
+    }
+    return f.writeText(content)
+}
+
+class EventCounter implements EventHandler {
+    Int count = 0
+    constructor() {
+    }
+    onEvent(EventEnvelope e): Bool {
+        count = count + 1
+        return true
+    }
+}
+
+class RecordingHandler implements EventHandler {
+    List<String> seen = listOf<String>()
+    constructor() {
+    }
+    onEvent(EventEnvelope e): Bool {
+        seen.add(e.topic + "=" + e.payload)
+        return true
+    }
+}
+
+freshBus(): EventBus {
+    return EventBus()
 }

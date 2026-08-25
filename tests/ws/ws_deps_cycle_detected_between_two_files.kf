@@ -1,0 +1,19 @@
+WS_ROOT_C(): String { return "build/ws_c" }
+
+setupC(): WorkspaceIndex {
+    mkFile("build/ws_c/lib.kf", "record Shared(Int v)\n")
+    var idx = WorkspaceIndex(WS_ROOT_C(), freshBus(), FixedClock(77))
+    idx.fullRescan()
+    return idx
+}
+
+test "cycle detected between two files" {
+    mkFile("build/ws_c/ca.kf", "import TypeB\n\nrecord TypeA(Int v)\n")
+    mkFile("build/ws_c/cb.kf", "import TypeA\n\nrecord TypeB(Int v)\n")
+    var idx = WorkspaceIndex(WS_ROOT_C(), freshBus(), FixedClock(77))
+    idx.fullRescan()
+    var cyc = idx.cycles()
+    assert(cyc.size > 0)
+}
+main() {
+}

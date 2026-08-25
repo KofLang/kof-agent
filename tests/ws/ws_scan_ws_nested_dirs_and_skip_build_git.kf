@@ -1,0 +1,17 @@
+WS_ROOT_A(): String { return "build/ws_a" }
+
+test "ws nested dirs and skip build git" {
+    mkFile("build/ws_a/deep/nested.kf", "record Deep(Int v)\n")
+    mkFile("build/ws_a/build/skipme.kf", "main() {\n}\n")
+    var gdir = Directory(joinPath("build/ws_a", ".git"))
+    if (!gdir.exists()) {
+        gdir.createDirectories()
+    }
+    mkFile("build/ws_a/.git/HEAD", "ref: refs/heads/main\n")
+    mkFile("build/ws_a/.git/internal.kf", "main() {\n}\n")
+    var idx = WorkspaceIndex("build/ws_a", freshBus())
+    var snap = idx.fullRescan()
+    assert(snap.files.size == 2)
+}
+main() {
+}

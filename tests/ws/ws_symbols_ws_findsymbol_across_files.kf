@@ -1,0 +1,13 @@
+WS_ROOT_B(): String { return "build/ws_b" }
+
+test "ws findSymbol across files" {
+    mkFile("build/ws_b/a.kf", "record Alpha(Int v)\n")
+    mkFile("build/ws_b/b.kf", "class Alpha2 {\n}\n")
+    var idx = WorkspaceIndex(WS_ROOT_B(), freshBus(), FixedClock(77))
+    idx.fullRescan()
+    assert(idx.findSymbol("Alpha").size == 1)
+    assert(idx.findSymbol("Nada").size == 0)
+    assert(idx.symbolsOf(joinPath(WS_ROOT_B(), "a.kf")).size >= 1)
+}
+main() {
+}

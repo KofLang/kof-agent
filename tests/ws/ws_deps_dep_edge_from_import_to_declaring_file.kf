@@ -1,0 +1,17 @@
+WS_ROOT_C(): String { return "build/ws_c" }
+
+setupC(): WorkspaceIndex {
+    mkFile("build/ws_c/lib.kf", "record Shared(Int v)\n")
+    var idx = WorkspaceIndex(WS_ROOT_C(), freshBus(), FixedClock(77))
+    idx.fullRescan()
+    return idx
+}
+
+test "dep edge from import to declaring file" {
+    mkFile("build/ws_c/app.kf", "import Shared\n\nmain() {\n}\n")
+    var idx = setupC()
+    assert(idx.depsFrom(joinPath(WS_ROOT_C(), "app.kf")).size == 1)
+    assert(idx.depsFrom(joinPath(WS_ROOT_C(), "lib.kf")).size == 0)
+}
+main() {
+}

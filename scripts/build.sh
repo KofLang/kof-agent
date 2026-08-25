@@ -13,6 +13,7 @@ PARTS=(
   agent/runtime/25_event.kf
   agent/runtime/30_lifecycle.kf
   agent/runtime/40_workspace.kf
+  agent/runtime/45_windex.kf
   agent/runtime/50_metrics.kf
   agent/runtime/90_runtime.kf
 )
@@ -23,9 +24,14 @@ OUT="$2"
 mkdir -p "$(dirname "$ROOT/$OUT")"
 : > "$ROOT/$OUT"
 SELECTED=("${PARTS[@]}")
-if [ "${3:-}" = "--with-gateway" ]; then
-  SELECTED+=("agent/runtime/95_gateway.kf")
-fi
+for flag in "${@:3}"; do
+  case "$flag" in
+    --with-gateway) SELECTED+=("agent/runtime/95_gateway.kf") ;;
+    --native-clock) SELECTED+=("agent/runtime/98_native_clock.kf") ;;
+    --no-native-clock) ;;
+    *) echo "unknown flag $flag" >&2 ;;
+  esac
+done
 for p in "${SELECTED[@]}"; do
   cat "$ROOT/$p" >> "$ROOT/$OUT"
   printf '\n' >> "$ROOT/$OUT"

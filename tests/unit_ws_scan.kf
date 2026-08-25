@@ -1,0 +1,88 @@
+WS_ROOT_A(): String { return "build/ws_a" }
+
+test "ws empty workspace scans zero files" {
+    var d = Directory("build/ws_empty")
+    if (!d.exists()) {
+        d.createDirectories()
+    }
+    var idx = WorkspaceIndex("build/ws_empty", freshBus(), FixedClock(77))
+    var snap = idx.fullRescan()
+    assert(snap.files.size == 0)
+    assert(snap.symbols.size == 0)
+}
+
+test "ws single file discovered with stable hash" {
+    mkFile("build/ws_a/one.kf", "main() {\n}\n")
+    var idx = WorkspaceIndex("build/ws_a", freshBus())
+    var s1 = idx.fullRescan()
+    assert(s1.files.size == 1)
+    var h1 = s1.files.get(0).hash
+    var s2 = idx.fullRescan()
+    assert(s2.files.get(0).hash == h1)
+}
+
+test "ws nested dirs and skip build git" {
+    mkFile("build/ws_a/deep/nested.kf", "record Deep(Int v)\n")
+    mkFile("build/ws_a/build/skipme.kf", "main() {\n}\n")
+    var gdir = Directory(joinPath("build/ws_a", ".git"))
+    if (!gdir.exists()) {
+        gdir.createDirectories()
+    }
+    mkFile("build/ws_a/.git/HEAD", "ref: refs/heads/main\n")
+    mkFile("build/ws_a/.git/internal.kf", "main() {\n}\n")
+    var idx = WorkspaceIndex("build/ws_a", freshBus())
+    var snap = idx.fullRescan()
+    assert(snap.files.size == 2)
+}
+
+test "ws only kf files indexed" {
+    mkFile("build/ws_a/notkf.txt", "class Fake(Int v)\n")
+    var idx = WorkspaceIndex("build/ws_a", freshBus())
+    var snap = idx.fullRescan()
+    var foundFake = false
+    for (var f in snap.files) {
+        if (f.path.contains("notkf")) {
+            foundFake = true
+        }
+    }
+    assert(foundFake == false)
+}
+
+test "ws git branch and commit parsed" {
+    mkFile("build/ws_a/.git/refs/heads/main", "abc123def456\n")
+    var idx = WorkspaceIndex("build/ws_a", freshBus())
+    var snap = idx.fullRescan()
+    assert(snap.gitBranch == "main")
+    assert(snap.gitCommit == "abc123def456")
+}
+
+test "ws target from config" {
+    mkFile("build/ws_a/kof.config", "target = jvm\n")
+    var idx = WorkspaceIndex("build/ws_a", freshBus())
+    var snap = idx.fullRescan()
+    assert(snap.target == "jvm")
+}
+
+test "ws workspaceId stable" {
+    var idx = WorkspaceIndex("build/ws_a", freshBus())
+    var s1 = idx.fullRescan()
+    var s2 = idx.fullRescan()
+    assert(s1.workspaceId == s2.workspaceId)
+    assert(s1.workspaceId != "")
+}
+
+test "ws timestamp positive" {
+    var idx = WorkspaceIndex("build/ws_a", freshBus())
+    var snap = idx.fullRescan()
+    assert(snap.timestamp > 0)
+}
+
+test "ws events fired on scan" {
+    var counter = EventCounter()
+    var bus = freshBus()
+    bus.subscribe("workspace.indexed", counter)
+    bus.subscribe("snapshot.created", counter)
+    var idx = WorkspaceIndex(WS_ROOT_A(), bus)
+    idx.fullRescan()
+    assert(counter.count >= 2)
+}

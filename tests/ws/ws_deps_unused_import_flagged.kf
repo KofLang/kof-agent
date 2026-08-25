@@ -1,0 +1,29 @@
+WS_ROOT_C(): String { return "build/ws_c" }
+
+setupC(): WorkspaceIndex {
+    mkFile("build/ws_c/lib.kf", "record Shared(Int v)\n")
+    var idx = WorkspaceIndex(WS_ROOT_C(), freshBus(), FixedClock(77))
+    idx.fullRescan()
+    return idx
+}
+
+test "unused import flagged" {
+    mkFile("build/ws_c/unused.kf", "import Shared\nimport NeverUsed\n\nmain() {\n}\n")
+    var idx = WorkspaceIndex(WS_ROOT_C(), freshBus(), FixedClock(77))
+    idx.fullRescan()
+    var unused = idx.unusedImports()
+    var foundNever = false
+    var foundSharedUnused = false
+    for (var u in unused) {
+        if (u.name == "NeverUsed") {
+            foundNever = true
+        }
+        if (u.file.contains("unused.kf") && u.name == "Shared") {
+            foundSharedUnused = true
+        }
+    }
+    assert(foundNever)
+    assert(foundSharedUnused)
+}
+main() {
+}

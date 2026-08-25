@@ -1,0 +1,18 @@
+WS_ROOT_E(): String { return "build/ws_e" }
+
+setupE(): WorkspaceIndex {
+    mkFile("build/ws_e/one.kf", "record One(Int v)\n")
+    var idx = WorkspaceIndex(WS_ROOT_E(), freshBus(), FixedClock(77))
+    idx.fullRescan()
+    return idx
+}
+
+test "deleted file detected" {
+    var idx = setupE()
+    var f = File(joinPath(WS_ROOT_E(), "one.kf"))
+    f.delete()
+    var d = idx.diffVsCurrent()
+    assert(d.deleted.size == 1)
+}
+main() {
+}

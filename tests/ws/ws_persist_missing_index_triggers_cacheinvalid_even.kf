@@ -1,0 +1,26 @@
+WS_ROOT_D(): String { return "build/ws_d" }
+
+setupD(): WorkspaceIndex {
+    mkFile("build/ws_d/base.kf", "record Base(Int v)\n\nmain() {\n}\n")
+    var idx = WorkspaceIndex(WS_ROOT_D(), freshBus(), FixedClock(77))
+    idx.fullRescan()
+    idx.save()
+    return idx
+}
+
+test "missing index triggers cacheInvalid event" {
+    mkFile("build/ws_d/extra.kf", "main() {\n}\n")
+    var counter = EventCounter()
+    var bus = freshBus()
+    bus.subscribe("workspace.cacheInvalid", counter)
+    var freshRoot = WS_ROOT_D()
+    var idx6 = WorkspaceIndex(freshRoot, bus)
+    var before = File(joinPath(joinPath(freshRoot, "build"), "workspace.idx"))
+    if (before.exists()) {
+        before.delete()
+    }
+    assert(idx6.load() == false)
+    assert(counter.count == 1)
+}
+main() {
+}

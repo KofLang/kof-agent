@@ -1,0 +1,11 @@
+WS_ROOT_A(): String { return "build/ws_a" }
+
+test "ws workspaceId stable" {
+    var idx = WorkspaceIndex("build/ws_a", freshBus())
+    var s1 = idx.fullRescan()
+    var s2 = idx.fullRescan()
+    assert(s1.workspaceId == s2.workspaceId)
+    assert(s1.workspaceId != "")
+}
+main() {
+}

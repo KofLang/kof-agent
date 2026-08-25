@@ -1,0 +1,22 @@
+WS_ROOT_D(): String { return "build/ws_d" }
+
+setupD(): WorkspaceIndex {
+    mkFile("build/ws_d/base.kf", "record Base(Int v)\n\nmain() {\n}\n")
+    var idx = WorkspaceIndex(WS_ROOT_D(), freshBus(), FixedClock(77))
+    idx.fullRescan()
+    idx.save()
+    return idx
+}
+
+test "future version header rejected" {
+    var p = joinPath(joinPath(WS_ROOT_D(), "build"), "workspace.idx")
+    var f = File(p)
+    var txt = f.readText()
+    var nl = txt.indexOf("\n")
+    f.delete()
+    f.writeText("WSIDX|999|123\njunk")
+    var idx4 = WorkspaceIndex(WS_ROOT_D(), freshBus(), FixedClock(77))
+    assert(idx4.load() == false)
+}
+main() {
+}

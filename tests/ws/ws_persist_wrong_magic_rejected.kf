@@ -1,0 +1,22 @@
+WS_ROOT_D(): String { return "build/ws_d" }
+
+setupD(): WorkspaceIndex {
+    mkFile("build/ws_d/base.kf", "record Base(Int v)\n\nmain() {\n}\n")
+    var idx = WorkspaceIndex(WS_ROOT_D(), freshBus(), FixedClock(77))
+    idx.fullRescan()
+    idx.save()
+    return idx
+}
+
+test "wrong magic rejected" {
+    var p = joinPath(joinPath(WS_ROOT_D(), "build"), "workspace.idx")
+    var f = File(p)
+    var txt = f.readText()
+    var nl = txt.indexOf("\n")
+    f.delete()
+    f.writeText("NOPE|3|1\njunk")
+    var idx5 = WorkspaceIndex(WS_ROOT_D(), freshBus(), FixedClock(77))
+    assert(idx5.load() == false)
+}
+main() {
+}

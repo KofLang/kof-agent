@@ -1,0 +1,23 @@
+WS_ROOT_E(): String { return "build/ws_e" }
+
+setupE(): WorkspaceIndex {
+    mkFile("build/ws_e/one.kf", "record One(Int v)\n")
+    var idx = WorkspaceIndex(WS_ROOT_E(), freshBus(), FixedClock(77))
+    idx.fullRescan()
+    return idx
+}
+
+test "rename detected as pair via content hash" {
+    var idx = setupE()
+    var old = File(joinPath(WS_ROOT_E(), "one.kf"))
+    var body = old.readText()
+    old.delete()
+    mkFile("build/ws_e/renamed.kf", body)
+    var d = idx.diffVsCurrent()
+    assert(d.renamedOld.size == 1)
+    assert(d.renamedNew.get(0).contains("renamed.kf"))
+    assert(d.added.size == 0)
+    assert(d.deleted.size == 0)
+}
+main() {
+}

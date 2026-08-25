@@ -1,0 +1,20 @@
+WS_ROOT_E(): String { return "build/ws_e" }
+
+setupE(): WorkspaceIndex {
+    mkFile("build/ws_e/one.kf", "record One(Int v)\n")
+    var idx = WorkspaceIndex(WS_ROOT_E(), freshBus(), FixedClock(77))
+    idx.fullRescan()
+    return idx
+}
+
+test "diagnostic cache put fetch hit and miss" {
+    var idx = WorkspaceIndex(WS_ROOT_E(), freshBus(), FixedClock(77))
+    idx.putDiag("a.kf", 111, 2, "SEM011|SEM015")
+    var hit = idx.cachedDiag("a.kf", 111)
+    assert(hit.diagCount == 2)
+    assert(hit.codes.contains("ARITH") == false)
+    var miss = idx.cachedDiag("zz", 1)
+    assert(miss.diagCount == -1)
+}
+main() {
+}

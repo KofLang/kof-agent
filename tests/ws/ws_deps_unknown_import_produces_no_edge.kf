@@ -1,0 +1,17 @@
+WS_ROOT_C(): String { return "build/ws_c" }
+
+setupC(): WorkspaceIndex {
+    mkFile("build/ws_c/lib.kf", "record Shared(Int v)\n")
+    var idx = WorkspaceIndex(WS_ROOT_C(), freshBus(), FixedClock(77))
+    idx.fullRescan()
+    return idx
+}
+
+test "unknown import produces no edge" {
+    mkFile("build/ws_c/ext.kf", "import java.util.List\n\nmain() {\n}\n")
+    var idx = setupC()
+    var deps = idx.depsFrom(joinPath(WS_ROOT_C(), "ext.kf"))
+    assert(deps.size == 0)
+}
+main() {
+}

@@ -1,0 +1,13 @@
+WS_ROOT_A(): String { return "build/ws_a" }
+
+test "ws single file discovered with stable hash" {
+    mkFile("build/ws_a/one.kf", "main() {\n}\n")
+    var idx = WorkspaceIndex("build/ws_a", freshBus())
+    var s1 = idx.fullRescan()
+    assert(s1.files.size == 1)
+    var h1 = s1.files.get(0).hash
+    var s2 = idx.fullRescan()
+    assert(s2.files.get(0).hash == h1)
+}
+main() {
+}

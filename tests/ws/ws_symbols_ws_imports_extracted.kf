@@ -1,0 +1,11 @@
+WS_ROOT_B(): String { return "build/ws_b" }
+
+test "ws imports extracted" {
+    mkFile("build/ws_b/imp.kf", "import java.util.List\nimport kof.web\n\nmain() {\n}\n")
+    var idx = WorkspaceIndex(WS_ROOT_B(), freshBus(), FixedClock(77))
+    var snap = idx.fullRescan()
+    assert(snap.imports.size == 2)
+    assert(snap.imports.get(0).name == "java.util.List")
+}
+main() {
+}
