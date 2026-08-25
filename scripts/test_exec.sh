@@ -6,7 +6,7 @@ pass=0; fail=0; failed=""
 while IFS= read -r u; do
   [ -z "$u" ] && continue
   rm -rf "$ROOT/build/tt_exec"
-  "$ROOT/scripts/build.sh" "tests/exec/$u" "build/tests_exec/$u" >/dev/null 2>&1
+  "$ROOT/scripts/build.sh" "tests/exec/$u" "build/tests_exec/$u" --native-clock >/dev/null 2>&1
   if (cd "$ROOT" && "$KOF" test "build/tests_exec/$u.kf" --target native >/dev/null 2>&1); then
     pass=$((pass+1))
   else

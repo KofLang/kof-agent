@@ -34,9 +34,16 @@ Ambiente: kof 0.0.14-alpha, JDK 25 (build), binutils 2.46, Linux x86_64.
 | J1 | ✅ **CORRIGIDO** (`now()` compila e roda no JVM) |
 | J2 | ✅ **CORRIGIDO** (`process.run` compila e executa no JVM) |
 | N1–N13 | presentes em c822ed3 (re-sweep idêntico ao anterior) |
-| **N14 (NOVO)** | **REGRESSÃO no HEAD ef91b7e**: todo build native falha no link — `undefined reference to .Ljf_adv` dentro de `kof_json_find_value` (emitJsonFindValue emite label local não gerado). Repro: qualquer `main(){println("hello")}` → `kof run --target native`. **Hello world nativo quebrado globalmente no HEAD.** |
+| ~~N14~~ | ✅ **CORRIGIDO** em 4954622 (hello world nativo OK) |
+| N2 | ✅ **CORRIGIDO** em c822ed3 (`"42".toInt()` nativo = 42) |
+| ~~N14 (NOVO)~~ | **REGRESSÃO no HEAD ef91b7e**: todo build native falha no link — `undefined reference to .Ljf_adv` dentro de `kof_json_find_value` (emitJsonFindValue emite label local não gerado). Repro: qualquer `main(){println("hello")}` → `kof run --target native`. **Hello world nativo quebrado globalmente no HEAD.** |
 
-**Decisão D0020:** baseline do kof-agent pinado em **c822ed3** (branch
+**Atualização final:** HEAD 4954622 corrigiu N14+N2; N10-FAMILY PARCIALMENTE ALIVIADA
+(ws_diff 7/7 voltou a passar) mas segfaults residuais persistem em artefatos grandes
+(tools fs suite). Baseline movido para **HEAD 4954622**. Pendentes: N1?/N3/N4/N6/N7/
+N8/N9/N10-residual/N11/N12/N13, SC1–5.
+
+**Histórico D0020:** baseline pinado em **c822ed3** (branch
 `kofagent-baseline` no clone do compilador) — inclui multi-arquivo parcial
 (e462fcb) e os fixes JVM, sem a regressão N14. Retestar N1–N13/N10-family
 quando N14 fechar.
