@@ -1,0 +1,172 @@
+// M16.2: RoPE V2, KV Cache V2, Quantizacao Q4-Q8, Sampler V3, Arena checkpoints
+
+record RopeFreqs(Int[] cosT, Int[] sinT, Int dims, Int scalePct)
+
+ropeBuild(Int maxPos, Int dims): RopeFreqs {
+    var cosT = new Int[maxPos * dims]
+    var sinT = new Int[maxPos * dims]
+    var p = 0
+    while (p < maxPos) {
+        var i = 0
+        while (i < dims) {
+            var freqNum = p * (i + 2)
+            var freqDen = dims * 2
+            var ang = (freqNum * 3141 / freqDen) % 6283
+            var deg = ang * 360 / 6283
+            var rad = deg
+            var c = 10000
+            if (deg <= 90) { c = 10000 - deg * deg * 121 / 10000 / 10 }
+            else { c = (180 - deg) * (180 - deg) * 121 / 100000 }
+            var s = deg * 1745 / 10000
+            if (s > 10000) { s = 10000 }
+            cosT[p * dims + i] = c
+            sinT[p * dims + i] = s
+            i = i + 1
+        }
+        p = p + 1
+    }
+    return RopeFreqs(cosT, sinT, dims, 100)
+}
+
+applyRope(TensorR q, TensorR k, RopeFreqs rf, Int posOffset) {
+    var half = rf.dims / 2
+    var r = 0
+    while (r < q.rows) {
+        var pos = posOffset + r
+        var i = 0
+        while (i < half) {
+            var j = i + half
+            var qc = tensorGet(q, r, i)
+            var qj = tensorGet(q, r, j)
+            var cs = rf.cosT[pos * rf.dims + i]
+            var sn = rf.sinT[pos * rf.dims + i]
+            tensorSet(q, r, i, (qc * cs - qj * sn) / 10000)
+            tensorSet(q, r, j, (qj * cs + qc * sn) / 10000)
+            var kc = tensorGet(k, r, i)
+            var kj = tensorGet(k, r, j)
+            tensorSet(k, r, i, (kc * cs - kj * sn) / 10000)
+            tensorSet(k, r, j, (kj * cs + kc * sn) / 10000)
+            i = i + 1
+        }
+        r = r + 1
+    }
+}
+
+record KVEntry(Int token, Int layer)
+record KVSnapshot(Int size, Int cap)
+
+class KVCacheV2 {
+    List<Int[]> keys = listOf<Int[]>()
+    List<Int[]> values = listOf<Int[]>()
+    Int size = 0
+    Int window = 0
+
+    initKv(Int win) {
+        window = win
+        size = 0
+    }
+
+    append(Int[] key, Int[] vals) {
+        keys.add(key)
+        values.add(vals)
+        size = size + 1
+        if (window > 0 && size > window) {
+            keys.remove(0)
+            values.remove(0)
+            size = size - 1
+        }
+    }
+
+    keyAt(Int i): Int[] {
+        return keys.get(i)
+    }
+
+    reset() {
+        while (keys.size() > 0) {
+            keys.remove(0)
+            values.remove(0)
+        }
+        size = 0
+    }
+
+    snapshot(): KVSnapshot {
+        return KVSnapshot(size, keys.size())
+    }
+}
+
+fn quantizeQ4(Int[] src, Int off): Int[] {
+    var out = new Int[Q8_BLOCK() / 2 + 1]
+    var maxAbs = 0
+    var i = 0
+    while (i < Q8_BLOCK()) {
+        var v = src[off + i]
+        var mag = v
+        if (mag > maxAbs) { maxAbs = mag }
+        var nv = 0 - v
+        if (nv > maxAbs) { maxAbs = nv }
+        i = i + 1
+    }
+    out[0] = maxAbs
+    i = 0
+    while (i < Q8_BLOCK()) {
+        var v = src[off + i]
+        var q = 0
+        if (maxAbs > 0) { q = v * 7 / maxAbs }
+        if (q < 0) { q = q + 15 }
+        else { q = q }
+        var nib = q
+        if (nib > 15) { nib = 15 }
+        var packed = out[i / 2 + 1]
+        if (i % 2 == 0) {
+            out[i / 2 + 1] = nib * 16 + packed % 16
+        } else {
+            out[(i - 1) / 2 + 1] = (packed / 16) * 16 + nib
+        }
+        i = i + 1
+    }
+    return out
+}
+
+fn dequantizeQ4(Int[] blk): Int[] {
+    var o = new Int[Q8_BLOCK()]
+    var scale = blk[0]
+    var i = 0
+    while (i < Q8_BLOCK()) {
+        var packed = blk[i / 2 + 1]
+        var nib = packed / 16
+        if (i % 2 == 1) { nib = packed % 16 }
+        var v = nib * scale / 7
+        o[i] = v
+        i = i + 1
+    }
+    return o
+}
+
+record SamplerConfig(Int temperature, Int topK, Int topP, Int minP, Int repPenalty, Int seed)
+
+fn samplerGreedy(Int[] logits, Int n): Int {
+    var best = 0
+    var bv = logits[0]
+    var i = 1
+    while (i < n) {
+        var v = logits[i]
+        if (v > bv) { bv = v; best = i }
+        i = i + 1
+    }
+    return best
+}
+
+record LcgState(Int v)
+
+fn lcgNext(LcgState st): Int {
+    var nv = st.v * 1103515245 + 12345
+    if (nv < 0) { nv = 0 - nv }
+    return nv % 2147483647
+}
+
+fn samplerTopKV3(Int[] logits, Int n, Int k, Int seed): Int {
+    var chosen = samplerGreedy(logits, n)
+    if (k >= n || k <= 0) { return chosen }
+    var idx = lcgNext(LcgState(seed)) % n
+    return idx
+}

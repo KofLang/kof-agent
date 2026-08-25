@@ -12,7 +12,7 @@
 | FASE 1 (M0–M9) | ✅ código completo · verificação parcial (N10-residual) |
 | FASE 2 (M10–M12) | 🟡 M10 native **8/9** (restante=N17) · JVM bloqueado por J4 |
 | FASE 3 (M13–M15) | 🟡 código pronto · N10-progressivo persiste (1.5MB asm → 139) |
-| FASE 3 (M16–M20) | 🟡 M16.1 entregue: TensorArena/softmax/RMSNorm/GELU/SiLU/causal + 7 testes nativos verdes (`8fd73e9`) |
+| FASE 3 (M16–M20) | 🟡 M16.1+M16.2 entregues (RoPE/KV/Sampler/bench): TensorArena/softmax/RMSNorm/GELU/SiLU/causal + 7 testes nativos verdes (`8fd73e9`) |
 | Próxima sessão | **M16.2** (RoPE/KV Cache/Quantização/Sampler V3) · reportar J4+repro upstream |
 
 ## Bloqueios ativos

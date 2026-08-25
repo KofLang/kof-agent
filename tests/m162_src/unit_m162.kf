@@ -1,0 +1,166 @@
+test "rope build cache dims" {
+    var rf = ropeBuild(8, 4)
+    assert(rf.dims == 4)
+    assert(rf.cosT.length == 32)
+}
+
+test "rope apply rotates q" {
+    var rf = ropeBuild(8, 4)
+    var q = tensorNew(1, 4)
+    tensorSet(q, 0, 0, 10000)
+    var k = tensorNew(1, 4)
+    applyRope(q, k, rf, 3)
+    assert(tensorGet(q, 0, 0) != 10000)
+}
+
+test "rope offset changes position" {
+    var rf = ropeBuild(16, 2)
+    var q1 = tensorNew(1, 2)
+    var k1 = tensorNew(1, 2)
+    tensorSet(q1, 0, 0, 10000)
+    applyRope(q1, k1, rf, 0)
+    var q2 = tensorNew(1, 2)
+    var k2 = tensorNew(1, 2)
+    tensorSet(q2, 0, 0, 10000)
+    applyRope(q2, k2, rf, 5)
+    assert(tensorGet(q1, 0, 0) != tensorGet(q2, 0, 0))
+}
+
+test "kv append grows size" {
+    var kv = KVCacheV2()
+    kv.initKv(0)
+    var i = 0
+    while (i < 3) {
+        var a = new Int[2]
+        a[0] = i
+        kv.append(a, a)
+        i = i + 1
+    }
+    assert(kv.size == 3)
+}
+
+test "kv sliding window evicts" {
+    var kv = KVCacheV2()
+    kv.initKv(2)
+    var i = 0
+    while (i < 5) {
+        var a = new Int[1]
+        a[0] = i
+        kv.append(a, a)
+        i = i + 1
+    }
+    assert(kv.size == 2)
+    assert(kv.keyAt(0)[0] == 3)
+}
+
+test "kv reset clears" {
+    var kv = KVCacheV2()
+    kv.initKv(0)
+    var a = new Int[1]
+    kv.append(a, a)
+    kv.reset()
+    assert(kv.size == 0)
+}
+
+test "kv snapshot reports size" {
+    var kv = KVCacheV2()
+    kv.initKv(0)
+    var a = new Int[1]
+    kv.append(a, a)
+    var s = kv.snapshot()
+    assert(s.size == 1)
+}
+
+test "q4 roundtrip approx" {
+    var src = new Int[Q8_BLOCK()]
+    var i = 0
+    while (i < Q8_BLOCK()) {
+        src[i] = i % 16
+        i = i + 1
+    }
+    var q = quantizeQ4(src, 0)
+    var back = dequantizeQ4(q)
+    assert(back[7] >= 4 && back[7] <= 10)
+}
+
+test "sampler greedy picks max" {
+    var lg = new Int[3]
+    lg[0] = 1
+    lg[1] = 99
+    lg[2] = 5
+    assert(samplerGreedy(lg, 3) == 1)
+}
+
+test "topkv3 deterministic same seed" {
+    var lg = new Int[8]
+    var i = 0
+    while (i < 8) {
+        lg[i] = i * 7 % 5
+        i = i + 1
+    }
+    var a = samplerTopKV3(lg, 8, 4, 42)
+    var b = samplerTopKV3(lg, 8, 4, 42)
+    assert(a == b)
+}
+
+test "topkv3 different seeds differ" {
+    var lg = new Int[8]
+    var i = 0
+    while (i < 8) {
+        lg[i] = i
+        i = i + 1
+    }
+    var a = samplerTopKV3(lg, 8, 8, 1)
+    var b = samplerTopKV3(lg, 8, 8, 999)
+    assert(a != b)
+}
+
+test "lcg stays in positive range" {
+    var v = lcgNext(LcgState(12345))
+    assert(v >= 0)
+    assert(v < 2147483647)
+}
+
+test "sampler config record holds fields" {
+    var sc = SamplerConfig(80, 40, 95, 5, 110, 7)
+    assert(sc.topK == 40)
+    assert(sc.seed == 7)
+}
+
+test "kv reuse after window slide" {
+    var kv = KVCacheV2()
+    kv.initKv(3)
+    var i = 0
+    while (i < 10) {
+        var a = new Int[1]
+        a[0] = i
+        kv.append(a, a)
+        i = i + 1
+    }
+    assert(kv.size == 3)
+    assert(kv.keyAt(2)[0] == 9)
+}
+test "zz bench" {
+    var clk = RealTimeClock()
+    var t0 = clk.nowMs()
+    var rf = ropeBuild(512, 64)
+    var t1 = clk.nowMs()
+    var q = tensorNew(1, 64)
+    var k = tensorNew(1, 64)
+    var i = 0
+    while (i < 256) {
+        applyRope(q, k, rf, i)
+        i = i + 1
+    }
+    var t2 = clk.nowMs()
+    var kv = KVCacheV2()
+    kv.initKv(128)
+    var j = 0
+    while (j < 512) {
+        var a = new Int[64]
+        kv.append(a, a)
+        j = j + 1
+    }
+    var t3 = clk.nowMs()
+    println("BENCH rope_cache_ms=" + (t1 - t0) + " rope_apply256_ms=" + (t2 - t1) + " kv512_ms=" + (t3 - t2))
+}

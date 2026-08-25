@@ -26,6 +26,7 @@ PARTS=(
   agent/runtime/81_tensors_v2.kf
   agent/runtime/82_tensor_ops.kf
   agent/runtime/79_hal.kf
+  agent/runtime/83_m16_v2.kf
   agent/runtime/83_nn_interfaces.kf
   agent/runtime/68_brain.kf
   agent/runtime/69_planner.kf

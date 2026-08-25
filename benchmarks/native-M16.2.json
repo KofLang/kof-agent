@@ -1,0 +1,14 @@
+{
+  "milestone": "M16.2",
+  "target": "native",
+  "compiler": "Kof4j origin/main @ a7949a5",
+  "machine": "linux x86_64",
+  "date": "2026-08-25",
+  "measurements": {
+    "rope_cache_build_512x64_ms": 0,
+    "rope_apply_256_tokens_ms": 1,
+    "kv_append_512x64_sliding128_ms": 2,
+    "suite_wall_14_tests": "<10s one-per-process"
+  },
+  "notes": "Inteiros fixo-ponto (10000=1.0); kernels livres de negativos devido a N17."
+}
