@@ -1,0 +1,1 @@
+7afdbb5 feat(security): AES-GCM nativo em asm — fecha SECN002 (G10 completo)
