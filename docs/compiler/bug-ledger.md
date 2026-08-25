@@ -46,3 +46,24 @@ SECN002 (AES-GCM nativo) fechado — G10 completo. Não rastreado pelo agente (f
 | N6 null-compare | ✅ FIXED — retorna false |
 | N1 fwd-fn | ✅ FIXED — v=5 |
 | N4 split | ❌ ainda segfault em alguns padrões |
+
+
+## N16 — SEM025 false positive: método de classe não resolvido quando uso precede definição
+
+- **Commit:** 65f748f (regressão introduzida por 3329323)
+- **Target:** jvm (provável native também)
+- **Categoria:** SC (Semantic)
+- **Repro:** `/tmp/opencode/n16/combined.kf` (função top-level chama método de classe definida DEPOIS no arquivo)
+- **Esperado:** resolve (two-pass)
+- **Obtido:** `Cannot resolve method 'find' on type 'Registry' [SEM025]`
+- **Workaround:** definir classe ANTES do uso (reordenação) — já é a regra defs-before-main do projeto
+- **Status:** CONFIRMED — bloqueia builds M16+ com ordem atual de PARTS (03_tool_exec antes de 47_tools)
+
+
+## N17 — Comparação signed quebrada no Native para negativos vindos de Int[]
+
+- **Commit:** 65f748f · **Target:** native (JVM correto) · **Categoria:** N Codegen
+- **Repro:** regressions/N17/repro.kf — elemento de Int[] negativo; `a < 0` → false
+- **Esperado:** true · **Obtido:** false (compara como unsigned; -1000000 > 0 → true)
+- **Workaround:** sem negativos em tensors: softmax racional positiva; máscara causal com penalidade positiva (+1e6)
+- **Status:** CONFIRMED — crítico para attention/softmax nativos

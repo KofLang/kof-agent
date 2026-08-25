@@ -10,41 +10,6 @@ class ToolResult {
     }
 }
 
-toolOk(String data): ToolResult {
-    var r = ToolResult()
-    r.status = "ok"
-    r.data = data
-    return r
-}
-
-toolErr(String code, String detail): ToolResult {
-    var r = ToolResult()
-    r.status = "error"
-    r.data = code + "|" + detail
-    return r
-}
-
-toolGap(String gapCode, String detail): ToolResult {
-    var r = ToolResult()
-    r.status = "gap"
-    r.data = gapCode + "|" + detail
-    return r
-}
-
-toolDenied(String perm): ToolResult {
-    var r = ToolResult()
-    r.status = "denied"
-    r.data = perm
-    return r
-}
-
-toolCancelled(): ToolResult {
-    var r = ToolResult()
-    r.status = "cancelled"
-    r.data = ""
-    return r
-}
-
 
 toolExec(ToolRegistry reg, ToolCtx ctx, ToolCall call): ToolResult {
     if (ctx.cancelled) {

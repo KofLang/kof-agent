@@ -1,0 +1,13 @@
+fn mk(): Int[] {
+    var a = new Int[2]
+    a[0] = 0 - 1000000
+    a[1] = 5
+    return a
+}
+
+main() {
+    var arr = mk()
+    var a = arr[0]
+    println("v=" + a)
+    println("lt0=" + (a < 0))
+}

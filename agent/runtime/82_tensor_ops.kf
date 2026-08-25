@@ -1,0 +1,119 @@
+// M16 part 82: Tensor ops V2 — arena, stable softmax, rmsnorm, gelu/silu, causal mask
+
+record ArenaStats(Int allocs, Int reuses, Int peakBytes)
+record ArenaSlot(Int key, TensorR tensor)
+
+class TensorArena {
+    List<ArenaSlot> free = listOf<ArenaSlot>()
+    ArenaStats stats = ArenaStats(0, 0, 0)
+
+    acquire(Int rows, Int cols): TensorR {
+        var key = rows * 100000 + cols
+        var i = 0
+        while (i < free.size()) {
+            var s = free.get(i)
+            if (s.key == key) {
+                var out2 = s.tensor
+                var j = i
+                while (j < free.size() - 1) {
+                    free.set(j, free.get(j + 1))
+                    j = j + 1
+                }
+                stats = ArenaStats(stats.allocs + 1, stats.reuses + 1, stats.peakBytes)
+                return out2
+            }
+            i = i + 1
+        }
+        stats = ArenaStats(stats.allocs + 1, stats.reuses, stats.peakBytes)
+        return tensorNew(rows, cols)
+    }
+
+    release(TensorR t) {
+        free.add(ArenaSlot(t.rows * 100000 + t.cols, t))
+        var bytes = t.rows * t.cols * 4
+        if (bytes > stats.peakBytes) {
+            stats = ArenaStats(stats.allocs, stats.reuses, bytes)
+        }
+    }
+}
+
+tensorSoftmaxRow(TensorR t, Int row): TensorR {
+    var out = tensorNew(1, t.cols)
+    var maxv = tensorGet(t, row, 0)
+    var c2 = 1
+    while (c2 < t.cols) {
+        if (tensorGet(t, row, c2) > maxv) {
+            maxv = tensorGet(t, row, c2)
+        }
+        c2 = c2 + 1
+    }
+    var sum = 0
+    c2 = 0
+    while (c2 < t.cols) {
+        var d = maxv - tensorGet(t, row, c2)
+        var e = 10000000 / (10 + d)
+        tensorSet(out, 0, c2, e)
+        sum = sum + e
+        c2 = c2 + 1
+    }
+    if (sum == 0) { sum = 1 }
+    c2 = 0
+    while (c2 < t.cols) {
+        tensorSet(out, 0, c2, tensorGet(out, 0, c2) * 10000 / sum)
+        c2 = c2 + 1
+    }
+    return out
+}
+
+tensorRmsNorm(TensorR t): TensorR {
+    var out = tensorNew(t.rows, t.cols)
+    var r = 0
+    while (r < t.rows) {
+        var ss = 0
+        var c2 = 0
+        while (c2 < t.cols) {
+            var v = tensorGet(t, r, c2)
+            ss = ss + v * v / 1000
+            c2 = c2 + 1
+        }
+        var inv = 31623 * 1000 / (100 + ss)
+        c2 = 0
+        while (c2 < t.cols) {
+            tensorSet(out, r, c2, tensorGet(t, r, c2) * inv / 100000)
+            c2 = c2 + 1
+        }
+        r = r + 1
+    }
+    return out
+}
+
+gelu(x: Int): Int {
+    var x3 = x * x * x / 1000000
+    return (x + x3 / 6) / 2
+}
+
+silu(x: Int): Int {
+    if (x <= 0) { return x / 4 }
+    return x
+}
+
+record CausalMask(Int penalty)
+
+tensorCausalMask(Int seqLen): TensorR {
+    var m = tensorNew(seqLen, seqLen)
+    var cm = CausalMask(1000000)
+    var i = 0
+    while (i < seqLen) {
+        var j = 0
+        while (j < seqLen) {
+            if (j > i) {
+                tensorSet(m, i, j, cm.penalty)
+            } else {
+                tensorSet(m, i, j, 0)
+            }
+            j = j + 1
+        }
+        i = i + 1
+    }
+    return m
+}

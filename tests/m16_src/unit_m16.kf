@@ -1,0 +1,50 @@
+test "arena reuse" {
+    var a = TensorArena()
+    var t1 = a.acquire(4, 4)
+    assert(a.stats.allocs == 1)
+    a.release(t1)
+    var t2 = a.acquire(4, 4)
+    assert(a.stats.reuses == 1)
+}
+
+test "matmul identity via existing tensorMatMul" {
+    var id = tensorNew(2, 2)
+    tensorSet(id, 0, 0, 1)
+    tensorSet(id, 1, 1, 1)
+    var x = tensorNew(2, 2)
+    tensorSet(x, 0, 0, 3)
+    tensorSet(x, 1, 1, 7)
+    var m = tensorMatMul(x, id)
+    assert(tensorGet(m, 0, 0) == 3)
+    assert(tensorGet(m, 1, 1) == 7)
+}
+
+test "softmax stable max-subtracted" {
+    var x = tensorNew(1, 3)
+    tensorSet(x, 0, 0, 5000000)
+    tensorSet(x, 0, 1, 1000000)
+    var sm = tensorSoftmaxRow(x, 0)
+    assert(tensorGet(sm, 0, 0) > tensorGet(sm, 0, 1))
+}
+
+test "rmsnorm shrinks large values" {
+    var x = tensorNew(1, 2)
+    tensorSet(x, 0, 0, 300)
+    tensorSet(x, 0, 1, 400)
+    var r = tensorRmsNorm(x)
+    assert(tensorGet(r, 0, 0) < 300)
+}
+
+test "causal mask blocks future" {
+    var m = tensorCausalMask(3)
+    assert(tensorGet(m, 0, 2) == 1000000)
+    assert(tensorGet(m, 2, 0) == 0)
+}
+
+test "gelu approx zero at zero" {
+    assert(gelu(0) == 0)
+}
+
+test "silu positive stays positive" {
+    assert(silu(100) > 0)
+}
