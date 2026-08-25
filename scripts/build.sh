@@ -19,6 +19,7 @@ PARTS=(
   agent/runtime/50_metrics.kf
   agent/runtime/57_corpus.kf
   agent/runtime/67_retrieval.kf
+  agent/runtime/68_brain.kf
   agent/runtime/90_runtime.kf
 )
 

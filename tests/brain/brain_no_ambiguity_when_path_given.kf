@@ -1,0 +1,11 @@
+test "entity quoted extracted" {
+    var p = mkPlan("edita o arquivo \"main.kf\" agora")
+    assert(p.entitiesJson.contains("main.kf"))
+}
+
+test "no ambiguity when path given" {
+    var p = mkPlan("edita o arquivo \"site.kf\"")
+    assert(p.ambiguitiesJson == "[]")
+}
+main() {
+}

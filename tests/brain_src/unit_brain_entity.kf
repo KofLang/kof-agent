@@ -1,0 +1,52 @@
+test "entity quoted extracted" {
+    var p = mkPlan("edita o arquivo \"main.kf\" agora")
+    assert(p.entitiesJson.contains("main.kf"))
+}
+
+test "entity diag code extracted" {
+    var p = mkPlan("arruma o erro SEM011")
+    assert(p.entitiesJson.contains("SEM011"))
+}
+
+test "entity path extracted" {
+    var p = mkPlan("arruma build/tt/quebrado.kf")
+    assert(p.entitiesJson.contains("build/tt/quebrado.kf"))
+}
+
+test "ambiguity when edit lacks target" {
+    var p = mkPlan("edita o site")
+    assert(p.ambiguitiesJson != "[]")
+}
+
+test "no ambiguity when path given" {
+    var p = mkPlan("edita o arquivo \"site.kf\"")
+    assert(p.ambiguitiesJson == "[]")
+}
+
+test "repair without code is ambiguous" {
+    var p = mkPlan("arruma o erro")
+    assert(p.ambiguitiesJson != "[]")
+}
+
+test "confidence higher with context" {
+    var a = mkPlan("janela janela")
+    var b = mkPlan("cria um site")
+    assert(b.confidence > a.confidence)
+}
+
+test "candidate tools for repair" {
+    var p = mkPlan("arruma o erro ARITH001")
+    assert(p.candidateToolsCsv.contains("compiler.check"))
+}
+
+test "candidate recipe for website" {
+    var p = mkPlan("cria um site")
+    assert(p.candidateRecipesCsv.contains("recipe-rest-api"))
+}
+
+test "context built from corpus" {
+    var p = mkPlan("explique spawn")
+    assert(p.contextJson.contains("b-spawn"))
+}
+main() {
+}

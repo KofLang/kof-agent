@@ -1,0 +1,11 @@
+test "entity quoted extracted" {
+    var p = mkPlan("edita o arquivo \"main.kf\" agora")
+    assert(p.entitiesJson.contains("main.kf"))
+}
+
+test "candidate tools for repair" {
+    var p = mkPlan("arruma o erro ARITH001")
+    assert(p.candidateToolsCsv.contains("compiler.check"))
+}
+main() {
+}

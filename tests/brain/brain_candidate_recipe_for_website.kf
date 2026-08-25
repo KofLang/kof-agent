@@ -1,0 +1,11 @@
+test "entity quoted extracted" {
+    var p = mkPlan("edita o arquivo \"main.kf\" agora")
+    assert(p.entitiesJson.contains("main.kf"))
+}
+
+test "candidate recipe for website" {
+    var p = mkPlan("cria um site")
+    assert(p.candidateRecipesCsv.contains("recipe-rest-api"))
+}
+main() {
+}

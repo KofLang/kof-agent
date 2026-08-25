@@ -1,0 +1,11 @@
+test "entity quoted extracted" {
+    var p = mkPlan("edita o arquivo \"main.kf\" agora")
+    assert(p.entitiesJson.contains("main.kf"))
+}
+
+test "context built from corpus" {
+    var p = mkPlan("explique spawn")
+    assert(p.contextJson.contains("b-spawn"))
+}
+main() {
+}

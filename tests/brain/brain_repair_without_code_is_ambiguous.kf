@@ -1,0 +1,11 @@
+test "entity quoted extracted" {
+    var p = mkPlan("edita o arquivo \"main.kf\" agora")
+    assert(p.entitiesJson.contains("main.kf"))
+}
+
+test "repair without code is ambiguous" {
+    var p = mkPlan("arruma o erro")
+    assert(p.ambiguitiesJson != "[]")
+}
+main() {
+}

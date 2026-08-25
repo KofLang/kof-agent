@@ -66,7 +66,7 @@ Projeto em fase de fundação (**Milestone 0** — documentação de engenharia)
 | M4 | Tool API | 🟡 (N10) |
 | M5 | Corpus Engine | 🟡 (N10) |
 | M6 | Retrieval Engine | 🟡 (N10) |
-| M7 | Kof Brain | ⬜ |
+| M7 | Kof Brain | 🟡 (N10) |
 | M8 | Planner | ⬜ |
 | M9 | Executor + Repair Loop | ⬜ |
 | M10 | Runtime AI | ⬜ |

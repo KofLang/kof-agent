@@ -1,0 +1,11 @@
+test "entity quoted extracted" {
+    var p = mkPlan("edita o arquivo \"main.kf\" agora")
+    assert(p.entitiesJson.contains("main.kf"))
+}
+
+test "entity path extracted" {
+    var p = mkPlan("arruma build/tt/quebrado.kf")
+    assert(p.entitiesJson.contains("build/tt/quebrado.kf"))
+}
+main() {
+}

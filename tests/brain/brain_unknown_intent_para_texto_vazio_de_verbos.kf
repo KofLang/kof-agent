@@ -1,0 +1,18 @@
+SEEDB(): String { return "build/brain_corpus" }
+
+seedBrain() {
+    mkFile("build/brain_corpus/language/spawn-doc.md", "---\nid: b-spawn\ntitle: spawn task scheduler\nmodule: language\ncategory: language\nkeywords: spawn,task,scheduler\nsymbols: spawn\n---\nspawn executa tarefas.")
+    mkFile("build/brain_corpus/diagnostics/E999.md", "---\nid: b-e999\ntitle: erro E999\nmodule: diagnostics\ncategory: diagnostics\nkeywords: e999\n---\nworkaround documentado.")
+}
+
+mkPlan(String text): BrainPlan {
+    seedBrain()
+    return brainProcess(freshBus(), corpusLoad(freshBus(), SEEDB(), FixedClock(1)), text, listOf<String>(), listOf<String>())
+}
+
+test "unknown intent para texto vazio de verbos" {
+    var p = mkPlan("janela janela janela")
+    assert(p.intent == "Unknown")
+}
+main() {
+}

@@ -1,0 +1,12 @@
+test "entity quoted extracted" {
+    var p = mkPlan("edita o arquivo \"main.kf\" agora")
+    assert(p.entitiesJson.contains("main.kf"))
+}
+
+test "confidence higher with context" {
+    var a = mkPlan("janela janela")
+    var b = mkPlan("cria um site")
+    assert(b.confidence > a.confidence)
+}
+main() {
+}
