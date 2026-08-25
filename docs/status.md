@@ -6,8 +6,8 @@
 > vence: implementação → testes → este arquivo → demais docs.
 
 **Última atualização:** 24 de agosto de 2026
-**Milestone corrente:** M12 — Dataset Builder (M11 🟡 CPU real 5/5)
-**Milestones:** M0 ✅ · M1 ✅ · M2–M10 🟡 · **M11 🟡 CPU real 5/5**
+**Milestone corrente:** Estabilização anti-N10 (colheita M3–M9) — M10–M12 núcleo entregues
+**Milestones:** M0 ✅ · M1 ✅ · M2–M12 🟡 (núcleos entregues; verificação nativa integral aguarda N10)
 
 ---
 
@@ -146,6 +146,7 @@ N8 (&&/|| sem curto-circuito) · N9 (+= String perde acumulador) · N10
 | 2026-08-24 | M0 concluída; repo publicado; status.md criado |
 | 2026-08-24 | M1 concluída: runtime nativo completo, 11 suítes verdes, baselines registrados, 10 bugs do compilador documentados |
 | 2026-08-24 | M2 🟡: gateway tipado + ADR-001 (B' híbrido) + goldens 20/20 via ponte; J2 e SC1–SC5 descobertos; execução in-language aguarda upstream |
+| 2026-08-24 | M12 🟡→✅-núcleo: dataset builder JSONL 26 exemplos, manifest+checksums |
 | 2026-08-24 | M11 🟡: HAL v1 CPU real (copy/scale/dot) + seleção c/ override; 5/5 |
 | 2026-08-24 | M10 🟡: runtime ai core (tokenizer/vocab/sampler/tensor-int/gguf-header) 10/10 nativo |
 | 2026-08-24 | M9 🟡: executor/rollback/repair implementados; N10 revelado PROGRESSIVO (regressão de suítes verdes ao crescer TU) |
