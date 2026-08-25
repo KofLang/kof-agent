@@ -65,7 +65,7 @@ Projeto em fase de fundação (**Milestone 0** — documentação de engenharia)
 | M3 | Workspace Intelligence | 🟡 (N10 upstream bloqueia 21/37 testes) |
 | M4 | Tool API | 🟡 (N10) |
 | M5 | Corpus Engine | 🟡 (N10) |
-| M6 | Retrieval Engine | ⬜ |
+| M6 | Retrieval Engine | 🟡 (N10) |
 | M7 | Kof Brain | ⬜ |
 | M8 | Planner | ⬜ |
 | M9 | Executor + Repair Loop | ⬜ |

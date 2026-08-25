@@ -1,0 +1,16 @@
+SEED(): String { return "build/ret_corpus" }
+
+seedCorpus() {
+    mkFile("build/ret_corpus/language/spawn-doc.md", "---\nid: r-spawn\ntitle: spawn task runtime\nmodule: language\ncategory: language\nkeywords: spawn,scheduler,task\nsymbols: spawn\n---\nspawn roda tarefas com scheduler e future.")
+    mkFile("build/ret_corpus/diagnostics/E999.md", "---\nid: r-e999\ntitle: erro E999 workaround\nmodule: diagnostics\ncategory: diagnostics\nkeywords: e999\n---\nworkaround N2 exemplo corrigido.")
+    mkFile("build/ret_corpus/recipes/rest-doc.md", "---\nid: r-rest\ntitle: recipe rest api crud http json\nmodule: recipes\ncategory: recipes\nkeywords: rest,crud,http,json\n---\nreceita rest api com http json database validation testing.")
+}
+
+test "diagnostic boost surfaces E999 for code query" {
+    seedCorpus()
+    var ix = corpusLoad(freshBus(), SEED(), FixedClock(1))
+    var ctx = retBuildContext(ix, "E999", 5, 4000, listOf<String>())
+    assert(ctx.contains("r-e999"))
+}
+main() {
+}

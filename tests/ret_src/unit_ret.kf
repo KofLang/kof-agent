@@ -1,0 +1,61 @@
+SEED(): String { return "build/ret_corpus" }
+
+seedCorpus() {
+    mkFile("build/ret_corpus/language/spawn-doc.md", "---\nid: r-spawn\ntitle: spawn task runtime\nmodule: language\ncategory: language\nkeywords: spawn,scheduler,task\nsymbols: spawn\n---\nspawn roda tarefas com scheduler e future.")
+    mkFile("build/ret_corpus/diagnostics/E999.md", "---\nid: r-e999\ntitle: erro E999 workaround\nmodule: diagnostics\ncategory: diagnostics\nkeywords: e999\n---\nworkaround N2 exemplo corrigido.")
+    mkFile("build/ret_corpus/recipes/rest-doc.md", "---\nid: r-rest\ntitle: recipe rest api crud http json\nmodule: recipes\ncategory: recipes\nkeywords: rest,crud,http,json\n---\nreceita rest api com http json database validation testing.")
+}
+
+test "retrieval ranks matching doc first" {
+    seedCorpus()
+    var ix = corpusLoad(freshBus(), SEED(), FixedClock(1))
+    var ctx = retBuildContext(ix, "spawn task", 5, 4000, listOf<String>())
+    assert(ctx.contains("r-spawn"))
+}
+
+test "diagnostic boost surfaces E999 for code query" {
+    seedCorpus()
+    var ix = corpusLoad(freshBus(), SEED(), FixedClock(1))
+    var ctx = retBuildContext(ix, "E999", 5, 4000, listOf<String>())
+    assert(ctx.contains("r-e999"))
+}
+
+test "recipe expansion pulls rest api doc" {
+    seedCorpus()
+    var ix = corpusLoad(freshBus(), SEED(), FixedClock(1))
+    var ctx = retBuildContext(ix, "crud", 5, 4000, listOf<String>())
+    assert(ctx.contains("r-rest"))
+}
+
+test "dedup ids in context" {
+    seedCorpus()
+    var ix = corpusLoad(freshBus(), SEED(), FixedClock(1))
+    var ctx = retBuildContext(ix, "spawn", 10, 4000, listOf<String>())
+    var first = ctx.indexOf("r-spawn")
+    var second = ctx.rfind("r-spawn") if false else -1
+    var count = wsCountOccurrences(ctx, "\"r-spawn\"")
+    assert(count == 1)
+}
+
+test "budget caps items" {
+    seedCorpus()
+    var ix = corpusLoad(freshBus(), SEED(), FixedClock(1))
+    var ctx = retBuildContext(ix, "spawn e999 rest crud", 10, 120, listOf<String>())
+    assert(ctx.length <= 200)
+}
+
+test "cache save then hit" {
+    seedCorpus()
+    var bus = freshBus()
+    var missRec = EventCounter()
+    var hitRec = EventCounter()
+    bus.subscribe("cache.miss", missRec)
+    bus.subscribe("cache.hit", hitRec)
+    var ix = corpusLoad(bus, SEED(), FixedClock(1))
+    var q = "consulta unica xyz"
+    var ctx = retBuildContext(ix, q, 3, 1000, listOf<String>())
+    retCacheSave(bus, "build/ret_cache", q, ctx)
+    var again = retCacheLoad(bus, "build/ret_cache", q)
+    assert(again == ctx)
+    assert(hitRec.count == 1)
+}

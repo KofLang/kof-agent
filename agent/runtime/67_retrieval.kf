@@ -1,0 +1,263 @@
+record RetHit(String source, String id, String title, Int score, String snippet)
+record CtxItem(String source, String id, String title, String body)
+record RetOpts(String query, Int topK, Int maxChars, Bool useWorkspaceBoost)
+
+retTokenize(String s): List<String> {
+    var out = listOf<String>()
+    var clean = ""
+    var i = 0
+    while (i < s.length) {
+        var c = s.charAt(i)
+        var alpha = (c >= 65 && c <= 90) || (c >= 97 && c <= 122) || c == 46
+        if (alpha) {
+            if (c >= 65 && c <= 90) {
+                clean = clean + " "
+            }
+            clean = clean + s.substring(i, i + 1)
+        } else {
+            clean = clean + " "
+        }
+        i = i + 1
+    }
+    for (var tk in splitStr(clean, " ")) {
+        var t = tk.trim()
+        if (t.length > 1) {
+            out.add(t)
+        }
+    }
+    return out
+}
+
+retLower(String s): String {
+    return s.toLowerCase()
+}
+
+embedDocumentTokens(String title, String body): List<String> {
+    var toks = retTokenize(title)
+    for (var t in retTokenize(body)) {
+        toks.add(t)
+    }
+    return toks
+}
+
+embedQueryTokens(String q): List<String> {
+    return retTokenize(q)
+}
+
+embedWorkspaceTokens(CorpusIndex ix): List<String> {
+    var out = listOf<String>()
+    for (var d in ix.docs) {
+        for (var k in splitStr(d.meta.keywordsCsv, ",")) {
+            var kk = k.trim()
+            if (kk.length > 0) {
+                out.add(kk)
+            }
+        }
+    }
+    return out
+}
+
+embedSymbolTokens(String symbol): List<String> {
+    return retTokenize(symbol)
+}
+
+embedDiagnosticTokens(String code, String message): List<String> {
+    var out = retTokenize(code)
+    for (var t in retTokenize(message)) {
+        out.add(t)
+    }
+    return out
+}
+
+retOverlap(List<String> q, List<String> doc): Int {
+    var n = 0
+    for (var qt in q) {
+        var ql = retLower(qt)
+        for (var dt in doc) {
+            if (retLower(dt) == ql) {
+                n = n + 1
+            }
+        }
+    }
+    return n
+}
+
+retExpandSymbol(String symbol): List<String> {
+    var out = listOf<String>(symbol)
+    var s = retLower(symbol)
+    if (s.contains("spawn")) {
+        out.add("scheduler")
+        out.add("task")
+        out.add("future")
+        out.add("runtime")
+    }
+    if (s.contains("record")) {
+        out.add("dados")
+        out.add("imutavel")
+        out.add("constructor")
+    }
+    if (s.contains("json")) {
+        out.add("decode")
+        out.add("encode")
+        out.add("serializacao")
+    }
+    return out
+}
+
+retExpandRecipe(String recipe): List<String> {
+    var out = listOf<String>(recipe)
+    var s = retLower(recipe)
+    if (s.contains("crud") || s.contains("rest") || s.contains("api")) {
+        out.add("http")
+        out.add("json")
+        out.add("database")
+        out.add("validation")
+        out.add("testing")
+    }
+    return out
+}
+
+retExpandDiagnostic(String code, CorpusIndex ix): List<String> {
+    var out = listOf<String>(code)
+    for (var d in ix.diagRegistry) {
+        if (d.code.contains(code)) {
+            if (d.workaroundId != "") {
+                out.add("workaround-" + d.workaroundId)
+            }
+            out.add("exemplo-corrigido")
+            out.add("documentacao")
+        }
+    }
+    return out
+}
+
+retScoreDoc(List<String> qTokens, CorpusDoc d, List<String> recentFiles, List<SymRef> symIndex): Int {
+    var docToks = embedDocumentTokens(d.meta.title + " " + d.meta.keywordsCsv, d.body)
+    var score = retOverlap(qTokens, docToks)
+    for (var qt in qTokens) {
+        var ql = retLower(qt)
+        for (var sr in symIndex) {
+            if (retLower(sr.symbol).contains(ql)) {
+                score = score + 3
+                break
+            }
+        }
+        if (d.meta.category == "diagnostics" && d.meta.id.contains(ql.toUpperCase())) {
+            score = score + 4
+        }
+        if (d.meta.category == "recipes" && d.meta.title.contains(ql)) {
+            score = score + 2
+        }
+        for (var rf in recentFiles) {
+            if (rf == d.relPath) {
+                score = score + 2
+            }
+        }
+    }
+    return score
+}
+
+retBuildContext(CorpusIndex ix, String query, Int topK, Int maxChars, List<String> recentFiles): String {
+    var qTokens = embedQueryTokens(query)
+    var expanded = listOf<String>()
+    for (var qt in qTokens) {
+        for (var e in retExpandSymbol(retLower(qt))) {
+            expanded.add(e)
+        }
+    }
+    var scored = listOf<RetHit>()
+    for (var d in ix.docs) {
+        var base = embedDocumentTokens(d.meta.title + " " + d.meta.keywordsCsv, d.body)
+        var sc = retOverlap(expanded, base)
+        for (var qt in qTokens) {
+            var ql = retLower(qt)
+            if (d.meta.id.contains(ql) || d.meta.title.contains(ql)) {
+                sc = sc + 5
+            }
+            for (var sr in ix.symIndex) {
+                if (sr.docId == d.meta.id && retLower(sr.symbol).contains(ql)) {
+                    sc = sc + 3
+                }
+            }
+            if (d.meta.category == "diagnostics" && d.meta.id.contains(ql.toUpperCase())) {
+                sc = sc + 4
+            }
+            if (d.meta.category == "recipes") {
+                for (var re in retExpandRecipe(query)) {
+                    if (d.meta.title.contains(re) || d.body.contains(re)) {
+                        sc = sc + 2
+                    }
+                }
+            }
+            for (var rf in recentFiles) {
+                if (rf == d.relPath) {
+                    sc = sc + 2
+                }
+            }
+        }
+        scored.add(RetHit("corpus", d.meta.id, d.meta.title, sc, d.relPath))
+    }
+    var picked = listOf<RetHit>()
+    var budget = maxChars
+    var k = 0
+    while (k < topK) {
+        var bestIdx = -1
+        var bestScore = -1
+        var i = 0
+        while (i < scored.size) {
+            var already = false
+            for (var p in picked) {
+                if (p.id == scored.get(i).id && p.source == scored.get(i).source) {
+                    already = true
+                }
+            }
+            if (!already && scored.get(i).score > bestScore) {
+                bestScore = scored.get(i).score
+                bestIdx = i
+            }
+            i = i + 1
+        }
+        if (bestIdx < 0) {
+            break
+        }
+        var hit = scored.get(bestIdx)
+        var cost = hit.title.length + hit.snippet.length + 10
+        if (budget - cost < 0) {
+            break
+        }
+        budget = budget - cost
+        picked.add(hit)
+        k = k + 1
+    }
+    var out = "{\"query\":\"" + escapeJson(query) + "\",\"items\":["
+    var first = true
+    for (var p in picked) {
+        if (!first) {
+            out = out + ","
+        }
+        first = false
+        out = out + "{\"source\":\"" + p.source + "\",\"id\":\"" + escapeJson(p.id) + "\",\"title\":\"" + escapeJson(p.title) + "\",\"score\":" + p.score + "}"
+    }
+    out = out + "]}"
+    return out
+}
+
+retCachePath(String dir, String qHash): String {
+    return joinPath(dir, "q." + qHash + ".cache")
+}
+
+retCacheSave(EventBus bus, String dir, String query, String contextJson): Bool {
+    var h = wsHash(retLower(query))
+    var ok = wsWriteVersioned(retCachePath(dir, "" + h), "RETC", 1, contextJson)
+    bus.publish("cache.miss", query)
+    return ok
+}
+
+retCacheLoad(EventBus bus, String dir, String query): String {
+    var h = wsHash(retLower(query))
+    var body = wsReadVersioned(retCachePath(dir, "" + h), "RETC")
+    if (body != "") {
+        bus.publish("cache.hit", query)
+    }
+    return body
+}

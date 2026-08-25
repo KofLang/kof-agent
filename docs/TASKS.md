@@ -1,6 +1,6 @@
 # TASKS — Milestone corrente
 
-**Milestone atual:** M6 — Retrieval Engine (não iniciada)
+**Milestone atual:** Estabilização anti-N10 → M7 — Kof Brain
 **Milestones:** M0 ✅ · M1 ✅ · M2–M5 🟡 (N10 bloqueia verificação integral desde M3)
 **Última atualização:** 24 de agosto de 2026
 
