@@ -6,7 +6,7 @@
 > vence: implementação → testes → este arquivo → demais docs.
 
 **Última atualização:** 24 de agosto de 2026
-**Milestone corrente:** ESTABILIZAÇÃO anti-N10 sobre baseline c822ed3 (pinado, D0020) → depois M10 Runtime AI
+**Milestone corrente:** ESTABILIZAÇÃO pós-fixes upstream (baseline HEAD 4954622) → colher M3–M9 → depois M10 Runtime AI
 **Milestones:** M0 ✅ · M1 ✅ · M2–M9 🟡 (código completo; verificação nativa bloqueada por N10 PROGRESSIVO)
 
 ---
@@ -15,11 +15,15 @@
 
 | Item | Estado |
 |------|--------|
+| Compilador | HEAD 4954622 (fix/compiler-bugs-0.0.14 merged) · branch kofagent-baseline |
+|------|--------|
 | Repositório | `github.com/KofLang/kof-agent` · branch `main` · sincronizado |
 | Código | runtime completo em Kof: 9 partes + CLI (~2.6k linhas), compila no **Native** |
 | Suíte | **11/11 suítes verdes** (39 testes estruturados + 2 stress), target native |
 | Benchmarks | baseline `native-M01`: init **120 µs**, scheduler ~143k tasks/s, bus ~56k ops/s, logger ~19.6k l/s, pool ~141k t/s |
-| URGENTE | reportar N10-residual + N11/N12/N13 + SC1–5; J1/J2/N2/N14 ✅ corrigidos upstream; baseline = HEAD 4954622 |
+| URGENTE | reportar upstream: N10-residual (segfaults em artefatos grandes), N11/N12/N13, SC1–5 |
+| ✅ CORRIGIDOS upstream | J1 · J2 · N2 · N14 (baseline HEAD 4954622) |
+| 🆕 J3 (investigar) | runner JVM exige JavaFX em certos artefatos de teste — bloqueia rota JVM das suítes WS |
 | Workspace | índice+snapshot+diff+persistência implementados; aproximação lexical (D0018); 16/37 testes nativos (resto N10) |
 | Gateway Q1 | ✅ decidido (D0016): B' híbrido batch-subprocess — A=201ms/op, B'=21.8ms/arq, C bloqueado |
 
@@ -149,3 +153,29 @@ N8 (&&/|| sem curto-circuito) · N9 (+= String perde acumulador) · N10
 | 2026-08-24 | M5 🟡: corpus engine + conteúdo semeado; 15 testes aguardam N10 |
 | 2026-08-24 | M4 🟡: Tool API completa em código (46 tools, perms, rollback, eventos); execução aguarda N10 |
 | 2026-08-24 | M3 🟡: workspace intelligence completa em código; N11/N12/J1-presença descobertos; 16/37 testes nativos, resto N10 |
+
+
+---
+
+## Pós-fixes upstream (24/08 tarde)
+
+| Suíte | Target | Estado |
+|-------|--------|--------|
+| M1 core/runtime | native | 9/16 suítes ✅ (stress precisa rebuild c/ --native-clock) |
+| M3 ws | native | scan 1/9 · diff **7/8** ✅ (N10 cedeu aqui) · symbols/deps/persist segfault |
+| M4 tools | native | 0/52 (segfault residual N10 no caminho fs.read) |
+| M5 corpus | native | 0/15 (idem) |
+| M7 brain | native | 0/22 (idem) |
+| M8 planner | native | **5/8** ✅ |
+| M9 exec | native | 0/5 (idem N10) |
+| M3 ws | jvm | bloqueado por **J3** (JavaFX no runner — investigar) |
+
+### Ganhos da rodada
+J1/J2/N2/N14 corrigidos e verificados com repros. N10-family **parcialmente
+aliviada** (ws_diff 100%, planner estável). Baseline movido ao HEAD.
+
+### Fila de trabalho sugerida
+1. Investigar J3 (JavaFX no runner JVM) — pode destravar ~90 testes via rota JVM.
+2. Rebuild stress/bench com `--native-clock` (refactor do clock quebrou geradores antigos).
+3. Bisect N10-residual nos artefatos tools/corpus/brain (playbook já documentado).
+4. Reporte upstream: N10-residual + N11/N12/N13 + SC1–5 (repros prontos).
