@@ -31,3 +31,7 @@ Repros dirigidos executados: N1✅ N6✅ N7✅ N8✅ N9✅ N12✅ corrigidos · 
 ## Auditoria v0.1.0-beta (8df415e)
 
 Repros: N1✅ N6✅ N7✅ N8✅ N9✅ N12✅ · N3❌ N4❌ N11❌ persistem · Security native E2E ✅
+
+## Upstream 7afdbb5
+
+SECN002 (AES-GCM nativo) fechado — G10 completo. Não rastreado pelo agente (fora do nosso ledger), registrado como ganho do ecossistema.
