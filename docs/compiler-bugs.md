@@ -38,6 +38,17 @@ Ambiente: kof 0.0.14-alpha, JDK 25 (build), binutils 2.46, Linux x86_64.
 | N2 | ✅ **CORRIGIDO** em c822ed3 (`"42".toInt()` nativo = 42) |
 | ~~N14 (NOVO)~~ | **REGRESSÃO no HEAD ef91b7e**: todo build native falha no link — `undefined reference to .Ljf_adv` dentro de `kof_json_find_value` (emitJsonFindValue emite label local não gerado). Repro: qualquer `main(){println("hello")}` → `kof run --target native`. **Hello world nativo quebrado globalmente no HEAD.** |
 
+**Atualização FINAL 2026-08-25 (baseline 416ff4b):**
+
+| Bug | Estado |
+|-----|--------|
+| **N17** | ✅ **FIXED** (416ff4b) — `lt0=true` no native; M10 Q8 destravado → **9/9** |
+| **N16** | ✅ FIXED declarado no commit — workaround topológico pode ser simplificado depois |
+| **J4** | 🟡 fix parcial — repro_full.kf AINDA crasha COMP002 em purgeExpired (reabrir upstream) |
+| N10-progressivo | ❌ aberto — f3_test (1.5MB asm) segue SIGSEGV 139 |
+
+M16.2 suite: **14/14 nativo**. M10: **9/9 nativo**.
+
 **Atualização 2026-08-25 (baseline a7949a5):**
 
 | Bug | Estado |
