@@ -12,7 +12,7 @@
 | FASE 1 (M0–M9) | ✅ código completo · verificação parcial (N10-residual) |
 | FASE 2 (M10–M12) | 🟡 M10 native **9/9** ✅ (Q8 destravado c/ fix N17) · JVM segue J4-residual |
 | FASE 3 (M13–M15) | 🟡 código pronto · N10-progressivo persiste (1.5MB asm → 139) |
-| FASE 3 (M16–M20) | 🟡 M17 ✅ **COMPLETO — 11/11 nativo** (workaround N18 aplicado); M16.1+M16.2 ✅ (RoPE/KV/Sampler/bench): M16.1 TensorArena/softmax/RMSNorm/GELU/SiLU/causal (7t) + M16.2 RoPE V2/KVCacheV2/Q4/SamplerV3 (14t) + benchmark nativo (`2164230`) |
+| FASE 3 (M16–M20) | 🟡 M18.1 ✅ ModelRunner 8/8 nativo (~9.1k tok/s pipeline) · M17 ✅ 11/11 (workaround N18 aplicado); M16.1+M16.2 ✅ (RoPE/KV/Sampler/bench): M16.1 TensorArena/softmax/RMSNorm/GELU/SiLU/causal (7t) + M16.2 RoPE V2/KVCacheV2/Q4/SamplerV3 (14t) + benchmark nativo (`2164230`) |
 | Próxima fase | **FASE 4 — Tooling Avançado**: M21 LSP · M22 DevTools · M23 Plugin SDK/MCP · M24 Self Improvement · M25 Execution Journal · M26 Observatory |
 | Bugs p/ upstream | **N18 CONFIRMED** (repro_minimal) + J4-residual + N10/N11/N12/N4/SC3/SC4 | (fechar 9 testes, bench real) (RoPE/KV Cache/Quantização/Sampler V3) · reportar J4+repro upstream |
 

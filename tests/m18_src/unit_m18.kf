@@ -1,0 +1,78 @@
+test "load and info" {
+    var h = openGGUF("fixtures/tiny.gguf")
+    var r = ModelRunner()
+    r.loadModel(h)
+    assert(r.modelIsLoaded())
+    assert(r.ctxLen == 512)
+}
+
+test "unload resets" {
+    var h = openGGUF("fixtures/tiny.gguf")
+    var r = ModelRunner()
+    r.loadModel(h)
+    r.unloadModel()
+    assert(!r.modelIsLoaded())
+}
+
+test "greedy step deterministic" {
+    var h = openGGUF("fixtures/tiny.gguf")
+    var r = ModelRunner()
+    r.loadModel(h)
+    var a = r.generateStep(1, 42)
+    r.resetContext()
+    var b = r.generateStep(1, 42)
+    assert(a == b)
+}
+
+test "generate bounded by maxTokens" {
+    var h = openGGUF("fixtures/tiny.gguf")
+    var r = ModelRunner()
+    r.loadModel(h)
+    var cfg = RunnerConfig(5, 0, 100, 7)
+    var out = r.generate(1, cfg)
+    var n = out.size()
+    assert(n > 0 && n <= 5)
+}
+
+test "generate deterministic same seed" {
+    var h = openGGUF("fixtures/tiny.gguf")
+    var r = ModelRunner()
+    r.loadModel(h)
+    var cfg = RunnerConfig(4, 0, 100, 9)
+    var a = r.generate(2, cfg)
+    r.resetContext()
+    var b = r.generate(2, cfg)
+    var x = a.get(0)
+    var y = b.get(0)
+    assert(x == y)
+}
+
+test "kv grows during generation" {
+    var h = openGGUF("fixtures/tiny.gguf")
+    var r = ModelRunner()
+    r.loadModel(h)
+    var before = r.kvDepth()
+    var cfg = RunnerConfig(3, 0, 100, 5)
+    r.generate(1, cfg)
+    var after = r.kvDepth()
+    assert(after > before)
+}
+
+test "cancel stops generation" {
+    var h = openGGUF("fixtures/tiny.gguf")
+    var r = ModelRunner()
+    r.loadModel(h)
+    r.cancelGeneration()
+    var evs = r.streamGenerate(1, RunnerConfig(10, 0, 100, 3))
+    var n = evs.size()
+    assert(n <= 1)
+}
+
+test "stream emits token events" {
+    var h = openGGUF("fixtures/tiny.gguf")
+    var r = ModelRunner()
+    r.loadModel(h)
+    var evs = r.streamGenerate(1, RunnerConfig(3, 0, 100, 11))
+    var n = evs.size()
+    assert(n >= 1 && n <= 3)
+}

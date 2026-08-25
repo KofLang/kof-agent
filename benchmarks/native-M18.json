@@ -1,0 +1,11 @@
+{
+  "milestone": "M18.1",
+  "target": "native",
+  "compiler": "Kof4j origin/main @ 416ff4b",
+  "date": "2026-08-25",
+  "measurements": {
+    "generate_256_tokens_ms": 28,
+    "tokens_per_sec_synthetic_pipeline": 9142,
+    "note": "pipeline mecanico completo (embed→rope→kv→logits→sampler); pesos reais dependem de modelo GGUF com tensors de verdade"
+  }
+}

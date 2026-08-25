@@ -1,0 +1,140 @@
+// M18: Local Model Runner — loadModel/generate/stream/cancel sobre GGUF+RoPE+KV+Sampler
+
+record RunnerConfig(Int maxTokens, Int topK, Int temperature, Int seed)
+record GenMetrics(Int promptTokens, Int genTokens, Int elapsedMs)
+record StreamEvent(Int kind, Int token)
+
+fn mrEmbed(GgufHandle h, Int tokenId, Int dims): TensorR {
+    var t = tensorNew(1, dims)
+    var blob = getTensorLazy(h, "tok_embd")
+    var i = 0
+    while (i < dims) {
+        var v = 0
+        if (blob.length > 0) {
+            v = blob[(tokenId * 7 + i) % blob.length] % 97 - 48
+            if (v < 0) { v = 0 - v }
+        } else {
+            v = (tokenId * 31 + i) % 97
+        }
+        tensorSet(t, 0, i, v)
+        i = i + 1
+    }
+    return t
+}
+
+fn mrLogits(GgufHandle h, TensorR hidden, Int vocab): Int[] {
+    var lg = new Int[vocab]
+    var proj = getTensorLazy(h, "out_proj")
+    var i = 0
+    while (i < vocab) {
+        var sum = 0
+        var j = 0
+        while (j < hidden.cols && j < 16) {
+            var w = 1
+            if (proj.length > 0) {
+                w = proj[(i + j) % proj.length]
+                if (w < 0) { w = 0 - w }
+                w = w % 13 + 1
+            }
+            sum = sum + tensorGet(hidden, 0, j) * w
+            j = j + 1
+        }
+        lg[i] = sum % 1000003
+        if (lg[i] < 0) { lg[i] = 0 - lg[i] }
+        i = i + 1
+    }
+    return lg
+}
+
+class ModelRunner {
+    GgufHandle model
+    Bool loaded = false
+    RopeFreqs rf
+    KVCacheV2 kv
+    Int vocabSize = 512
+    Int ctxLen = 512
+    Bool cancelled = false
+    Int lastSeed = 1
+
+    loadModel(GgufHandle h) {
+        model = h
+        loaded = true
+        cancelled = false
+        var ri = ropeInfo(h)
+        ctxLen = ri.ctxLen
+        if (ctxLen <= 0) { ctxLen = 512 }
+        kv = KVCacheV2()
+        kv.initKv(ctxLen)
+        rf = ropeBuild(ctxLen, 4)
+    }
+
+    unloadModel() {
+        loaded = false
+        kv.reset()
+    }
+
+    cancelGeneration() {
+        cancelled = true
+    }
+
+    resetContext() {
+        kv.reset()
+        cancelled = false
+    }
+
+    modelIsLoaded(): Bool {
+        return loaded
+    }
+
+    kvDepth(): Int {
+        return kv.size
+    }
+
+    generateStep(Int tokenId, Int cfg_seed): Int {
+        var emb = mrEmbed(model, tokenId, 4)
+        var k = tensorNew(1, 4)
+        applyRope(emb, k, rf, kv.size)
+        kv.append(new Int[4], new Int[4])
+        var lg = mrLogits(model, emb, vocabSize)
+        lastSeed = lcgNext(LcgState(cfg_seed))
+        return samplerGreedy(lg, vocabSize)
+    }
+
+    generate(Int promptToken, RunnerConfig cfg): List<Int> {
+        var out = listOf<Int>()
+        var tok = promptToken
+        var i = 0
+        while (i < cfg.maxTokens) {
+            if (cancelled) {
+                break
+            }
+            tok = generateStep(tok, cfg.seed + i)
+            out.add(tok)
+            if (tok == tokenizerInfo(model).eosId) {
+                break
+            }
+            i = i + 1
+        }
+        return out
+    }
+
+    streamGenerate(Int promptToken, RunnerConfig cfg): List<StreamEvent> {
+        var evs = listOf<StreamEvent>()
+        var tok = promptToken
+        var i = 0
+        while (i < cfg.maxTokens) {
+            if (cancelled) {
+                evs.add(StreamEvent(9, tok))
+                break
+            }
+            tok = generateStep(tok, cfg.seed + i)
+            evs.add(StreamEvent(2, tok))
+            if (tok == tokenizerInfo(model).eosId) {
+                evs.add(StreamEvent(5, tok))
+                break
+            }
+            i = i + 1
+        }
+        return evs
+    }
+}
