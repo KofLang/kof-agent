@@ -20,9 +20,9 @@
 | ID | Impacto |
 |----|---------|
 | **N10-progressivo** | TU > ~800KB asm → SIGSEGV; bloqueia FASE 3 (unit_f3, 9 testes) e suítes grandes |
-| ~~N17~~ FIXED 416ff4b | ~~cmp signed nativo quebrado p/ negativos vindos de `Int[]`; mata Q8 quant (81_tensors_v2.kf:92); workaround: kernels sem negativos |
-| **J4** | COMP002 ASM Frame.merge crash em MemoryLayer.purgeExpired; suite M10 não compila em JVM |
-| **N16** | SEM025 fwd-ref classe; workaround: PARTS em ordem topológica + helpers movidos p/ 47_tools |
+| ~~N17~~ | ✅ FIXED (416ff4b) — era cmp signed nativo c/ negativos de Int[]; Q8/M10 destravados. Kernels podem re-adotar negativos |
+| **J4-residual** | COMP002 ASM Frame.merge em purgeExpired; fix 416ff4b não cobriu nosso repro — REABRIR upstream |
+| ~~N16~~ | ✅ FIXED (416ff4b) — era SEM025 fwd-ref; workaround topológico dos PARTS agora é opcional (manter por higiene) |
 
 Histórico: **N10-progressivo**: translation units > ~800KB asm crasham (segfault/bounds
 espúrio). Cada parte nova empurra módulos antes verdes para o limite.
