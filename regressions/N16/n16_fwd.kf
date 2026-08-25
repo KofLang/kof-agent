@@ -1,0 +1,18 @@
+useTool(Registry r) {
+    r.find("x")
+}
+
+record Item(String id)
+
+class Registry {
+    List<Item> items = listOf<Item>()
+
+    find(String s): Item {
+        return Item(s)
+    }
+}
+
+main() {
+    useTool(Registry())
+    println("N16-OK")
+}

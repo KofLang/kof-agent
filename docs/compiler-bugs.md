@@ -42,7 +42,7 @@ Ambiente: kof 0.0.14-alpha, JDK 25 (build), binutils 2.46, Linux x86_64.
 
 | Bug | Estado |
 |-----|--------|
-| **N17** | ✅ **FIXED** (416ff4b) — `lt0=true` no native; M10 Q8 destravado → **9/9** |
+| **N17** | ✅ **FIXED** (416ff4b) [confirmado por sweep] — `lt0=true` no native; M10 Q8 destravado → **9/9** |
 | **N16** | ✅ FIXED declarado no commit — workaround topológico pode ser simplificado depois |
 | **J4** | 🟡 fix parcial — repro_full.kf AINDA crasha COMP002 em purgeExpired (reabrir upstream) |
 | N10-progressivo | ❌ aberto — f3_test (1.5MB asm) segue SIGSEGV 139 |
@@ -85,3 +85,8 @@ quando N14 fechar.
 - Ao atualizar o compilador, rodar `scripts/test.sh` + `scripts/check_compat.sh`
   e tentar REMOVER workarounds: cada bug fechado upstream deve resultar em PR
   simplificando o código afetado.
+
+
+## Sweep final 416ff4b (REPORT_COMPILER_HEAD_416ff4b.md)
+
+N16 ✅ · N17 ✅ · **N13 ✅ NOVO FIX** · N11 ❌ · N12 ❌ (9º campo=0) · J4 🟡 parcial · N10 ❌
