@@ -184,3 +184,17 @@ aliviada** (ws_diff 100%, planner estável). Baseline movido ao HEAD.
 2. Rebuild stress/bench com `--native-clock` (refactor do clock quebrou geradores antigos).
 3. Bisect N10-residual nos artefatos tools/corpus/brain (playbook já documentado).
 4. Reporte upstream: N10-residual + N11/N12/N13 + SC1–5 (repros prontos).
+
+
+## Pós v0.1.0-beta (8df415e) — verificação dirigida
+
+| Bug | Estado novo |
+|-----|-------------|
+| SC1 var inexistente | ✅ FIXED (SEM020) |
+| SC2 type mismatch decl | ✅ FIXED (SEM021) |
+| SC5 redeclaração local | ✅ FIXED (SEM024) |
+| SC3 método inexistente | 🟡 Partial — falha no link (`String_naoExiste`) em vez de diagnóstico SEM |
+| N4 split | ❌ ainda segfault |
+| Security G10 | ✅ bônus: PBKDF2/SHA-512/JWT nativos (SECN001/003/004 fechados) |
+
+Sweep completo do agente contra esta versão: pendente (próxima sessão).

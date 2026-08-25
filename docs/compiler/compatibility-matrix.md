@@ -3,6 +3,8 @@
 | Milestone | Backend | Status | Bloqueios |
 |-----------|---------|--------|-----------|
 | M1 Core | Native | ✅ estavel | — |
+| Semantic SC1/SC2/SC5 | ambos | ✅ FIXED upstream (SEM020/021/024) | — |
+| Semantic SC3 | Native | 🟡 Partial (link error em vez de SEM) | — |
 | M2 Gateway exec | JVM | 🟡 ponte tooling | J2(resolvido)/GW001 |
 | M2 Gateway exec | Native | ❌ | GW001 |
 | M3 Workspace verify | Native | 🟡 16/37 | N10/N11/N12 |

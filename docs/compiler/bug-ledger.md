@@ -17,9 +17,9 @@
 | N12 | Codegen Native | record grande corrompe campos | cc46da5 | — | Partial | alto | classes p/ estruturas grandes | Compiler |
 | N13 | Codegen Native | Long delta em campo crasha posicional | cc46da5 | — | Investigating | alto | parte propria 03 | Compiler |
 | N14 | Native Linking | .Ljf_adv undefined (hello) | 4954622 | 4954622 | Fixed | critica | pin c822ed3 temporario | Compiler |
-| SC1 | Semantic | var inexistente compila | db7320b | — | Open | medio | — | Compiler |
-| SC2 | Semantic | decl tipo errado compila | db7320b | — | Open | medio | — | Compiler |
-| SC3 | Semantic | metodo inexistente compila | db7320b | — | Open | medio | — | Compiler |
+| SC1 | Semantic | var inexistente compila | db7320b | 8df415e (SEM020) | Fixed | medio | — | Compiler |
+| SC2 | Semantic | decl tipo errado compila | db7320b | 8df415e (SEM021) | Fixed | medio | — | Compiler |
+| SC3 | Semantic | metodo inexistente compila | db7320b | — | Partial (agora falha no link) | medio | — | Compiler |
 | SC4 | Semantic | aridade construtor errada compila | db7320b | — | Open | medio | — | Compiler |
-| SC5 | Semantic | redeclaracao local compila | db7320b | — | Open | medio | — | Compiler |
+| SC5 | Semantic | redeclaracao local compila | db7320b | 8df415e (SEM024) | Fixed | medio | — | Compiler |
 | J3 | Tooling JVM | runner JVM exige JavaFX em alguns artefatos | 634fe5f | — | Investigating | medio | suites nativas | Agent |
