@@ -23,6 +23,7 @@
 | GraphExecutor | ✅ decoder plan N-layers/forward-all/steps (2/2) |
 | Backend abstraction | ✅ CPUBackend real + auto-select vulkan→opengl→cpu + koflm.toml parser (3/3) |
 | Rebranding | ✅ models/KofLM/{metadata.json,config.toml} — origem checkpoint só em metadata |
+| Distribuição modelo | ✅ HF Hub primário + GH Releases mirror (scripts/model_{publish,download}.sh) |
 | Treino QLoRA | ✅ pipeline pronta (training/scripts/train_koflm.py, resume-safe) — aguarda execução longa |
 
 **Próxima fila:**
