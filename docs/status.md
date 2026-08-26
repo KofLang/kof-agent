@@ -8,7 +8,7 @@
 
 | Item | Estado |
 |------|--------|
-| Compilador | **HEAD origin/main @ 416ff4b** · sweep: N16✅ N17✅ N13✅ fixed; N11/N12/J4/N10 abertos · kof 0.1.0-alpha-report |
+| Compilador | **HEAD origin/main @ cb4aede (v0.1.1-alpha — Map/Set nativo COL001 fechado, switch-enum, spawn/await fixes)** · sweep: N16✅ N17✅ N13✅ fixed; N11/N12/J4/N10 abertos · kof 0.1.0-alpha-report |
 | FASE 1 (M0–M9) | ✅ código completo · verificação parcial (N10-residual) |
 | FASE 2 (M10–M12) | 🟡 M10 native **9/9** ✅ (Q8 destravado c/ fix N17) · JVM segue J4-residual |
 | FASE 3 (M13–M15) | 🟡 código pronto · N10-progressivo persiste (1.5MB asm → 139) |

@@ -121,3 +121,9 @@ SIGSEGV 139 quando InferenceEngine acessa runner.generateStep via KoflmRuntime (
 
 Gatilho real: **método trivial adicional da classe** (`cacheSize(): Int { return cacheN }`) chamado após outro método no mesmo teste → `undefined reference to 'size'` (símbolo que não existe em lugar nenhum do TU). Removendo o método da API pública: 3/3 PASS.
 Regra prática p/ parts novas: expor o mínimo de métodos; evitar getters triviais adicionais quando a classe já tem outros métodos chamados sequencialmente. Investigação de causa raiz segue p/ upstream c/ os 4 repros N18–N20.
+
+
+## Baseline cb4aede (v0.1.1-alpha) — reteste rápido
+
+- GraphExecutor 2/2 ✅ · GGUF lookup ✅ · TokenizerEngine ✅ no novo HEAD.
+- Novidades: Map/Set nativo asm (COL001 FIXED), switch-enum SEM031, spawn/await hardening.
