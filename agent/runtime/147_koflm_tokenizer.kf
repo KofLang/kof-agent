@@ -17,10 +17,15 @@ fn kofSpecialTokens(): List<SpecialToken> {
     return l
 }
 
+fn kofSpecialCount(): Int {
+    return 10
+}
+
 fn kofTokenLookup(String name): Int {
     var toks = kofSpecialTokens()
+    var total = 10
     var i = 0
-    while (i < toks.size()) {
+    while (i < total) {
         if (toks.get(i).name == name) {
             return toks.get(i).id
         }

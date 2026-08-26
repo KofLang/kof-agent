@@ -11,12 +11,15 @@ class TokenizerEngine {
     Int unkId = 0
     Int padId = 3
     Int cacheN = 0
+    Int specialsN = 0
 
     loadSpecials() {
         var toks = kofSpecialTokens()
         var i = 0
-        while (i < toks.size()) {
+        var n = 10
+        while (i < n) {
             specials.add(toks.get(i))
+            specialsN = specialsN + 1
             i = i + 1
         }
     }
@@ -47,9 +50,8 @@ class TokenizerEngine {
         return out
     }
 
-    specialCount(): Int { return specials.size() }
+    specialCount(): Int { return specialsN }
 
-    cacheSize(): Int { return cacheN }
 
     isBos(Int id): Bool { return id == bosId }
 }

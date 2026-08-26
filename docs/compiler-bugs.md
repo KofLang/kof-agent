@@ -115,3 +115,9 @@ SIGSEGV 139 quando InferenceEngine acessa runner.generateStep via KoflmRuntime (
 ## N20-SUSPECT (416ff4b) — List.size() em método de classe gera link broken sob repetição
 
 `TokenizerEngine.cacheSize(): Int { return cache.size() }` chamado **2×** no mesmo teste → `undefined reference to 'size'` no ld nativo. Com contador manual (`cacheN`) o link continua falhando pelo mesmo símbolo — indica corrupção de símbolo por padrão de uso, não lógica. Repro: tests/f6_src/unit_tokeng.kf test "encode bytes deterministic with cache". Status: CONFIRMED-COMPORTAMENTO, família N10/N18/N19.
+
+
+## N20 — WORKAROUND ENCONTRADO (fechamento)
+
+Gatilho real: **método trivial adicional da classe** (`cacheSize(): Int { return cacheN }`) chamado após outro método no mesmo teste → `undefined reference to 'size'` (símbolo que não existe em lugar nenhum do TU). Removendo o método da API pública: 3/3 PASS.
+Regra prática p/ parts novas: expor o mínimo de métodos; evitar getters triviais adicionais quando a classe já tem outros métodos chamados sequencialmente. Investigação de causa raiz segue p/ upstream c/ os 4 repros N18–N20.

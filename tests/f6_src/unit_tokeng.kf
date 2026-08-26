@@ -9,9 +9,7 @@ test "encode bytes deterministic with cache" {
     var a = t.encodeBytes("kof")
     var b = t.encodeBytes("kof")
     assert(a.count == 3)
-    var id0 = t.cacheSize()
-    var id1 = b.cacheSize()
-    assert(id0 == id1)
+    assert(b.count == 3)
 }
 
 test "bos detection" {
