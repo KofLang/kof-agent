@@ -1,0 +1,13 @@
+test "graph plan builds N layers" {
+    var g = GraphExecutor()
+    g.buildPlan(22, 2048)
+    assert(g.layerCount() == 22)
+}
+
+test "forward runs all layers counting steps" {
+    var g = GraphExecutor()
+    g.buildPlan(4, 8)
+    var x = tensorNew(1, 8)
+    var y = g.forwardAllLayers(x)
+    assert(g.stepCount() == 4)
+}

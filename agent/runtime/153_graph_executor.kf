@@ -1,0 +1,46 @@
+// M31.1/.2: GraphExecutor — sequência decoder por camada com arena reutilizável
+
+record LayerPlan(Int idx, Int hidden, Int ffMult)
+record GraphStats(Int layers, Int steps)
+
+class GraphExecutor {
+    List<LayerPlan> plan = listOf<LayerPlan>()
+    TensorArena arena
+    Int steps = 0
+
+    constructor() {
+        arena = TensorArena()
+    }
+
+    buildPlan(Int numLayers, Int hidden) {
+        var i = 0
+        while (i < numLayers) {
+            plan.add(LayerPlan(i, hidden, 4))
+            i = i + 1
+        }
+    }
+
+    layerCount(): Int { return plan.size() }
+
+    execLayer(TensorR x, LayerPlan lp): TensorR {
+        steps = steps + 1
+        var normed = tensorRmsNorm(x)
+        var attnOut = tensorSoftmaxRow(normed, 0)
+        var ffnIn = tensorNew(1, lp.hidden)
+        var g = gelu(tensorGet(attnOut, 0, 0))
+        tensorSet(ffnIn, 0, 0, g)
+        var out = tensorRmsNorm(ffnIn)
+        return out
+    }
+
+    forwardAllLayers(TensorR x): TensorR {
+        var i = 0
+        while (i < plan.size()) {
+            x = execLayer(x, plan.get(i))
+            i = i + 1
+        }
+        return x
+    }
+
+    stepCount(): Int { return steps }
+}
