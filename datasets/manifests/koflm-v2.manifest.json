@@ -1,0 +1,10 @@
+{
+  "dataset_version": "koflm-ds-v2",
+  "examples": 405,
+  "sources": [
+    "Kof4j/training",
+    "agent-specs-docs-tests",
+    "synthetic"
+  ],
+  "checksum": "e8a15fedf2a0adbc"
+}
