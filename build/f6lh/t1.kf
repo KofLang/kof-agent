@@ -1,0 +1,8 @@
+test "q4_0 decode block scales" {
+    var raw = new Int[9]
+    raw[0] = 200
+    raw[1] = 50
+    var v = q40DecodeBlock(raw, 0)
+    assert(v == 4)
+    assert(v >= 0)
+}

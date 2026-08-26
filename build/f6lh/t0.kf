@@ -1,0 +1,9 @@
+test "lm head produces bounded logits" {
+    var h = tensorNew(1, 4)
+    tensorSet(h, 0, 0, 100)
+    var w = tensorNew(8, 4)
+    tensorSet(w, 0, 0, 2)
+    var lg = lmHead(h, w, 16)
+    assert(lg.length == 16)
+    assert(lg[0] >= 0)
+}

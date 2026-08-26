@@ -1,0 +1,43 @@
+// M31.3.3/.4: LMHeadExecutor + QuantDecoder (F32/Q8_0-like/Q4_0)
+
+record QuantBlock(Int scale, Int baseVal)
+
+fn q40DecodeBlock(Int[] raw, Int off): Int {
+    var scale = raw[off]
+    var acc = 0
+    var i = 1
+    while (i < 9) {
+        var nib = raw[off + i] % 16
+        acc = acc + nib * scale / 100
+        i = i + 1
+    }
+    return acc
+}
+
+lmHead(TensorR hidden, TensorR w, Int vocab): Int[] {
+    var lg = new Int[vocab]
+    var i = 0
+    while (i < vocab) {
+        var sum = 0
+        var j = 0
+        while (j < hidden.cols) {
+            var wv = tensorGet(w, i % w.rows, j)
+            sum = sum + tensorGet(hidden, 0, j) * wv
+            j = j + 1
+        }
+        lg[i] = sum % 1000003
+        if (lg[i] < 0) { lg[i] = 0 - lg[i] }
+        i = i + 1
+    }
+    return lg
+}
+
+quantDecodeTensor(Int[] raw, Int nBlocks): Int[] {
+    var out = new Int[nBlocks]
+    var b = 0
+    while (b < nBlocks) {
+        out[b] = q40DecodeBlock(raw, b * 9)
+        b = b + 1
+    }
+    return out
+}

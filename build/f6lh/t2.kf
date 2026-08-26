@@ -1,0 +1,7 @@
+test "quant decode tensor full pass" {
+    var raw = new Int[18]
+    raw[0] = 100
+    raw[9] = 300
+    var o = quantDecodeTensor(raw, 2)
+    assert(o.length == 2)
+}
