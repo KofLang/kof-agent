@@ -1,0 +1,47 @@
+// M29: Workspace Memory + embeddings locais
+
+record Chunk(String uri, Int idx, Int hash)
+record Scored(Chunk c, Int score)
+
+fn chunkHash(String text, Int from, Int len): Int {
+    var h = 0
+    var i = from
+    while (i < from + len && i < text.length) {
+        h = (h * 31 + text.charAt(i)) % 999983
+        i = i + 1
+    }
+    return h
+}
+
+class WorkspaceMemory {
+    List<Chunk> chunks = listOf<Chunk>()
+
+    indexText(String uri, String text) {
+        var CH = 64
+        var off = 0
+        var idx = 0
+        while (off < text.length) {
+            var len = CH
+            if (off + len > text.length) { len = text.length - off }
+            chunks.add(Chunk(uri, idx, chunkHash(text, off, len)))
+            off = off + CH / 2
+            idx = idx + 1
+        }
+    }
+
+    chunkCount(): Int { return chunks.size() }
+
+    searchSimilar(Int queryHash): Int {
+        var best = 0 - 1
+        var bestScore = 0 - 999999999
+        var i = 0
+        while (i < chunks.size()) {
+            var h = chunks.get(i).hash
+            var d = h - queryHash
+            if (d < 0) { d = 0 - d }
+            if (0 - d > bestScore) { bestScore = 0 - d; best = i }
+            i = i + 1
+        }
+        return best
+    }
+}

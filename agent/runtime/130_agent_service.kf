@@ -1,0 +1,33 @@
+// M27: kof-agentd — sessões + dispatch JSON-RPC
+
+record ServiceSession(String id, String kind)
+
+class AgentService {
+    List<ServiceSession> sessions = listOf<ServiceSession>()
+    Int requests = 0
+
+    openSession(String kind): String {
+        var id = "s" + sessions.size()
+        sessions.add(ServiceSession(id, kind))
+        return id
+    }
+
+    closeSession(String sid): Bool {
+        var i = 0
+        while (i < sessions.size()) {
+            if (sessions.get(i).id == sid) {
+                sessions.remove(i)
+                return true
+            }
+            i = i + 1
+        }
+        return false
+    }
+
+    sessionCount(): Int { return sessions.size() }
+
+    dispatch(String method, Int id): String {
+        requests = requests + 1
+        return lspRespond(method, id)
+    }
+}

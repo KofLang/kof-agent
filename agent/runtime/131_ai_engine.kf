@@ -1,0 +1,25 @@
+// M28: AI Coding Engine sobre ModelRunner
+
+class AiEngine {
+    ModelRunner runner
+
+    bind(ModelRunner r) {
+        runner = r
+    }
+
+    complete(Int promptToken, Int maxTokens): String {
+        var cfg = RunnerConfig(maxTokens, 0, 100, 42)
+        var out = runner.generate(promptToken, cfg)
+        var s = ""
+        var i = 0
+        while (i < out.size()) {
+            s = s + out.get(i) + " "
+            i = i + 1
+        }
+        return s
+    }
+
+    explain(String target): String {
+        return "explain:" + target
+    }
+}

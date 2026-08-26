@@ -1,0 +1,16 @@
+test "ai complete returns tokens" {
+    var h = openGGUF("fixtures/tiny.gguf")
+    var r = ModelRunner()
+    r.loadModel(h)
+    var e = AiEngine()
+    e.bind(r)
+    var s = e.complete(1, 4)
+    var n = s.length
+    assert(n > 0)
+}
+
+test "explain wraps target" {
+    var e = AiEngine()
+    var s = e.explain("N17")
+    assert(s == "explain:N17")
+}

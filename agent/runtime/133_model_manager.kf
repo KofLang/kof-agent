@@ -1,0 +1,35 @@
+// M30: Model Manager — biblioteca GGUF local
+
+record ModelEntry(String name, String path, Int version, Int checksum)
+
+class ModelManager {
+    List<ModelEntry> models = listOf<ModelEntry>()
+
+    register(String name, String path, Int ver): Bool {
+        var i = 0
+        while (i < models.size()) {
+            if (models.get(i).name == name) { return false }
+            i = i + 1
+        }
+        models.add(ModelEntry(name, path, ver, name.length * 7919))
+        return true
+    }
+
+    remove(String name): Bool {
+        var i = 0
+        while (i < models.size()) {
+            if (models.get(i).name == name) {
+                models.remove(i)
+                return true
+            }
+            i = i + 1
+        }
+        return false
+    }
+
+    count(): Int { return models.size() }
+
+    supportsQuant(Int modelQuant, Int runtimeQuant): Bool {
+        return modelQuant <= runtimeQuant
+    }
+}

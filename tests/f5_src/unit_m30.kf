@@ -1,0 +1,18 @@
+test "model register unique" {
+    var m = ModelManager()
+    assert(m.register("qwen", "/m/q.gguf", 3))
+}
+
+test "model duplicate rejected and remove works" {
+    var m = ModelManager()
+    m.register("llama", "/m/l.gguf", 2)
+    assert(!m.register("llama", "/x", 1))
+    m.remove("llama")
+    assert(m.count() == 0)
+}
+
+test "quant compat monotonic" {
+    var m = ModelManager()
+    assert(m.supportsQuant(4, 8))
+    assert(!m.supportsQuant(8, 4))
+}

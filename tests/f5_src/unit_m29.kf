@@ -1,0 +1,13 @@
+test "chunker indexes overlapping chunks" {
+    var w = WorkspaceMemory()
+    w.indexText("a.kf", "0123456789012345678901234567890123456789012345678901234567890123456789")
+    var n = w.chunkCount()
+    assert(n >= 1)
+}
+
+test "search similar returns valid index" {
+    var w = WorkspaceMemory()
+    w.indexText("b.kf", "abcdef")
+    var best = w.searchSimilar(chunkHash("abcdef", 0, 6))
+    assert(best == 0)
+}
