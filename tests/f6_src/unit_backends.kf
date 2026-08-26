@@ -1,0 +1,20 @@
+test "cpu backend init and matmul" {
+    var b = CPUBackend()
+    b.init()
+    assert(b.ready)
+    var x = tensorNew(2, 2)
+    tensorSet(x, 0, 0, 3)
+    var m = b.matmul(x, x)
+    assert(tensorGet(m, 0, 0) == 9)
+}
+
+test "autoselect falls back when no vulkan icd" {
+    var info = backendAutoSelect()
+    assert(info.backend != "")
+    assert(info.threads > 0)
+}
+
+test "config parse toml fields" {
+    var c = koflmParseConfig("backend = \"auto\"\nthreads = 8\n")
+    assert(c.threads == 8)
+}

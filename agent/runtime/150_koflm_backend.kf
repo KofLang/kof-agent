@@ -1,0 +1,41 @@
+// M31: Backend Abstraction — CPU real + Vulkan/OpenGL detect/fallback
+
+record RuntimeInfo(String backend, Int gpuLayers, Int threads)
+
+class CPUBackend {
+    Bool ready = false
+
+    init() { ready = true }
+
+    matmul(TensorR a, TensorR b): TensorR {
+        return tensorMatMul(a, b)
+    }
+
+    rmsNormT(TensorR t): TensorR {
+        return tensorRmsNorm(t)
+    }
+
+    name(): String { return "cpu" }
+}
+
+fn detectVulkan(): Bool {
+    var f = File("/usr/share/vulkan/icd.d")
+    if (!f.exists()) { return false }
+    var txt = f.readText()
+    return txt.length > 0
+}
+
+fn detectOpenGL(): Bool {
+    var f = File("/sys/class/drm/card0")
+    return f.exists()
+}
+
+backendAutoSelect(): RuntimeInfo {
+    if (detectVulkan()) {
+        return RuntimeInfo("vulkan", 99, 6)
+    }
+    if (detectOpenGL()) {
+        return RuntimeInfo("opengl", 32, 6)
+    }
+    return RuntimeInfo("cpu", 0, 6)
+}

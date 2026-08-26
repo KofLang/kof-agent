@@ -1,0 +1,32 @@
+kcfgTrim(String s): String {
+    var out = s
+    while (out.startsWith(" ")) { out = out.substring(1) }
+    return out
+}
+// koflm.toml parser mínimo tipado + RuntimeStats
+
+record KoflmConfig(String backend, Int threads, Int context, Int temperatureX100)
+record RuntimeStats(String backend, Int promptTps, Int decodeTps)
+
+koflmParseConfig(String tomlText): KoflmConfig {
+    var backend = "auto"
+    var threads = 6
+    var ctx = 4096
+    var temp = 80
+    var lines = splitStr(tomlText, "\n")
+    var i = 0
+    while (i < lines.size()) {
+        var l = lines.get(i)
+        if (l.contains("backend")) {
+            var kv = splitStr(l, "=")
+            if (kv.size() == 2) { backend = kcfgTrim(kv.get(1)) }
+        }
+        if (l.contains("threads")) {
+            var kv2 = splitStr(l, "=")
+            if (kv2.size() == 2) { threads = parseIntStr(kcfgTrim(kv2.get(1))) }
+        }
+        i = i + 1
+    }
+    return KoflmConfig(backend, threads, ctx, temp)
+}
+

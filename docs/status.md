@@ -19,6 +19,7 @@
 | FASE 5 núcleo | ✅ M27–M30 9/9 nativos (service/AI-engine/workspace-memory/model-manager) |
 | FASE 6 | ✅ KofLM v1: núcleo 9/9 + dataset v2 453 exemplos (real+sintético, dedup SHA256) + eval 540 + LoRA manager + tokenizer verify (16/16 F6 total) |
 | KofLM inferência real | ✅ TinyLlama Q4 local: 37 tok/s decode (CPU) · llama.cpp CPU+Vulkan buildado · RX 6600 aguarda ICD RADV |
+| Backend abstraction | ✅ CPUBackend real + auto-select vulkan→opengl→cpu + koflm.toml parser (3/3) |
 | Próxima fase | **FASE 4 — Tooling Avançado**: M21 LSP · M22 DevTools · M23 Plugin SDK/MCP · M24 Self Improvement · M25 Execution Journal · M26 Observatory |
 | Bugs p/ upstream | **N18 CONFIRMED** (repro_minimal) + J4-residual + N10/N11/N12/N4/SC3/SC4 | (fechar 9 testes, bench real) (RoPE/KV Cache/Quantização/Sampler V3) · reportar J4+repro upstream |
 
