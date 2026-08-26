@@ -77,6 +77,7 @@ class ModelRunner {
         cancelled = true
     }
 
+
     resetContext() {
         kv.reset()
         cancelled = false

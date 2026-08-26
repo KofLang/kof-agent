@@ -1,0 +1,32 @@
+test "engine session lifecycle" {
+    var h = openGGUF("fixtures/tiny.gguf")
+    var e = InferenceEngine()
+    e.bind(h)
+    var sid = e.createSession()
+    assert(e.isActive(sid))
+    e.destroySession(sid)
+    assert(!e.isActive(sid))
+}
+
+test "prefill grows kv" {
+    var h = openGGUF("fixtures/tiny.gguf")
+    var e = InferenceEngine()
+    e.bind(h)
+    e.createSession()
+    var before = e.rt.kv.size
+    e.prefill(5)
+    assert(e.rt.kv.size > before)
+}
+
+test "generate stream bounded and cancellable" {
+    var h = openGGUF("fixtures/tiny.gguf")
+    var e = InferenceEngine()
+    e.bind(h)
+    e.createSession()
+    var toks = e.generateStream(1, 6)
+    var n = toks.size()
+    assert(n <= 6)
+    e.cancel()
+    var toks2 = e.generateStream(1, 6)
+    assert(toks2.size() == 0)
+}

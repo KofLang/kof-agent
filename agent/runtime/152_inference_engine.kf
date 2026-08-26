@@ -1,0 +1,61 @@
+// M31 Native Inference Engine — sessões + streaming sobre ModelRunner existente
+
+record EngineSession(Int id, Bool active)
+
+class InferenceEngine {
+    KoflmRuntime rt
+    List<EngineSession> sessions = listOf<EngineSession>()
+    Int current = 0 - 1
+    Bool cancelled = false
+
+    bind(GgufHandle h) {
+        rt.loadModel(h)
+    }
+
+    createSession(): Int {
+        var id = sessions.size()
+        sessions.add(EngineSession(id, true))
+        current = id
+        return id
+    }
+
+    destroySession(Int sid) {
+        var i = 0
+        while (i < sessions.size()) {
+            if (sessions.get(i).id == sid) {
+                sessions.set(i, EngineSession(sid, false))
+            }
+            i = i + 1
+        }
+    }
+
+    isActive(Int sid): Bool {
+        var i = 0
+        while (i < sessions.size()) {
+            if (sessions.get(i).id == sid) { return sessions.get(i).active }
+            i = i + 1
+        }
+        return false
+    }
+
+    decodeOnce(Int token): Int {
+        return rt.runner.generateStep(token, 42)
+    }
+
+    generateStream(Int promptToken, Int maxTokens): List<Int> {
+        var out = listOf<Int>()
+        var tok = promptToken
+        var i = 0
+        while (i < maxTokens) {
+            if (cancelled) { break }
+            tok = rt.runner.generateStep(tok, 42 + i)
+            out.add(tok)
+            i = i + 1
+        }
+        return out
+    }
+
+    cancel() { cancelled = true }
+
+    sessionCount(): Int { return sessions.size() }
+}

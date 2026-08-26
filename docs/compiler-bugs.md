@@ -105,3 +105,8 @@ Instabilidade tipo-N10 evoluída: outcome nativo muda (PASS/assert-fail/SIGSEGV)
 - **Workaround APLICADO (M17):** GgufHandle usa `Int errorCount` + `String errorCode` em vez de `List<String> errors`; acessores ggufVersion/ggufTensorCount/ggufErrorCount para todo acesso aninhado
 - **Resultado:** suite GGUF 2/11 → **11/11 nativo**
 - **Status:** CONFIRMED — reportar upstream com prioridade alta
+
+
+## N19-SUSPECT (416ff4b) — crash por combinação de classes em TU média
+
+SIGSEGV 139 quando InferenceEngine acessa runner.generateStep via KoflmRuntime (~1MB asm). Mesma pipeline verde via ModelRunner direto. Repro: regressions/N19-SUSPECT/. Workaround temporário: acesso direto ao ModelRunner.
