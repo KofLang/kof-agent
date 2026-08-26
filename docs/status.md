@@ -22,7 +22,14 @@
 | N19-SUSPECT | 🔴 novo: crash combinando 152+144 (~1MB asm); engine aguarda workaround |
 | GraphExecutor | ✅ decoder plan N-layers/forward-all/steps (2/2) |
 | Backend abstraction | ✅ CPUBackend real + auto-select vulkan→opengl→cpu + koflm.toml parser (3/3) |
-| Próxima fase | **FASE 4 — Tooling Avançado**: M21 LSP · M22 DevTools · M23 Plugin SDK/MCP · M24 Self Improvement · M25 Execution Journal · M26 Observatory |
+| Rebranding | ✅ models/KofLM/{metadata.json,config.toml} — origem checkpoint só em metadata |
+| Treino QLoRA | ✅ pipeline pronta (training/scripts/train_koflm.py, resume-safe) — aguarda execução longa |
+
+**Próxima fila:**
+1. Rodar `train_koflm.py` (dias) → merge → KofLM-Q4.gguf oficial
+2. M31 continuação: AttentionExecutor/SwiGLU reais no GraphExecutor + TokenizerEngine + QuantDecoder
+3. Reportar **N18 CONFIRMED + N19-SUSPECT** upstream (repros em regressions/)
+4. Instalar mesa-vulkan-drivers → benchmark RX 6600
 | Bugs p/ upstream | **N18 CONFIRMED** (repro_minimal) + J4-residual + N10/N11/N12/N4/SC3/SC4 | (fechar 9 testes, bench real) (RoPE/KV Cache/Quantização/Sampler V3) · reportar J4+repro upstream |
 
 ## Bloqueios ativos
