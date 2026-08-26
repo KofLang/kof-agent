@@ -1,0 +1,54 @@
+// M26: Observatory — métricas texto/Prometheus-like + health engine
+
+class MetricsRegistry {
+    List<String> names = listOf<String>()
+    List<Int> values = listOf<Int>()
+
+    setGauge(String name, Int v) {
+        var i = 0
+        while (i < names.size()) {
+            if (names.get(i) == name) {
+                values.set(i, v)
+                return
+            }
+            i = i + 1
+        }
+        names.add(name)
+        values.add(v)
+    }
+
+    getGauge(String name): Int {
+        var i = 0
+        while (i < names.size()) {
+            if (names.get(i) == name) {
+                return values.get(i)
+            }
+            i = i + 1
+        }
+        return 0 - 1
+    }
+
+    exportPrometheus(): String {
+        var out = ""
+        var i = 0
+        while (i < names.size()) {
+            out = out + names.get(i) + " " + values.get(i) + "\n"
+            i = i + 1
+        }
+        return out
+    }
+
+    metricCount(): Int {
+        return names.size()
+    }
+}
+
+healthCheck(Int rssMb, Int toolTimeouts, Int schedulerStarved): Int {
+    if (rssMb > 4096 || toolTimeouts > 10 || schedulerStarved > 5) {
+        return 2
+    }
+    if (toolTimeouts > 3) {
+        return 1
+    }
+    return 0
+}

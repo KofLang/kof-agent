@@ -1,0 +1,23 @@
+test "journal append increments seq" {
+    var j = ExecutionJournal()
+    var s1 = j.append("step", "a")
+    var s2 = j.append("step", "b")
+    assert(s2 > s1)
+}
+
+test "journal replay bounded count" {
+    var j = ExecutionJournal()
+    j.append("e", "1")
+    j.append("e", "2")
+    var c = j.replayTo(1)
+    assert(c == 1)
+}
+
+test "journal diff counts since seq" {
+    var j = ExecutionJournal()
+    j.append("e", "1")
+    var mark = j.append("e", "2")
+    j.append("e", "3")
+    var d = j.diffFrom(mark)
+    assert(d == 1)
+}

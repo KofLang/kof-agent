@@ -1,0 +1,27 @@
+test "lsp initialize sets flag" {
+    var s = LspServer()
+    s.handleRequest("initialize", 1)
+    assert(s.initialized == 1)
+}
+
+test "lsp didopen counts doc and symbol" {
+    var s = LspServer()
+    s.didOpen("/w/main.kf")
+    var d = s.docCount()
+    var n = s.symbolCount()
+    assert(d == 1)
+    assert(n == 1)
+}
+
+test "lsp completion prefix filter" {
+    var s = LspServer()
+    s.didOpen("/w/token.kf")
+    var c = s.completion("tok")
+    var n = c.size()
+    assert(n >= 1)
+}
+
+test "lsp frame has content length" {
+    var f = lspFrame("{\"a\":1}", 7)
+    assert(f.startsWith("Content-Length:"))
+}

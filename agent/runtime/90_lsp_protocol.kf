@@ -1,0 +1,63 @@
+// M21: LSP core — JSON-RPC framing + symbols/diagnostics/completion mínimos
+
+record LspRequest(Int id, String method, String body)
+record LspSymbol(String name, String kind, Int line)
+record LspDiag(Int line, String code)
+record LspCompletion(String label, String kind)
+
+lspFrame(String json, Int id): String {
+    return "Content-Length: " + json.length + "\r\n\r\n" + json
+}
+
+lspRespond(String method, Int id): String {
+    return lspFrame("{\"method\":\"" + method + "\",\"id\":" + id + "}", id)
+}
+
+class LspServer {
+    List<String> openDocs = listOf<String>()
+    List<LspSymbol> symbols = listOf<LspSymbol>()
+    Int initialized = 0
+
+    initialize() {
+        initialized = 1
+    }
+
+    didOpen(String uri) {
+        openDocs.add(uri)
+        var parts = splitStr(uri, "/")
+        if (parts.size() > 0) {
+            symbols.add(LspSymbol(parts.get(parts.size() - 1), "file", 0))
+        }
+    }
+
+    docCount(): Int {
+        return openDocs.size()
+    }
+
+    symbolCount(): Int {
+        return symbols.size()
+    }
+
+    handleRequest(String method, Int id): String {
+        if (method == "initialize") {
+            initialize()
+            return lspRespond("initialize", id)
+        }
+        return lspRespond(method, id)
+    }
+
+    completion(String prefix): List<LspCompletion> {
+        var out = listOf<LspCompletion>()
+        out.add(LspCompletion("fn", "keyword"))
+        out.add(LspCompletion("class", "keyword"))
+        var i = 0
+        while (i < symbols.size()) {
+            var s = symbols.get(i)
+            if (s.name.startsWith(prefix)) {
+                out.add(LspCompletion(s.name, s.kind))
+            }
+            i = i + 1
+        }
+        return out
+    }
+}

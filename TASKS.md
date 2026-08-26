@@ -27,3 +27,6 @@
 
 ## M19 ✅ 8/8 — orchestrator/budget/audit/trace
 ## M20 ✅ 6/6 — runtime unificado DAG+repair+journal
+
+## FASE 4 núcleo ✅ 22/22
+M21 LSP · M22 DevTools · M23 Plugin/MCP · M24 SelfImprovement · M25 Journal · M26 Observatory — expansão de features na fila.

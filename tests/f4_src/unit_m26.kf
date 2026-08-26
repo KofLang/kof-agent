@@ -1,0 +1,27 @@
+test "metrics gauge set and get" {
+    var m = MetricsRegistry()
+    m.setGauge("tok_s", 9000)
+    var v = m.getGauge("tok_s")
+    assert(v == 9000)
+}
+
+test "metrics overwrite same gauge" {
+    var m = MetricsRegistry()
+    m.setGauge("x", 1)
+    m.setGauge("x", 5)
+    var n = m.metricCount()
+    assert(n == 1)
+}
+
+test "prometheus export format" {
+    var m = MetricsRegistry()
+    m.setGauge("ram_mb", 120)
+    var e = m.exportPrometheus()
+    assert(e.startsWith("ram_mb 120"))
+}
+
+test "health check healthy degraded critical" {
+    assert(healthCheck(100, 0, 0) == 0)
+    assert(healthCheck(100, 5, 0) == 1)
+    assert(healthCheck(5000, 0, 0) == 2)
+}

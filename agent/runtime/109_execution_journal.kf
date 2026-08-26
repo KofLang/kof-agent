@@ -1,0 +1,40 @@
+// M25: Execution Journal — append/replay/diff
+
+record JournalEvent(Int seq, String kind, String payload)
+
+class ExecutionJournal {
+    List<JournalEvent> events = listOf<JournalEvent>()
+    Int nextSeq = 0
+
+    append(String kind, String payload): Int {
+        nextSeq = nextSeq + 1
+        events.add(JournalEvent(nextSeq, kind, payload))
+        return nextSeq
+    }
+
+    size(): Int {
+        return events.size()
+    }
+
+    replayTo(Int n): Int {
+        var c = 0
+        var i = 0
+        while (i < events.size() && c < n) {
+            c = c + 1
+            i = i + 1
+        }
+        return c
+    }
+
+    diffFrom(Int sinceSeq): Int {
+        var n = 0
+        var i = 0
+        while (i < events.size()) {
+            if (events.get(i).seq > sinceSeq) {
+                n = n + 1
+            }
+            i = i + 1
+        }
+        return n
+    }
+}

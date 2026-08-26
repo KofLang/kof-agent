@@ -1,0 +1,24 @@
+test "plugin install unique name" {
+    var r = PluginRegistry()
+    var a = r.install("p1", "1.0", 3)
+    assert(a)
+}
+
+test "plugin duplicate rejected" {
+    var r = PluginRegistry()
+    r.install("p1", "1.0", 3)
+    assert(!r.install("p1", "2.0", 3))
+}
+
+test "plugin remove works" {
+    var r = PluginRegistry()
+    r.install("p2", "1.0", 0)
+    r.remove("p2")
+    var n = r.count()
+    assert(n == 0)
+}
+
+test "mcp handshake payload" {
+    var h = mcpHandshake("zed")
+    assert(h.contains("kof-agent"))
+}

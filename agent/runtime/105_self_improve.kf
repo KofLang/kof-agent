@@ -1,0 +1,41 @@
+// M24: Failure Analyzer + Repair Memory
+
+record FailureSig(String kind, Int hash)
+record RepairPatch(String signature, String patch, Int confidence)
+
+failureSignature(String errMsg): FailureSig {
+    var h = 0
+    var i = 0
+    while (i < errMsg.length) {
+        h = (h * 31 + errMsg.charAt(i)) % 999983
+        i = i + 1
+    }
+    var kind = "unknown"
+    if (errMsg.startsWith("N")) { kind = "native" }
+    if (errMsg.startsWith("SEM")) { kind = "semantic" }
+    return FailureSig(kind, h)
+}
+
+class RepairMemory {
+    List<RepairPatch> patches = listOf<RepairPatch>()
+
+    learn(String sig, String patch) {
+        patches.add(RepairPatch(sig, patch, 50))
+    }
+
+    lookup(String sig): String {
+        var i = 0
+        while (i < patches.size()) {
+            var p = patches.get(i)
+            if (p.signature == sig) {
+                return p.patch
+            }
+            i = i + 1
+        }
+        return ""
+    }
+
+    size(): Int {
+        return patches.size()
+    }
+}

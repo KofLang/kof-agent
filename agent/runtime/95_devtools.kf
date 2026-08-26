@@ -1,0 +1,48 @@
+// M22: Formatter/Linter/Trace core
+
+record LintIssue(Int line, String ruleId, String severity)
+record TraceEventJson(String name, Int ts, Int dur)
+
+fmtIndentLine(String line, Int depth): String {
+    var sp = ""
+    var i = 0
+    while (i < depth * 4) {
+        sp = sp + " "
+        i = i + 1
+    }
+    return sp + line
+}
+
+lintCheckUnusedParam(String fnLine, Int lineNo): LintIssue {
+    if (fnLine.contains("_unused")) {
+        return LintIssue(lineNo, "STYLE001", "warn")
+    }
+    return LintIssue(0 - 1, "", "")
+}
+
+lintCheckLongLine(String line, Int lineNo, Int maxLen): LintIssue {
+    if (line.length > maxLen) {
+        return LintIssue(lineNo, "STYLE002", "warn")
+    }
+    return LintIssue(0 - 1, "", "")
+}
+
+class TraceExporter {
+    List<TraceEventJson> events = listOf<TraceEventJson>()
+
+    add(String name, Int ts, Int dur) {
+        events.add(TraceEventJson(name, ts, dur))
+    }
+
+    toChromeJson(): String {
+        var out = "["
+        var i = 0
+        while (i < events.size()) {
+            var e = events.get(i)
+            if (i > 0) { out = out + "," }
+            out = out + "{\"name\":\"" + e.name + "\",\"ts\":" + e.ts + ",\"dur\":" + e.dur + "}"
+            i = i + 1
+        }
+        return out + "]"
+    }
+}

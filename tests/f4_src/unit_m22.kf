@@ -1,0 +1,21 @@
+test "formatter indent depth" {
+    var l = fmtIndentLine("x()", 2)
+    assert(l.startsWith("        x()"))
+}
+
+test "linter unused param rule" {
+    var i = lintCheckUnusedParam("fn f(_unused a)", 3)
+    assert(i.line == 3)
+}
+
+test "linter long line rule" {
+    var i = lintCheckLongLine("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", 1, 10)
+    assert(i.ruleId == "STYLE002")
+}
+
+test "chrome trace json export" {
+    var t = TraceExporter()
+    t.add("span1", 1, 2)
+    var j = t.toChromeJson()
+    assert(j.startsWith("[{\"name\":\"span1\""))
+}

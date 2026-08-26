@@ -1,0 +1,44 @@
+// M23: Plugin SDK + MCP handshake
+
+record PluginManifest(String name, String version, Int perms)
+record McpRequest(String method, Int id)
+
+class PluginRegistry {
+    List<PluginManifest> plugins = listOf<PluginManifest>()
+
+    install(String name, String ver, Int perms): Bool {
+        var i = 0
+        while (i < plugins.size()) {
+            if (plugins.get(i).name == name) {
+                return false
+            }
+            i = i + 1
+        }
+        plugins.add(PluginManifest(name, ver, perms))
+        return true
+    }
+
+    remove(String name): Bool {
+        var i = 0
+        while (i < plugins.size()) {
+            if (plugins.get(i).name == name) {
+                plugins.remove(i)
+                return true
+            }
+            i = i + 1
+        }
+        return false
+    }
+
+    count(): Int {
+        return plugins.size()
+    }
+}
+
+mcpHandshake(String clientName): String {
+    return "{\"server\":\"kof-agent\",\"client\":\"" + clientName + "\"}"
+}
+
+mcpListTools(): String {
+    return "{\"tools\":[\"fs.read\",\"fs.write\",\"proc.run\"]}"
+}
