@@ -15,6 +15,7 @@
 | FASE 3 (M16–M20) | 🟡 M19 ✅ Orchestrator 8/8 (20k tools/s) · M20 ✅ Runtime 6/6 · M18.1 ✅ (~9.1k tok/s pipeline) · M17 ✅ 11/11 (workaround N18 aplicado); M16.1+M16.2 ✅ (RoPE/KV/Sampler/bench): M16.1 TensorArena/softmax/RMSNorm/GELU/SiLU/causal (7t) + M16.2 RoPE V2/KVCacheV2/Q4/SamplerV3 (14t) + benchmark nativo (`2164230`) |
 | FASE 3 | **COMPLETA** (M16-M20 todos verdes) |
 | FASE 4 núcleo | ✅ M21–M26 módulos base 22/22 nativos (LSP/DevTools/Plugin/Journal/Observatory) |
+| RC1 | ✅ Hardening 6/6 nativo + stress 100k ops (LruCache/sandbox/detectores) |
 | Próxima fase | **FASE 4 — Tooling Avançado**: M21 LSP · M22 DevTools · M23 Plugin SDK/MCP · M24 Self Improvement · M25 Execution Journal · M26 Observatory |
 | Bugs p/ upstream | **N18 CONFIRMED** (repro_minimal) + J4-residual + N10/N11/N12/N4/SC3/SC4 | (fechar 9 testes, bench real) (RoPE/KV Cache/Quantização/Sampler V3) · reportar J4+repro upstream |
 

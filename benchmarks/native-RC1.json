@@ -1,0 +1,1 @@
+{"milestone":"RC1","target":"native","stress":{"lru_ops_100k_ms":1431,"cache_cap_respected":128},"detectors":["slow_tool","leak"],"sandbox":"bitmask"}

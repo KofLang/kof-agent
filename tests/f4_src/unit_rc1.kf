@@ -1,0 +1,43 @@
+test "lru cache hit and miss" {
+    var c = LruCache()
+    c.initLru(4)
+    c.put("a", "1")
+    var hit = c.get("a")
+    var miss = c.get("z")
+    assert(hit == "1")
+    assert(miss == "")
+    assert(c.hits == 1)
+    assert(c.misses == 1)
+}
+
+test "lru evicts oldest beyond capacity" {
+    var c = LruCache()
+    c.initLru(2)
+    c.put("k1", "v1")
+    c.put("k2", "v2")
+    c.put("k3", "v3")
+    var n = c.size()
+    assert(n == 2)
+}
+
+test "plugin permission bitmask grant" {
+    assert(pluginAllowed(3, 1))
+    assert(pluginAllowed(3, 2))
+}
+
+test "plugin permission bitmask deny" {
+    assert(!pluginAllowed(2, 1))
+    assert(!pluginAllowed(0, 4))
+}
+
+test "slow tool detector levels" {
+    assert(detectSlowTool(50) == 0)
+    assert(detectSlowTool(2000) == 1)
+    assert(detectSlowTool(9000) == 2)
+}
+
+test "leak detector growth levels" {
+    assert(detectLeak(300, 300, 200) == 0)
+    assert(detectLeak(400, 300, 200) == 1)
+    assert(detectLeak(800, 300, 200) == 2)
+}

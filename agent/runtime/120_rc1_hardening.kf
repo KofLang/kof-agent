@@ -1,0 +1,71 @@
+// M21-M26 RC1: caches LRU, sandbox caps, detectores, stress helpers
+
+record CacheEntry(String key, String data, Int lastTick)
+record PermCheck(Int granted)
+
+class LruCache {
+    List<CacheEntry> items = listOf<CacheEntry>() // placeholder replaced below
+    Int capacity = 64
+    Int hits = 0
+    Int misses = 0
+
+    initLru(Int cap) {
+        capacity = cap
+    }
+
+    get(String k): String {
+        var i = 0
+        while (i < items.size()) {
+            var e = items.get(i)
+            if (e.key == k) {
+                hits = hits + 1
+                return e.data
+            }
+            i = i + 1
+        }
+        misses = misses + 1
+        return ""
+    }
+
+    put(String k, String v) {
+        var v2 = v
+        var i = 0
+        while (i < items.size()) {
+            if (items.get(i).key == k) {
+                items.set(i, CacheEntry(k, v2, hits + misses))
+                return
+            }
+            i = i + 1
+        }
+        if (items.size() >= capacity) {
+            var oldest = 0
+            var j = 1
+            while (j < items.size()) {
+                if (items.get(j).lastTick < items.get(oldest).lastTick) { oldest = j }
+                j = j + 1
+            }
+            items.remove(oldest)
+        }
+        items.add(CacheEntry(k, v2, hits + misses))
+    }
+
+    size(): Int { return items.size() }
+}
+
+pluginAllowed(Int manifestPerms, Int neededBit): Bool {
+    var p = manifestPerms % (neededBit * 2)
+    return p >= neededBit
+}
+
+detectSlowTool(Int durationMs): Int {
+    if (durationMs > 5000) { return 2 }
+    if (durationMs > 1000) { return 1 }
+    return 0
+}
+
+detectLeak(Int rssMb, Int prevRssMb, Int generations): Int {
+    var growth = rssMb - prevRssMb
+    if (growth > 256 && generations > 100) { return 2 }
+    if (growth > 64) { return 1 }
+    return 0
+}
