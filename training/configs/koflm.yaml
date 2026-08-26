@@ -1,0 +1,17 @@
+model: TinyLlama/TinyLlama-1.1B-Chat-v1.0
+language: pt-BR
+dataset: datasets/jsonl/koflm-v3.jsonl
+output_dir: models/kof-LM/lora
+epochs: 3
+batch_size: 2
+gradient_accumulation_steps: 8
+learning_rate: 2.0e-4
+lora_rank: 64
+lora_alpha: 128
+lora_dropout: 0.05
+context: 2048
+warmup_ratio: 0.05
+save_every_steps: 500
+seed: 42
+bf16: auto
+special_tokens: ["<kof>","</kof>","<tool>","<diag>","<workspace>","<code>","<spec>","<benchmark>","<bug>","<fix>"]
