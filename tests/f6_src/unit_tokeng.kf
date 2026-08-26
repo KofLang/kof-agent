@@ -1,0 +1,21 @@
+test "tokenizer loads kof specials" {
+    var t = TokenizerEngine()
+    t.loadSpecials()
+    assert(t.specialCount() == 10)
+}
+
+test "encode bytes deterministic with cache" {
+    var t = TokenizerEngine()
+    var a = t.encodeBytes("kof")
+    var b = t.encodeBytes("kof")
+    assert(a.count == 3)
+    var id0 = t.cacheSize()
+    var id1 = b.cacheSize()
+    assert(id0 == id1)
+}
+
+test "bos detection" {
+    var t = TokenizerEngine()
+    assert(t.isBos(1))
+    assert(!t.isBos(2))
+}

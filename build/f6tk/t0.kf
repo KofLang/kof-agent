@@ -1,0 +1,5 @@
+test "tokenizer loads kof specials" {
+    var t = TokenizerEngine()
+    t.loadSpecials()
+    assert(t.specialCount() == 10)
+}

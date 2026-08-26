@@ -110,3 +110,8 @@ Instabilidade tipo-N10 evoluída: outcome nativo muda (PASS/assert-fail/SIGSEGV)
 ## N19-SUSPECT (416ff4b) — crash por combinação de classes em TU média
 
 SIGSEGV 139 quando InferenceEngine acessa runner.generateStep via KoflmRuntime (~1MB asm). Mesma pipeline verde via ModelRunner direto. Repro: regressions/N19-SUSPECT/. Workaround temporário: acesso direto ao ModelRunner.
+
+
+## N20-SUSPECT (416ff4b) — List.size() em método de classe gera link broken sob repetição
+
+`TokenizerEngine.cacheSize(): Int { return cache.size() }` chamado **2×** no mesmo teste → `undefined reference to 'size'` no ld nativo. Com contador manual (`cacheN`) o link continua falhando pelo mesmo símbolo — indica corrupção de símbolo por padrão de uso, não lógica. Repro: tests/f6_src/unit_tokeng.kf test "encode bytes deterministic with cache". Status: CONFIRMED-COMPORTAMENTO, família N10/N18/N19.

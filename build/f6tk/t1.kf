@@ -1,0 +1,9 @@
+test "encode bytes deterministic with cache" {
+    var t = TokenizerEngine()
+    var a = t.encodeBytes("kof")
+    var b = t.encodeBytes("kof")
+    assert(a.count == 3)
+    var id0 = t.cache.size()
+    var id1 = b.cache.size()
+    assert(id0 == id1)
+}

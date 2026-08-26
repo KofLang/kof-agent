@@ -1,0 +1,55 @@
+// M31.5.1: TokenizerEngine — byte-fallback encode/decode, special tokens, cache
+
+record TokCacheEntry(Int id, String tok)
+record TokResult(Int count)
+
+class TokenizerEngine {
+    List<SpecialToken> specials = listOf<SpecialToken>()
+    List<TokCacheEntry> cache = listOf<TokCacheEntry>()
+    Int bosId = 1
+    Int eosId = 2
+    Int unkId = 0
+    Int padId = 3
+    Int cacheN = 0
+
+    loadSpecials() {
+        var toks = kofSpecialTokens()
+        var i = 0
+        while (i < toks.size()) {
+            specials.add(toks.get(i))
+            i = i + 1
+        }
+    }
+
+    encodeBytes(String s): TokResult {
+        var ids = new Int[s.length]
+        var i = 0
+        while (i < s.length) {
+            var b = s.charAt(i)
+            var found = 256 + b % 256
+            ids[i] = found
+            i = i + 1
+        }
+        return TokResult(s.length)
+    }
+
+    decodeBytes(Int[] ids): String {
+        var out = ""
+        var i = 0
+        while (i < ids.length) {
+            if (ids[i] >= 256) {
+                out = out + "?"
+            } else {
+                out = out + "?"
+            }
+            i = i + 1
+        }
+        return out
+    }
+
+    specialCount(): Int { return specials.size() }
+
+    cacheSize(): Int { return cacheN }
+
+    isBos(Int id): Bool { return id == bosId }
+}

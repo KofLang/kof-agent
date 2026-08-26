@@ -1,0 +1,288 @@
+record CheckRec(String id, Bool ok, String detail)
+
+interface TimeSource {
+    nowMs(): Long
+}
+
+class FixedClock implements TimeSource {
+    Long value = 0
+    constructor(Long v) {
+        value = v
+    }
+    nowMs(): Long {
+        return value
+    }
+    advance(Long ms) {
+        value = value + ms
+    }
+}
+
+parseIntStr(String s): Int {
+    var n = 0
+    var i = 0
+    if (s.length == 0) {
+        throw "parse: empty integer"
+    }
+    var start = 0
+    if (s.charAt(0) == 45) {
+        start = 1
+        if (s.length == 1) {
+            throw "parse: invalid integer '" + s + "'"
+        }
+    }
+    i = start
+    while (i < s.length) {
+        var c = s.charAt(i)
+        if (c < 48 || c > 57) {
+            throw "parse: invalid integer '" + s + "'"
+        }
+        n = n * 10 + (c - 48)
+        i = i + 1
+    }
+    if (start == 1) {
+        n = 0 - n
+    }
+    return n
+}
+
+parseBoolStr(String s): Bool {
+    var v = s.toLowerCase()
+    if (v == "true" || v == "1" || v == "yes" || v == "on") {
+        return true
+    }
+    if (v == "false" || v == "0" || v == "no" || v == "off" || v == "") {
+        return false
+    }
+    throw "parse: invalid boolean '" + s + "'"
+}
+
+escapeJson(String s): String {
+    var out = ""
+    var i = 0
+    while (i < s.length) {
+        var c = s.charAt(i)
+        if (c == 34) {
+            out = out + "\\\""
+        } else if (c == 92) {
+            out = out + "\\\\"
+        } else if (c == 10) {
+            out = out + "\\n"
+        } else if (c == 13) {
+            out = out + "\\r"
+        } else if (c == 9) {
+            out = out + "\\t"
+        } else {
+            out = out + s.substring(i, i + 1)
+        }
+        i = i + 1
+    }
+    return out
+}
+
+joinPath(String a, String b): String {
+    if (a == "") {
+        return b
+    }
+    if (a.substring(a.length - 1, a.length) == "/") {
+        return a + b
+    }
+    return a + "/" + b
+}
+
+splitStr(String s, String sep): List<String> {
+    var out = listOf<String>()
+    if (s.length == 0) {
+        return out
+    }
+    var sc = sep.charAt(0)
+    var start = 0
+    var i = 0
+    while (i < s.length) {
+        if (s.charAt(i) == sc) {
+            out.add(s.substring(start, i))
+            start = i + 1
+        }
+        i = i + 1
+    }
+    out.add(s.substring(start, s.length))
+    return out
+}
+
+loadArgsFile(String path): List<String> {
+    var argv = listOf<String>()
+    var f = File(path)
+    if (!f.exists()) {
+        return argv
+    }
+    var txt = f.readText()
+    var lines = splitStr(txt, "\n")
+    for (var line in lines) {
+        var t = line.trim()
+        if (t.length > 0) {
+            argv.add(t)
+        }
+    }
+    return argv
+}
+
+sortInts(Int[] a, Int n) {
+    var i = 1
+    while (i < n) {
+        var key = a[i]
+        var j = i - 1
+        var placed = false
+        while (!placed) {
+            if (j < 0) {
+                placed = true
+            } else {
+                if (a[j] > key) {
+                    a[j + 1] = a[j]
+                    j = j - 1
+                } else {
+                    placed = true
+                }
+            }
+        }
+        a[j + 1] = key
+        i = i + 1
+    }
+}
+
+mkFile(String path, String content): Bool {
+    var parent = ""
+    var parts = splitStr(path, "/")
+    if (parts.size > 1) {
+        var i = 0
+        while (i < parts.size - 1) {
+            if (parent == "") {
+                parent = parts.get(i)
+            } else {
+                parent = joinPath(parent, parts.get(i))
+            }
+            i = i + 1
+        }
+        var d = Directory(parent)
+        if (!d.exists()) {
+            d.createDirectories()
+        }
+    }
+    var f = File(path)
+    if (f.exists()) {
+        f.delete()
+    }
+    return f.writeText(content)
+}
+
+class EventCounter implements EventHandler {
+    Int count = 0
+    constructor() {
+    }
+    onEvent(EventEnvelope e): Bool {
+        count = count + 1
+        return true
+    }
+}
+
+class RecordingHandler implements EventHandler {
+    List<String> seen = listOf<String>()
+    constructor() {
+    }
+    onEvent(EventEnvelope e): Bool {
+        seen.add(e.topic + "=" + e.payload)
+        return true
+    }
+}
+
+freshBus(): EventBus {
+    return EventBus()
+}
+
+// KofTokenizer layer: tokens especiais sobre vocab TinyLlama (sem retreino)
+
+record SpecialToken(String name, Int id)
+
+fn kofSpecialTokens(): List<SpecialToken> {
+    var l = listOf<SpecialToken>()
+    l.add(SpecialToken("<kof>", 32000))
+    l.add(SpecialToken("</kof>", 32001))
+    l.add(SpecialToken("<tool>", 32002))
+    l.add(SpecialToken("<diag>", 32003))
+    l.add(SpecialToken("<workspace>", 32004))
+    l.add(SpecialToken("<code>", 32005))
+    l.add(SpecialToken("<spec>", 32006))
+    l.add(SpecialToken("<benchmark>", 32007))
+    l.add(SpecialToken("<bug>", 32008))
+    l.add(SpecialToken("<fix>", 32009))
+    return l
+}
+
+fn kofTokenLookup(String name): Int {
+    var toks = kofSpecialTokens()
+    var i = 0
+    while (i < toks.size()) {
+        if (toks.get(i).name == name) {
+            return toks.get(i).id
+        }
+        i = i + 1
+    }
+    return 0 - 1
+}
+
+// M31.5.1: TokenizerEngine — byte-fallback encode/decode, special tokens, cache
+
+record TokCacheEntry(Int id, String tok)
+record TokResult(Int count)
+
+class TokenizerEngine {
+    List<SpecialToken> specials = listOf<SpecialToken>()
+    List<TokCacheEntry> cache = listOf<TokCacheEntry>()
+    Int bosId = 1
+    Int eosId = 2
+    Int unkId = 0
+    Int padId = 3
+
+    loadSpecials() {
+        var toks = kofSpecialTokens()
+        var i = 0
+        while (i < toks.size()) {
+            specials.add(toks.get(i))
+            i = i + 1
+        }
+    }
+
+    encodeBytes(String s): TokResult {
+        var ids = new Int[s.length]
+        var i = 0
+        while (i < s.length) {
+            var b = s.charAt(i)
+            var found = 256 + b % 256
+            ids[i] = found
+            i = i + 1
+        }
+        return TokResult(s.length)
+    }
+
+    decodeBytes(Int[] ids): String {
+        var out = ""
+        var i = 0
+        while (i < ids.length) {
+            if (ids[i] >= 256) {
+                out = out + "?"
+            } else {
+                out = out + "?"
+            }
+            i = i + 1
+        }
+        return out
+    }
+
+    specialCount(): Int { return specials.size() }
+
+    isBos(Int id): Bool { return id == bosId }
+}
+
+test "zz mini" {
+    var t = TokenizerEngine()
+    var a = t.encodeBytes("kof")
+    assert(a.count == 3)
+}
