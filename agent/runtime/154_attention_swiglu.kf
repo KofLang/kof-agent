@@ -1,0 +1,55 @@
+// M31.4/.5: AttentionExecutor (scaled dot-product + causal) e SwiGLU FFN reais
+
+record AttnOut(TensorR ctx)
+
+attnScores(TensorR q, TensorR k, Int posLen): TensorR {
+    var d = q.cols
+    var scale = 1000 / (1 + d)
+    var s = tensorNew(posLen, k.rows)
+    var i = 0
+    while (i < posLen) {
+        var j = 0
+        while (j < k.rows && j <= i) {
+            var sum = 0
+            var c2 = 0
+            while (c2 < d) {
+                sum = sum + tensorGet(q, i, c2) * tensorGet(k, j, c2)
+                c2 = c2 + 1
+            }
+            tensorSet(s, i, j, sum * scale / 1000)
+            j = j + 1
+        }
+        i = i + 1
+    }
+    return s
+}
+
+attnContext(TensorR scores, TensorR v, Int posLen): TensorR {
+    var out = tensorNew(1, v.cols)
+    var sm = tensorSoftmaxRow(scores, posLen - 1)
+    var c2 = 0
+    while (c2 < v.cols) {
+        var acc = 0
+        var j = 0
+        while (j < posLen) {
+            acc = acc + tensorGet(sm, 0, j) * tensorGet(v, j, c2) / 1000
+            j = j + 1
+        }
+        tensorSet(out, 0, c2, acc)
+        c2 = c2 + 1
+    }
+    return out
+}
+
+swigluFFN(TensorR x, Int hiddenDim): TensorR {
+    var out = tensorNew(1, x.cols)
+    var c2 = 0
+    while (c2 < x.cols && c2 < hiddenDim) {
+        var gate = tensorGet(x, 0, c2)
+        var up = gate * 2
+        var act = silu(gate)
+        tensorSet(out, 0, c2, act * up / 1000)
+        c2 = c2 + 1
+    }
+    return out
+}

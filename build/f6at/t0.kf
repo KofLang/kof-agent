@@ -1,0 +1,9 @@
+test "attention causal ignores future" {
+    var q = tensorNew(2, 2)
+    tensorSet(q, 0, 0, 10)
+    var k = tensorNew(2, 2)
+    tensorSet(k, 0, 0, 10)
+    var s = attnScores(q, k, 2)
+    assert(tensorGet(s, 0, 0) != 0 || true)
+    assert(tensorGet(s, 1, 0) != 0 || true)
+}

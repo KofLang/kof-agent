@@ -1,0 +1,6 @@
+test "swiglu output positive for positive gate" {
+    var x = tensorNew(1, 4)
+    tensorSet(x, 0, 0, 500)
+    var o = swigluFFN(x, 4)
+    assert(tensorGet(o, 0, 0) >= 0)
+}
