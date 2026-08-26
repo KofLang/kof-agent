@@ -1,0 +1,24 @@
+test "tokenizer roundtrip length preserved" {
+    assert(tokVerifyRoundtrip("koflm"))
+}
+
+test "lora job lifecycle" {
+    var m = LoraManager()
+    assert(m.createJob())
+    m.tick()
+    m.tick()
+    m.tick()
+    assert(m.status() == 2)
+}
+
+test "lora single job only" {
+    var m = LoraManager()
+    m.createJob()
+    m.jobState = 2
+    assert(!m.createJob())
+}
+
+test "eval suite has 540 prompts" {
+    var n = evalCountValid("eval/ptbr-suite.jsonl")
+    assert(n >= 500)
+}

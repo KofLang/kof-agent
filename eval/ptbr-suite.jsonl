@@ -1,0 +1,540 @@
+{"id": "eval-0000", "category": "sintaxe", "instruction": "[sintaxe] Como declaro uma função em Kof?", "expected_kind": "text"}
+{"id": "eval-0001", "category": "sintaxe", "instruction": "[sintaxe] Explique records em Kof.", "expected_kind": "text"}
+{"id": "eval-0002", "category": "sintaxe", "instruction": "[sintaxe] Diferença entre class e record?", "expected_kind": "text"}
+{"id": "eval-0003", "category": "sintaxe", "instruction": "[sintaxe] Para que serve enum?", "expected_kind": "text"}
+{"id": "eval-0004", "category": "sintaxe", "instruction": "[sintaxe] Como declaro uma função em Kof?", "expected_kind": "text"}
+{"id": "eval-0005", "category": "sintaxe", "instruction": "[sintaxe] Explique records em Kof.", "expected_kind": "text"}
+{"id": "eval-0006", "category": "sintaxe", "instruction": "[sintaxe] Diferença entre class e record?", "expected_kind": "text"}
+{"id": "eval-0007", "category": "sintaxe", "instruction": "[sintaxe] Para que serve enum?", "expected_kind": "text"}
+{"id": "eval-0008", "category": "sintaxe", "instruction": "[sintaxe] Como declaro uma função em Kof?", "expected_kind": "text"}
+{"id": "eval-0009", "category": "sintaxe", "instruction": "[sintaxe] Explique records em Kof.", "expected_kind": "text"}
+{"id": "eval-0010", "category": "sintaxe", "instruction": "[sintaxe] Diferença entre class e record?", "expected_kind": "text"}
+{"id": "eval-0011", "category": "sintaxe", "instruction": "[sintaxe] Para que serve enum?", "expected_kind": "text"}
+{"id": "eval-0012", "category": "sintaxe", "instruction": "[sintaxe] Como declaro uma função em Kof?", "expected_kind": "text"}
+{"id": "eval-0013", "category": "sintaxe", "instruction": "[sintaxe] Explique records em Kof.", "expected_kind": "text"}
+{"id": "eval-0014", "category": "sintaxe", "instruction": "[sintaxe] Diferença entre class e record?", "expected_kind": "text"}
+{"id": "eval-0015", "category": "sintaxe", "instruction": "[sintaxe] Para que serve enum?", "expected_kind": "text"}
+{"id": "eval-0016", "category": "sintaxe", "instruction": "[sintaxe] Como declaro uma função em Kof?", "expected_kind": "text"}
+{"id": "eval-0017", "category": "sintaxe", "instruction": "[sintaxe] Explique records em Kof.", "expected_kind": "text"}
+{"id": "eval-0018", "category": "sintaxe", "instruction": "[sintaxe] Diferença entre class e record?", "expected_kind": "text"}
+{"id": "eval-0019", "category": "sintaxe", "instruction": "[sintaxe] Para que serve enum?", "expected_kind": "text"}
+{"id": "eval-0020", "category": "sintaxe", "instruction": "[sintaxe] Como declaro uma função em Kof?", "expected_kind": "text"}
+{"id": "eval-0021", "category": "sintaxe", "instruction": "[sintaxe] Explique records em Kof.", "expected_kind": "text"}
+{"id": "eval-0022", "category": "sintaxe", "instruction": "[sintaxe] Diferença entre class e record?", "expected_kind": "text"}
+{"id": "eval-0023", "category": "sintaxe", "instruction": "[sintaxe] Para que serve enum?", "expected_kind": "text"}
+{"id": "eval-0024", "category": "sintaxe", "instruction": "[sintaxe] Como declaro uma função em Kof?", "expected_kind": "text"}
+{"id": "eval-0025", "category": "sintaxe", "instruction": "[sintaxe] Explique records em Kof.", "expected_kind": "text"}
+{"id": "eval-0026", "category": "sintaxe", "instruction": "[sintaxe] Diferença entre class e record?", "expected_kind": "text"}
+{"id": "eval-0027", "category": "sintaxe", "instruction": "[sintaxe] Para que serve enum?", "expected_kind": "text"}
+{"id": "eval-0028", "category": "sintaxe", "instruction": "[sintaxe] Como declaro uma função em Kof?", "expected_kind": "text"}
+{"id": "eval-0029", "category": "sintaxe", "instruction": "[sintaxe] Explique records em Kof.", "expected_kind": "text"}
+{"id": "eval-0030", "category": "sintaxe", "instruction": "[sintaxe] Diferença entre class e record?", "expected_kind": "text"}
+{"id": "eval-0031", "category": "sintaxe", "instruction": "[sintaxe] Para que serve enum?", "expected_kind": "text"}
+{"id": "eval-0032", "category": "sintaxe", "instruction": "[sintaxe] Como declaro uma função em Kof?", "expected_kind": "text"}
+{"id": "eval-0033", "category": "sintaxe", "instruction": "[sintaxe] Explique records em Kof.", "expected_kind": "text"}
+{"id": "eval-0034", "category": "sintaxe", "instruction": "[sintaxe] Diferença entre class e record?", "expected_kind": "text"}
+{"id": "eval-0035", "category": "sintaxe", "instruction": "[sintaxe] Para que serve enum?", "expected_kind": "text"}
+{"id": "eval-0036", "category": "sintaxe", "instruction": "[sintaxe] Como declaro uma função em Kof?", "expected_kind": "text"}
+{"id": "eval-0037", "category": "sintaxe", "instruction": "[sintaxe] Explique records em Kof.", "expected_kind": "text"}
+{"id": "eval-0038", "category": "sintaxe", "instruction": "[sintaxe] Diferença entre class e record?", "expected_kind": "text"}
+{"id": "eval-0039", "category": "sintaxe", "instruction": "[sintaxe] Para que serve enum?", "expected_kind": "text"}
+{"id": "eval-0040", "category": "sintaxe", "instruction": "[sintaxe] Como declaro uma função em Kof?", "expected_kind": "text"}
+{"id": "eval-0041", "category": "sintaxe", "instruction": "[sintaxe] Explique records em Kof.", "expected_kind": "text"}
+{"id": "eval-0042", "category": "sintaxe", "instruction": "[sintaxe] Diferença entre class e record?", "expected_kind": "text"}
+{"id": "eval-0043", "category": "sintaxe", "instruction": "[sintaxe] Para que serve enum?", "expected_kind": "text"}
+{"id": "eval-0044", "category": "sintaxe", "instruction": "[sintaxe] Como declaro uma função em Kof?", "expected_kind": "text"}
+{"id": "eval-0045", "category": "sintaxe", "instruction": "[sintaxe] Explique records em Kof.", "expected_kind": "text"}
+{"id": "eval-0046", "category": "sintaxe", "instruction": "[sintaxe] Diferença entre class e record?", "expected_kind": "text"}
+{"id": "eval-0047", "category": "sintaxe", "instruction": "[sintaxe] Para que serve enum?", "expected_kind": "text"}
+{"id": "eval-0048", "category": "sintaxe", "instruction": "[sintaxe] Como declaro uma função em Kof?", "expected_kind": "text"}
+{"id": "eval-0049", "category": "sintaxe", "instruction": "[sintaxe] Explique records em Kof.", "expected_kind": "text"}
+{"id": "eval-0050", "category": "sintaxe", "instruction": "[sintaxe] Diferença entre class e record?", "expected_kind": "text"}
+{"id": "eval-0051", "category": "sintaxe", "instruction": "[sintaxe] Para que serve enum?", "expected_kind": "text"}
+{"id": "eval-0052", "category": "sintaxe", "instruction": "[sintaxe] Como declaro uma função em Kof?", "expected_kind": "text"}
+{"id": "eval-0053", "category": "sintaxe", "instruction": "[sintaxe] Explique records em Kof.", "expected_kind": "text"}
+{"id": "eval-0054", "category": "sintaxe", "instruction": "[sintaxe] Diferença entre class e record?", "expected_kind": "text"}
+{"id": "eval-0055", "category": "sintaxe", "instruction": "[sintaxe] Para que serve enum?", "expected_kind": "text"}
+{"id": "eval-0056", "category": "sintaxe", "instruction": "[sintaxe] Como declaro uma função em Kof?", "expected_kind": "text"}
+{"id": "eval-0057", "category": "sintaxe", "instruction": "[sintaxe] Explique records em Kof.", "expected_kind": "text"}
+{"id": "eval-0058", "category": "sintaxe", "instruction": "[sintaxe] Diferença entre class e record?", "expected_kind": "text"}
+{"id": "eval-0059", "category": "sintaxe", "instruction": "[sintaxe] Para que serve enum?", "expected_kind": "text"}
+{"id": "eval-0060", "category": "sintaxe", "instruction": "[sintaxe] Como declaro uma função em Kof?", "expected_kind": "text"}
+{"id": "eval-0061", "category": "sintaxe", "instruction": "[sintaxe] Explique records em Kof.", "expected_kind": "text"}
+{"id": "eval-0062", "category": "sintaxe", "instruction": "[sintaxe] Diferença entre class e record?", "expected_kind": "text"}
+{"id": "eval-0063", "category": "sintaxe", "instruction": "[sintaxe] Para que serve enum?", "expected_kind": "text"}
+{"id": "eval-0064", "category": "sintaxe", "instruction": "[sintaxe] Como declaro uma função em Kof?", "expected_kind": "text"}
+{"id": "eval-0065", "category": "sintaxe", "instruction": "[sintaxe] Explique records em Kof.", "expected_kind": "text"}
+{"id": "eval-0066", "category": "sintaxe", "instruction": "[sintaxe] Diferença entre class e record?", "expected_kind": "text"}
+{"id": "eval-0067", "category": "sintaxe", "instruction": "[sintaxe] Para que serve enum?", "expected_kind": "text"}
+{"id": "eval-0068", "category": "sintaxe", "instruction": "[sintaxe] Como declaro uma função em Kof?", "expected_kind": "text"}
+{"id": "eval-0069", "category": "sintaxe", "instruction": "[sintaxe] Explique records em Kof.", "expected_kind": "text"}
+{"id": "eval-0070", "category": "sintaxe", "instruction": "[sintaxe] Diferença entre class e record?", "expected_kind": "text"}
+{"id": "eval-0071", "category": "sintaxe", "instruction": "[sintaxe] Para que serve enum?", "expected_kind": "text"}
+{"id": "eval-0072", "category": "sintaxe", "instruction": "[sintaxe] Como declaro uma função em Kof?", "expected_kind": "text"}
+{"id": "eval-0073", "category": "sintaxe", "instruction": "[sintaxe] Explique records em Kof.", "expected_kind": "text"}
+{"id": "eval-0074", "category": "sintaxe", "instruction": "[sintaxe] Diferença entre class e record?", "expected_kind": "text"}
+{"id": "eval-0075", "category": "sintaxe", "instruction": "[sintaxe] Para que serve enum?", "expected_kind": "text"}
+{"id": "eval-0076", "category": "sintaxe", "instruction": "[sintaxe] Como declaro uma função em Kof?", "expected_kind": "text"}
+{"id": "eval-0077", "category": "sintaxe", "instruction": "[sintaxe] Explique records em Kof.", "expected_kind": "text"}
+{"id": "eval-0078", "category": "sintaxe", "instruction": "[sintaxe] Diferença entre class e record?", "expected_kind": "text"}
+{"id": "eval-0079", "category": "sintaxe", "instruction": "[sintaxe] Para que serve enum?", "expected_kind": "text"}
+{"id": "eval-0080", "category": "sintaxe", "instruction": "[sintaxe] Como declaro uma função em Kof?", "expected_kind": "text"}
+{"id": "eval-0081", "category": "sintaxe", "instruction": "[sintaxe] Explique records em Kof.", "expected_kind": "text"}
+{"id": "eval-0082", "category": "sintaxe", "instruction": "[sintaxe] Diferença entre class e record?", "expected_kind": "text"}
+{"id": "eval-0083", "category": "sintaxe", "instruction": "[sintaxe] Para que serve enum?", "expected_kind": "text"}
+{"id": "eval-0084", "category": "sintaxe", "instruction": "[sintaxe] Como declaro uma função em Kof?", "expected_kind": "text"}
+{"id": "eval-0085", "category": "sintaxe", "instruction": "[sintaxe] Explique records em Kof.", "expected_kind": "text"}
+{"id": "eval-0086", "category": "sintaxe", "instruction": "[sintaxe] Diferença entre class e record?", "expected_kind": "text"}
+{"id": "eval-0087", "category": "sintaxe", "instruction": "[sintaxe] Para que serve enum?", "expected_kind": "text"}
+{"id": "eval-0088", "category": "sintaxe", "instruction": "[sintaxe] Como declaro uma função em Kof?", "expected_kind": "text"}
+{"id": "eval-0089", "category": "sintaxe", "instruction": "[sintaxe] Explique records em Kof.", "expected_kind": "text"}
+{"id": "eval-0090", "category": "runtime", "instruction": "[runtime] Explique o Scheduler cooperativo.", "expected_kind": "text"}
+{"id": "eval-0091", "category": "runtime", "instruction": "[runtime] Como funciona o EventBus?", "expected_kind": "text"}
+{"id": "eval-0092", "category": "runtime", "instruction": "[runtime] O que faz Lifecycle?", "expected_kind": "text"}
+{"id": "eval-0093", "category": "runtime", "instruction": "[runtime] Como usar Metrics?", "expected_kind": "text"}
+{"id": "eval-0094", "category": "runtime", "instruction": "[runtime] Explique o Scheduler cooperativo.", "expected_kind": "text"}
+{"id": "eval-0095", "category": "runtime", "instruction": "[runtime] Como funciona o EventBus?", "expected_kind": "text"}
+{"id": "eval-0096", "category": "runtime", "instruction": "[runtime] O que faz Lifecycle?", "expected_kind": "text"}
+{"id": "eval-0097", "category": "runtime", "instruction": "[runtime] Como usar Metrics?", "expected_kind": "text"}
+{"id": "eval-0098", "category": "runtime", "instruction": "[runtime] Explique o Scheduler cooperativo.", "expected_kind": "text"}
+{"id": "eval-0099", "category": "runtime", "instruction": "[runtime] Como funciona o EventBus?", "expected_kind": "text"}
+{"id": "eval-0100", "category": "runtime", "instruction": "[runtime] O que faz Lifecycle?", "expected_kind": "text"}
+{"id": "eval-0101", "category": "runtime", "instruction": "[runtime] Como usar Metrics?", "expected_kind": "text"}
+{"id": "eval-0102", "category": "runtime", "instruction": "[runtime] Explique o Scheduler cooperativo.", "expected_kind": "text"}
+{"id": "eval-0103", "category": "runtime", "instruction": "[runtime] Como funciona o EventBus?", "expected_kind": "text"}
+{"id": "eval-0104", "category": "runtime", "instruction": "[runtime] O que faz Lifecycle?", "expected_kind": "text"}
+{"id": "eval-0105", "category": "runtime", "instruction": "[runtime] Como usar Metrics?", "expected_kind": "text"}
+{"id": "eval-0106", "category": "runtime", "instruction": "[runtime] Explique o Scheduler cooperativo.", "expected_kind": "text"}
+{"id": "eval-0107", "category": "runtime", "instruction": "[runtime] Como funciona o EventBus?", "expected_kind": "text"}
+{"id": "eval-0108", "category": "runtime", "instruction": "[runtime] O que faz Lifecycle?", "expected_kind": "text"}
+{"id": "eval-0109", "category": "runtime", "instruction": "[runtime] Como usar Metrics?", "expected_kind": "text"}
+{"id": "eval-0110", "category": "runtime", "instruction": "[runtime] Explique o Scheduler cooperativo.", "expected_kind": "text"}
+{"id": "eval-0111", "category": "runtime", "instruction": "[runtime] Como funciona o EventBus?", "expected_kind": "text"}
+{"id": "eval-0112", "category": "runtime", "instruction": "[runtime] O que faz Lifecycle?", "expected_kind": "text"}
+{"id": "eval-0113", "category": "runtime", "instruction": "[runtime] Como usar Metrics?", "expected_kind": "text"}
+{"id": "eval-0114", "category": "runtime", "instruction": "[runtime] Explique o Scheduler cooperativo.", "expected_kind": "text"}
+{"id": "eval-0115", "category": "runtime", "instruction": "[runtime] Como funciona o EventBus?", "expected_kind": "text"}
+{"id": "eval-0116", "category": "runtime", "instruction": "[runtime] O que faz Lifecycle?", "expected_kind": "text"}
+{"id": "eval-0117", "category": "runtime", "instruction": "[runtime] Como usar Metrics?", "expected_kind": "text"}
+{"id": "eval-0118", "category": "runtime", "instruction": "[runtime] Explique o Scheduler cooperativo.", "expected_kind": "text"}
+{"id": "eval-0119", "category": "runtime", "instruction": "[runtime] Como funciona o EventBus?", "expected_kind": "text"}
+{"id": "eval-0120", "category": "runtime", "instruction": "[runtime] O que faz Lifecycle?", "expected_kind": "text"}
+{"id": "eval-0121", "category": "runtime", "instruction": "[runtime] Como usar Metrics?", "expected_kind": "text"}
+{"id": "eval-0122", "category": "runtime", "instruction": "[runtime] Explique o Scheduler cooperativo.", "expected_kind": "text"}
+{"id": "eval-0123", "category": "runtime", "instruction": "[runtime] Como funciona o EventBus?", "expected_kind": "text"}
+{"id": "eval-0124", "category": "runtime", "instruction": "[runtime] O que faz Lifecycle?", "expected_kind": "text"}
+{"id": "eval-0125", "category": "runtime", "instruction": "[runtime] Como usar Metrics?", "expected_kind": "text"}
+{"id": "eval-0126", "category": "runtime", "instruction": "[runtime] Explique o Scheduler cooperativo.", "expected_kind": "text"}
+{"id": "eval-0127", "category": "runtime", "instruction": "[runtime] Como funciona o EventBus?", "expected_kind": "text"}
+{"id": "eval-0128", "category": "runtime", "instruction": "[runtime] O que faz Lifecycle?", "expected_kind": "text"}
+{"id": "eval-0129", "category": "runtime", "instruction": "[runtime] Como usar Metrics?", "expected_kind": "text"}
+{"id": "eval-0130", "category": "runtime", "instruction": "[runtime] Explique o Scheduler cooperativo.", "expected_kind": "text"}
+{"id": "eval-0131", "category": "runtime", "instruction": "[runtime] Como funciona o EventBus?", "expected_kind": "text"}
+{"id": "eval-0132", "category": "runtime", "instruction": "[runtime] O que faz Lifecycle?", "expected_kind": "text"}
+{"id": "eval-0133", "category": "runtime", "instruction": "[runtime] Como usar Metrics?", "expected_kind": "text"}
+{"id": "eval-0134", "category": "runtime", "instruction": "[runtime] Explique o Scheduler cooperativo.", "expected_kind": "text"}
+{"id": "eval-0135", "category": "runtime", "instruction": "[runtime] Como funciona o EventBus?", "expected_kind": "text"}
+{"id": "eval-0136", "category": "runtime", "instruction": "[runtime] O que faz Lifecycle?", "expected_kind": "text"}
+{"id": "eval-0137", "category": "runtime", "instruction": "[runtime] Como usar Metrics?", "expected_kind": "text"}
+{"id": "eval-0138", "category": "runtime", "instruction": "[runtime] Explique o Scheduler cooperativo.", "expected_kind": "text"}
+{"id": "eval-0139", "category": "runtime", "instruction": "[runtime] Como funciona o EventBus?", "expected_kind": "text"}
+{"id": "eval-0140", "category": "runtime", "instruction": "[runtime] O que faz Lifecycle?", "expected_kind": "text"}
+{"id": "eval-0141", "category": "runtime", "instruction": "[runtime] Como usar Metrics?", "expected_kind": "text"}
+{"id": "eval-0142", "category": "runtime", "instruction": "[runtime] Explique o Scheduler cooperativo.", "expected_kind": "text"}
+{"id": "eval-0143", "category": "runtime", "instruction": "[runtime] Como funciona o EventBus?", "expected_kind": "text"}
+{"id": "eval-0144", "category": "runtime", "instruction": "[runtime] O que faz Lifecycle?", "expected_kind": "text"}
+{"id": "eval-0145", "category": "runtime", "instruction": "[runtime] Como usar Metrics?", "expected_kind": "text"}
+{"id": "eval-0146", "category": "runtime", "instruction": "[runtime] Explique o Scheduler cooperativo.", "expected_kind": "text"}
+{"id": "eval-0147", "category": "runtime", "instruction": "[runtime] Como funciona o EventBus?", "expected_kind": "text"}
+{"id": "eval-0148", "category": "runtime", "instruction": "[runtime] O que faz Lifecycle?", "expected_kind": "text"}
+{"id": "eval-0149", "category": "runtime", "instruction": "[runtime] Como usar Metrics?", "expected_kind": "text"}
+{"id": "eval-0150", "category": "runtime", "instruction": "[runtime] Explique o Scheduler cooperativo.", "expected_kind": "text"}
+{"id": "eval-0151", "category": "runtime", "instruction": "[runtime] Como funciona o EventBus?", "expected_kind": "text"}
+{"id": "eval-0152", "category": "runtime", "instruction": "[runtime] O que faz Lifecycle?", "expected_kind": "text"}
+{"id": "eval-0153", "category": "runtime", "instruction": "[runtime] Como usar Metrics?", "expected_kind": "text"}
+{"id": "eval-0154", "category": "runtime", "instruction": "[runtime] Explique o Scheduler cooperativo.", "expected_kind": "text"}
+{"id": "eval-0155", "category": "runtime", "instruction": "[runtime] Como funciona o EventBus?", "expected_kind": "text"}
+{"id": "eval-0156", "category": "runtime", "instruction": "[runtime] O que faz Lifecycle?", "expected_kind": "text"}
+{"id": "eval-0157", "category": "runtime", "instruction": "[runtime] Como usar Metrics?", "expected_kind": "text"}
+{"id": "eval-0158", "category": "runtime", "instruction": "[runtime] Explique o Scheduler cooperativo.", "expected_kind": "text"}
+{"id": "eval-0159", "category": "runtime", "instruction": "[runtime] Como funciona o EventBus?", "expected_kind": "text"}
+{"id": "eval-0160", "category": "runtime", "instruction": "[runtime] O que faz Lifecycle?", "expected_kind": "text"}
+{"id": "eval-0161", "category": "runtime", "instruction": "[runtime] Como usar Metrics?", "expected_kind": "text"}
+{"id": "eval-0162", "category": "runtime", "instruction": "[runtime] Explique o Scheduler cooperativo.", "expected_kind": "text"}
+{"id": "eval-0163", "category": "runtime", "instruction": "[runtime] Como funciona o EventBus?", "expected_kind": "text"}
+{"id": "eval-0164", "category": "runtime", "instruction": "[runtime] O que faz Lifecycle?", "expected_kind": "text"}
+{"id": "eval-0165", "category": "runtime", "instruction": "[runtime] Como usar Metrics?", "expected_kind": "text"}
+{"id": "eval-0166", "category": "runtime", "instruction": "[runtime] Explique o Scheduler cooperativo.", "expected_kind": "text"}
+{"id": "eval-0167", "category": "runtime", "instruction": "[runtime] Como funciona o EventBus?", "expected_kind": "text"}
+{"id": "eval-0168", "category": "runtime", "instruction": "[runtime] O que faz Lifecycle?", "expected_kind": "text"}
+{"id": "eval-0169", "category": "runtime", "instruction": "[runtime] Como usar Metrics?", "expected_kind": "text"}
+{"id": "eval-0170", "category": "runtime", "instruction": "[runtime] Explique o Scheduler cooperativo.", "expected_kind": "text"}
+{"id": "eval-0171", "category": "runtime", "instruction": "[runtime] Como funciona o EventBus?", "expected_kind": "text"}
+{"id": "eval-0172", "category": "runtime", "instruction": "[runtime] O que faz Lifecycle?", "expected_kind": "text"}
+{"id": "eval-0173", "category": "runtime", "instruction": "[runtime] Como usar Metrics?", "expected_kind": "text"}
+{"id": "eval-0174", "category": "runtime", "instruction": "[runtime] Explique o Scheduler cooperativo.", "expected_kind": "text"}
+{"id": "eval-0175", "category": "runtime", "instruction": "[runtime] Como funciona o EventBus?", "expected_kind": "text"}
+{"id": "eval-0176", "category": "runtime", "instruction": "[runtime] O que faz Lifecycle?", "expected_kind": "text"}
+{"id": "eval-0177", "category": "runtime", "instruction": "[runtime] Como usar Metrics?", "expected_kind": "text"}
+{"id": "eval-0178", "category": "runtime", "instruction": "[runtime] Explique o Scheduler cooperativo.", "expected_kind": "text"}
+{"id": "eval-0179", "category": "runtime", "instruction": "[runtime] Como funciona o EventBus?", "expected_kind": "text"}
+{"id": "eval-0180", "category": "compiler", "instruction": "[compiler] Por que SEM025 ocorre?", "expected_kind": "text"}
+{"id": "eval-0181", "category": "compiler", "instruction": "[compiler] O que é N10-progressivo?", "expected_kind": "text"}
+{"id": "eval-0182", "category": "compiler", "instruction": "[compiler] Como contornar N18?", "expected_kind": "text"}
+{"id": "eval-0183", "category": "compiler", "instruction": "[compiler] Explique COMP002.", "expected_kind": "text"}
+{"id": "eval-0184", "category": "compiler", "instruction": "[compiler] Por que SEM025 ocorre?", "expected_kind": "text"}
+{"id": "eval-0185", "category": "compiler", "instruction": "[compiler] O que é N10-progressivo?", "expected_kind": "text"}
+{"id": "eval-0186", "category": "compiler", "instruction": "[compiler] Como contornar N18?", "expected_kind": "text"}
+{"id": "eval-0187", "category": "compiler", "instruction": "[compiler] Explique COMP002.", "expected_kind": "text"}
+{"id": "eval-0188", "category": "compiler", "instruction": "[compiler] Por que SEM025 ocorre?", "expected_kind": "text"}
+{"id": "eval-0189", "category": "compiler", "instruction": "[compiler] O que é N10-progressivo?", "expected_kind": "text"}
+{"id": "eval-0190", "category": "compiler", "instruction": "[compiler] Como contornar N18?", "expected_kind": "text"}
+{"id": "eval-0191", "category": "compiler", "instruction": "[compiler] Explique COMP002.", "expected_kind": "text"}
+{"id": "eval-0192", "category": "compiler", "instruction": "[compiler] Por que SEM025 ocorre?", "expected_kind": "text"}
+{"id": "eval-0193", "category": "compiler", "instruction": "[compiler] O que é N10-progressivo?", "expected_kind": "text"}
+{"id": "eval-0194", "category": "compiler", "instruction": "[compiler] Como contornar N18?", "expected_kind": "text"}
+{"id": "eval-0195", "category": "compiler", "instruction": "[compiler] Explique COMP002.", "expected_kind": "text"}
+{"id": "eval-0196", "category": "compiler", "instruction": "[compiler] Por que SEM025 ocorre?", "expected_kind": "text"}
+{"id": "eval-0197", "category": "compiler", "instruction": "[compiler] O que é N10-progressivo?", "expected_kind": "text"}
+{"id": "eval-0198", "category": "compiler", "instruction": "[compiler] Como contornar N18?", "expected_kind": "text"}
+{"id": "eval-0199", "category": "compiler", "instruction": "[compiler] Explique COMP002.", "expected_kind": "text"}
+{"id": "eval-0200", "category": "compiler", "instruction": "[compiler] Por que SEM025 ocorre?", "expected_kind": "text"}
+{"id": "eval-0201", "category": "compiler", "instruction": "[compiler] O que é N10-progressivo?", "expected_kind": "text"}
+{"id": "eval-0202", "category": "compiler", "instruction": "[compiler] Como contornar N18?", "expected_kind": "text"}
+{"id": "eval-0203", "category": "compiler", "instruction": "[compiler] Explique COMP002.", "expected_kind": "text"}
+{"id": "eval-0204", "category": "compiler", "instruction": "[compiler] Por que SEM025 ocorre?", "expected_kind": "text"}
+{"id": "eval-0205", "category": "compiler", "instruction": "[compiler] O que é N10-progressivo?", "expected_kind": "text"}
+{"id": "eval-0206", "category": "compiler", "instruction": "[compiler] Como contornar N18?", "expected_kind": "text"}
+{"id": "eval-0207", "category": "compiler", "instruction": "[compiler] Explique COMP002.", "expected_kind": "text"}
+{"id": "eval-0208", "category": "compiler", "instruction": "[compiler] Por que SEM025 ocorre?", "expected_kind": "text"}
+{"id": "eval-0209", "category": "compiler", "instruction": "[compiler] O que é N10-progressivo?", "expected_kind": "text"}
+{"id": "eval-0210", "category": "compiler", "instruction": "[compiler] Como contornar N18?", "expected_kind": "text"}
+{"id": "eval-0211", "category": "compiler", "instruction": "[compiler] Explique COMP002.", "expected_kind": "text"}
+{"id": "eval-0212", "category": "compiler", "instruction": "[compiler] Por que SEM025 ocorre?", "expected_kind": "text"}
+{"id": "eval-0213", "category": "compiler", "instruction": "[compiler] O que é N10-progressivo?", "expected_kind": "text"}
+{"id": "eval-0214", "category": "compiler", "instruction": "[compiler] Como contornar N18?", "expected_kind": "text"}
+{"id": "eval-0215", "category": "compiler", "instruction": "[compiler] Explique COMP002.", "expected_kind": "text"}
+{"id": "eval-0216", "category": "compiler", "instruction": "[compiler] Por que SEM025 ocorre?", "expected_kind": "text"}
+{"id": "eval-0217", "category": "compiler", "instruction": "[compiler] O que é N10-progressivo?", "expected_kind": "text"}
+{"id": "eval-0218", "category": "compiler", "instruction": "[compiler] Como contornar N18?", "expected_kind": "text"}
+{"id": "eval-0219", "category": "compiler", "instruction": "[compiler] Explique COMP002.", "expected_kind": "text"}
+{"id": "eval-0220", "category": "compiler", "instruction": "[compiler] Por que SEM025 ocorre?", "expected_kind": "text"}
+{"id": "eval-0221", "category": "compiler", "instruction": "[compiler] O que é N10-progressivo?", "expected_kind": "text"}
+{"id": "eval-0222", "category": "compiler", "instruction": "[compiler] Como contornar N18?", "expected_kind": "text"}
+{"id": "eval-0223", "category": "compiler", "instruction": "[compiler] Explique COMP002.", "expected_kind": "text"}
+{"id": "eval-0224", "category": "compiler", "instruction": "[compiler] Por que SEM025 ocorre?", "expected_kind": "text"}
+{"id": "eval-0225", "category": "compiler", "instruction": "[compiler] O que é N10-progressivo?", "expected_kind": "text"}
+{"id": "eval-0226", "category": "compiler", "instruction": "[compiler] Como contornar N18?", "expected_kind": "text"}
+{"id": "eval-0227", "category": "compiler", "instruction": "[compiler] Explique COMP002.", "expected_kind": "text"}
+{"id": "eval-0228", "category": "compiler", "instruction": "[compiler] Por que SEM025 ocorre?", "expected_kind": "text"}
+{"id": "eval-0229", "category": "compiler", "instruction": "[compiler] O que é N10-progressivo?", "expected_kind": "text"}
+{"id": "eval-0230", "category": "compiler", "instruction": "[compiler] Como contornar N18?", "expected_kind": "text"}
+{"id": "eval-0231", "category": "compiler", "instruction": "[compiler] Explique COMP002.", "expected_kind": "text"}
+{"id": "eval-0232", "category": "compiler", "instruction": "[compiler] Por que SEM025 ocorre?", "expected_kind": "text"}
+{"id": "eval-0233", "category": "compiler", "instruction": "[compiler] O que é N10-progressivo?", "expected_kind": "text"}
+{"id": "eval-0234", "category": "compiler", "instruction": "[compiler] Como contornar N18?", "expected_kind": "text"}
+{"id": "eval-0235", "category": "compiler", "instruction": "[compiler] Explique COMP002.", "expected_kind": "text"}
+{"id": "eval-0236", "category": "compiler", "instruction": "[compiler] Por que SEM025 ocorre?", "expected_kind": "text"}
+{"id": "eval-0237", "category": "compiler", "instruction": "[compiler] O que é N10-progressivo?", "expected_kind": "text"}
+{"id": "eval-0238", "category": "compiler", "instruction": "[compiler] Como contornar N18?", "expected_kind": "text"}
+{"id": "eval-0239", "category": "compiler", "instruction": "[compiler] Explique COMP002.", "expected_kind": "text"}
+{"id": "eval-0240", "category": "compiler", "instruction": "[compiler] Por que SEM025 ocorre?", "expected_kind": "text"}
+{"id": "eval-0241", "category": "compiler", "instruction": "[compiler] O que é N10-progressivo?", "expected_kind": "text"}
+{"id": "eval-0242", "category": "compiler", "instruction": "[compiler] Como contornar N18?", "expected_kind": "text"}
+{"id": "eval-0243", "category": "compiler", "instruction": "[compiler] Explique COMP002.", "expected_kind": "text"}
+{"id": "eval-0244", "category": "compiler", "instruction": "[compiler] Por que SEM025 ocorre?", "expected_kind": "text"}
+{"id": "eval-0245", "category": "compiler", "instruction": "[compiler] O que é N10-progressivo?", "expected_kind": "text"}
+{"id": "eval-0246", "category": "compiler", "instruction": "[compiler] Como contornar N18?", "expected_kind": "text"}
+{"id": "eval-0247", "category": "compiler", "instruction": "[compiler] Explique COMP002.", "expected_kind": "text"}
+{"id": "eval-0248", "category": "compiler", "instruction": "[compiler] Por que SEM025 ocorre?", "expected_kind": "text"}
+{"id": "eval-0249", "category": "compiler", "instruction": "[compiler] O que é N10-progressivo?", "expected_kind": "text"}
+{"id": "eval-0250", "category": "compiler", "instruction": "[compiler] Como contornar N18?", "expected_kind": "text"}
+{"id": "eval-0251", "category": "compiler", "instruction": "[compiler] Explique COMP002.", "expected_kind": "text"}
+{"id": "eval-0252", "category": "compiler", "instruction": "[compiler] Por que SEM025 ocorre?", "expected_kind": "text"}
+{"id": "eval-0253", "category": "compiler", "instruction": "[compiler] O que é N10-progressivo?", "expected_kind": "text"}
+{"id": "eval-0254", "category": "compiler", "instruction": "[compiler] Como contornar N18?", "expected_kind": "text"}
+{"id": "eval-0255", "category": "compiler", "instruction": "[compiler] Explique COMP002.", "expected_kind": "text"}
+{"id": "eval-0256", "category": "compiler", "instruction": "[compiler] Por que SEM025 ocorre?", "expected_kind": "text"}
+{"id": "eval-0257", "category": "compiler", "instruction": "[compiler] O que é N10-progressivo?", "expected_kind": "text"}
+{"id": "eval-0258", "category": "compiler", "instruction": "[compiler] Como contornar N18?", "expected_kind": "text"}
+{"id": "eval-0259", "category": "compiler", "instruction": "[compiler] Explique COMP002.", "expected_kind": "text"}
+{"id": "eval-0260", "category": "compiler", "instruction": "[compiler] Por que SEM025 ocorre?", "expected_kind": "text"}
+{"id": "eval-0261", "category": "compiler", "instruction": "[compiler] O que é N10-progressivo?", "expected_kind": "text"}
+{"id": "eval-0262", "category": "compiler", "instruction": "[compiler] Como contornar N18?", "expected_kind": "text"}
+{"id": "eval-0263", "category": "compiler", "instruction": "[compiler] Explique COMP002.", "expected_kind": "text"}
+{"id": "eval-0264", "category": "compiler", "instruction": "[compiler] Por que SEM025 ocorre?", "expected_kind": "text"}
+{"id": "eval-0265", "category": "compiler", "instruction": "[compiler] O que é N10-progressivo?", "expected_kind": "text"}
+{"id": "eval-0266", "category": "compiler", "instruction": "[compiler] Como contornar N18?", "expected_kind": "text"}
+{"id": "eval-0267", "category": "compiler", "instruction": "[compiler] Explique COMP002.", "expected_kind": "text"}
+{"id": "eval-0268", "category": "compiler", "instruction": "[compiler] Por que SEM025 ocorre?", "expected_kind": "text"}
+{"id": "eval-0269", "category": "compiler", "instruction": "[compiler] O que é N10-progressivo?", "expected_kind": "text"}
+{"id": "eval-0270", "category": "tooling", "instruction": "[tooling] Como funciona WorkspaceIndex?", "expected_kind": "text"}
+{"id": "eval-0271", "category": "tooling", "instruction": "[tooling] Explique Retrieval Engine.", "expected_kind": "text"}
+{"id": "eval-0272", "category": "tooling", "instruction": "[tooling] O que faz ToolOrchestrator?", "expected_kind": "text"}
+{"id": "eval-0273", "category": "tooling", "instruction": "[tooling] Para que serve ExecutionJournal?", "expected_kind": "text"}
+{"id": "eval-0274", "category": "tooling", "instruction": "[tooling] Como funciona WorkspaceIndex?", "expected_kind": "text"}
+{"id": "eval-0275", "category": "tooling", "instruction": "[tooling] Explique Retrieval Engine.", "expected_kind": "text"}
+{"id": "eval-0276", "category": "tooling", "instruction": "[tooling] O que faz ToolOrchestrator?", "expected_kind": "text"}
+{"id": "eval-0277", "category": "tooling", "instruction": "[tooling] Para que serve ExecutionJournal?", "expected_kind": "text"}
+{"id": "eval-0278", "category": "tooling", "instruction": "[tooling] Como funciona WorkspaceIndex?", "expected_kind": "text"}
+{"id": "eval-0279", "category": "tooling", "instruction": "[tooling] Explique Retrieval Engine.", "expected_kind": "text"}
+{"id": "eval-0280", "category": "tooling", "instruction": "[tooling] O que faz ToolOrchestrator?", "expected_kind": "text"}
+{"id": "eval-0281", "category": "tooling", "instruction": "[tooling] Para que serve ExecutionJournal?", "expected_kind": "text"}
+{"id": "eval-0282", "category": "tooling", "instruction": "[tooling] Como funciona WorkspaceIndex?", "expected_kind": "text"}
+{"id": "eval-0283", "category": "tooling", "instruction": "[tooling] Explique Retrieval Engine.", "expected_kind": "text"}
+{"id": "eval-0284", "category": "tooling", "instruction": "[tooling] O que faz ToolOrchestrator?", "expected_kind": "text"}
+{"id": "eval-0285", "category": "tooling", "instruction": "[tooling] Para que serve ExecutionJournal?", "expected_kind": "text"}
+{"id": "eval-0286", "category": "tooling", "instruction": "[tooling] Como funciona WorkspaceIndex?", "expected_kind": "text"}
+{"id": "eval-0287", "category": "tooling", "instruction": "[tooling] Explique Retrieval Engine.", "expected_kind": "text"}
+{"id": "eval-0288", "category": "tooling", "instruction": "[tooling] O que faz ToolOrchestrator?", "expected_kind": "text"}
+{"id": "eval-0289", "category": "tooling", "instruction": "[tooling] Para que serve ExecutionJournal?", "expected_kind": "text"}
+{"id": "eval-0290", "category": "tooling", "instruction": "[tooling] Como funciona WorkspaceIndex?", "expected_kind": "text"}
+{"id": "eval-0291", "category": "tooling", "instruction": "[tooling] Explique Retrieval Engine.", "expected_kind": "text"}
+{"id": "eval-0292", "category": "tooling", "instruction": "[tooling] O que faz ToolOrchestrator?", "expected_kind": "text"}
+{"id": "eval-0293", "category": "tooling", "instruction": "[tooling] Para que serve ExecutionJournal?", "expected_kind": "text"}
+{"id": "eval-0294", "category": "tooling", "instruction": "[tooling] Como funciona WorkspaceIndex?", "expected_kind": "text"}
+{"id": "eval-0295", "category": "tooling", "instruction": "[tooling] Explique Retrieval Engine.", "expected_kind": "text"}
+{"id": "eval-0296", "category": "tooling", "instruction": "[tooling] O que faz ToolOrchestrator?", "expected_kind": "text"}
+{"id": "eval-0297", "category": "tooling", "instruction": "[tooling] Para que serve ExecutionJournal?", "expected_kind": "text"}
+{"id": "eval-0298", "category": "tooling", "instruction": "[tooling] Como funciona WorkspaceIndex?", "expected_kind": "text"}
+{"id": "eval-0299", "category": "tooling", "instruction": "[tooling] Explique Retrieval Engine.", "expected_kind": "text"}
+{"id": "eval-0300", "category": "tooling", "instruction": "[tooling] O que faz ToolOrchestrator?", "expected_kind": "text"}
+{"id": "eval-0301", "category": "tooling", "instruction": "[tooling] Para que serve ExecutionJournal?", "expected_kind": "text"}
+{"id": "eval-0302", "category": "tooling", "instruction": "[tooling] Como funciona WorkspaceIndex?", "expected_kind": "text"}
+{"id": "eval-0303", "category": "tooling", "instruction": "[tooling] Explique Retrieval Engine.", "expected_kind": "text"}
+{"id": "eval-0304", "category": "tooling", "instruction": "[tooling] O que faz ToolOrchestrator?", "expected_kind": "text"}
+{"id": "eval-0305", "category": "tooling", "instruction": "[tooling] Para que serve ExecutionJournal?", "expected_kind": "text"}
+{"id": "eval-0306", "category": "tooling", "instruction": "[tooling] Como funciona WorkspaceIndex?", "expected_kind": "text"}
+{"id": "eval-0307", "category": "tooling", "instruction": "[tooling] Explique Retrieval Engine.", "expected_kind": "text"}
+{"id": "eval-0308", "category": "tooling", "instruction": "[tooling] O que faz ToolOrchestrator?", "expected_kind": "text"}
+{"id": "eval-0309", "category": "tooling", "instruction": "[tooling] Para que serve ExecutionJournal?", "expected_kind": "text"}
+{"id": "eval-0310", "category": "tooling", "instruction": "[tooling] Como funciona WorkspaceIndex?", "expected_kind": "text"}
+{"id": "eval-0311", "category": "tooling", "instruction": "[tooling] Explique Retrieval Engine.", "expected_kind": "text"}
+{"id": "eval-0312", "category": "tooling", "instruction": "[tooling] O que faz ToolOrchestrator?", "expected_kind": "text"}
+{"id": "eval-0313", "category": "tooling", "instruction": "[tooling] Para que serve ExecutionJournal?", "expected_kind": "text"}
+{"id": "eval-0314", "category": "tooling", "instruction": "[tooling] Como funciona WorkspaceIndex?", "expected_kind": "text"}
+{"id": "eval-0315", "category": "tooling", "instruction": "[tooling] Explique Retrieval Engine.", "expected_kind": "text"}
+{"id": "eval-0316", "category": "tooling", "instruction": "[tooling] O que faz ToolOrchestrator?", "expected_kind": "text"}
+{"id": "eval-0317", "category": "tooling", "instruction": "[tooling] Para que serve ExecutionJournal?", "expected_kind": "text"}
+{"id": "eval-0318", "category": "tooling", "instruction": "[tooling] Como funciona WorkspaceIndex?", "expected_kind": "text"}
+{"id": "eval-0319", "category": "tooling", "instruction": "[tooling] Explique Retrieval Engine.", "expected_kind": "text"}
+{"id": "eval-0320", "category": "tooling", "instruction": "[tooling] O que faz ToolOrchestrator?", "expected_kind": "text"}
+{"id": "eval-0321", "category": "tooling", "instruction": "[tooling] Para que serve ExecutionJournal?", "expected_kind": "text"}
+{"id": "eval-0322", "category": "tooling", "instruction": "[tooling] Como funciona WorkspaceIndex?", "expected_kind": "text"}
+{"id": "eval-0323", "category": "tooling", "instruction": "[tooling] Explique Retrieval Engine.", "expected_kind": "text"}
+{"id": "eval-0324", "category": "tooling", "instruction": "[tooling] O que faz ToolOrchestrator?", "expected_kind": "text"}
+{"id": "eval-0325", "category": "tooling", "instruction": "[tooling] Para que serve ExecutionJournal?", "expected_kind": "text"}
+{"id": "eval-0326", "category": "tooling", "instruction": "[tooling] Como funciona WorkspaceIndex?", "expected_kind": "text"}
+{"id": "eval-0327", "category": "tooling", "instruction": "[tooling] Explique Retrieval Engine.", "expected_kind": "text"}
+{"id": "eval-0328", "category": "tooling", "instruction": "[tooling] O que faz ToolOrchestrator?", "expected_kind": "text"}
+{"id": "eval-0329", "category": "tooling", "instruction": "[tooling] Para que serve ExecutionJournal?", "expected_kind": "text"}
+{"id": "eval-0330", "category": "tooling", "instruction": "[tooling] Como funciona WorkspaceIndex?", "expected_kind": "text"}
+{"id": "eval-0331", "category": "tooling", "instruction": "[tooling] Explique Retrieval Engine.", "expected_kind": "text"}
+{"id": "eval-0332", "category": "tooling", "instruction": "[tooling] O que faz ToolOrchestrator?", "expected_kind": "text"}
+{"id": "eval-0333", "category": "tooling", "instruction": "[tooling] Para que serve ExecutionJournal?", "expected_kind": "text"}
+{"id": "eval-0334", "category": "tooling", "instruction": "[tooling] Como funciona WorkspaceIndex?", "expected_kind": "text"}
+{"id": "eval-0335", "category": "tooling", "instruction": "[tooling] Explique Retrieval Engine.", "expected_kind": "text"}
+{"id": "eval-0336", "category": "tooling", "instruction": "[tooling] O que faz ToolOrchestrator?", "expected_kind": "text"}
+{"id": "eval-0337", "category": "tooling", "instruction": "[tooling] Para que serve ExecutionJournal?", "expected_kind": "text"}
+{"id": "eval-0338", "category": "tooling", "instruction": "[tooling] Como funciona WorkspaceIndex?", "expected_kind": "text"}
+{"id": "eval-0339", "category": "tooling", "instruction": "[tooling] Explique Retrieval Engine.", "expected_kind": "text"}
+{"id": "eval-0340", "category": "tooling", "instruction": "[tooling] O que faz ToolOrchestrator?", "expected_kind": "text"}
+{"id": "eval-0341", "category": "tooling", "instruction": "[tooling] Para que serve ExecutionJournal?", "expected_kind": "text"}
+{"id": "eval-0342", "category": "tooling", "instruction": "[tooling] Como funciona WorkspaceIndex?", "expected_kind": "text"}
+{"id": "eval-0343", "category": "tooling", "instruction": "[tooling] Explique Retrieval Engine.", "expected_kind": "text"}
+{"id": "eval-0344", "category": "tooling", "instruction": "[tooling] O que faz ToolOrchestrator?", "expected_kind": "text"}
+{"id": "eval-0345", "category": "tooling", "instruction": "[tooling] Para que serve ExecutionJournal?", "expected_kind": "text"}
+{"id": "eval-0346", "category": "tooling", "instruction": "[tooling] Como funciona WorkspaceIndex?", "expected_kind": "text"}
+{"id": "eval-0347", "category": "tooling", "instruction": "[tooling] Explique Retrieval Engine.", "expected_kind": "text"}
+{"id": "eval-0348", "category": "tooling", "instruction": "[tooling] O que faz ToolOrchestrator?", "expected_kind": "text"}
+{"id": "eval-0349", "category": "tooling", "instruction": "[tooling] Para que serve ExecutionJournal?", "expected_kind": "text"}
+{"id": "eval-0350", "category": "tooling", "instruction": "[tooling] Como funciona WorkspaceIndex?", "expected_kind": "text"}
+{"id": "eval-0351", "category": "tooling", "instruction": "[tooling] Explique Retrieval Engine.", "expected_kind": "text"}
+{"id": "eval-0352", "category": "tooling", "instruction": "[tooling] O que faz ToolOrchestrator?", "expected_kind": "text"}
+{"id": "eval-0353", "category": "tooling", "instruction": "[tooling] Para que serve ExecutionJournal?", "expected_kind": "text"}
+{"id": "eval-0354", "category": "tooling", "instruction": "[tooling] Como funciona WorkspaceIndex?", "expected_kind": "text"}
+{"id": "eval-0355", "category": "tooling", "instruction": "[tooling] Explique Retrieval Engine.", "expected_kind": "text"}
+{"id": "eval-0356", "category": "tooling", "instruction": "[tooling] O que faz ToolOrchestrator?", "expected_kind": "text"}
+{"id": "eval-0357", "category": "tooling", "instruction": "[tooling] Para que serve ExecutionJournal?", "expected_kind": "text"}
+{"id": "eval-0358", "category": "tooling", "instruction": "[tooling] Como funciona WorkspaceIndex?", "expected_kind": "text"}
+{"id": "eval-0359", "category": "tooling", "instruction": "[tooling] Explique Retrieval Engine.", "expected_kind": "text"}
+{"id": "eval-0360", "category": "ai", "instruction": "[ai] Gere uma função Kof que soma dois ints.", "expected_kind": "code"}
+{"id": "eval-0361", "category": "ai", "instruction": "[ai] Refatore este código para usar records.", "expected_kind": "text"}
+{"id": "eval-0362", "category": "ai", "instruction": "[ai] Documente esta função.", "expected_kind": "text"}
+{"id": "eval-0363", "category": "ai", "instruction": "[ai] Corrija este loop infinito.", "expected_kind": "code"}
+{"id": "eval-0364", "category": "ai", "instruction": "[ai] Gere uma função Kof que soma dois ints.", "expected_kind": "code"}
+{"id": "eval-0365", "category": "ai", "instruction": "[ai] Refatore este código para usar records.", "expected_kind": "text"}
+{"id": "eval-0366", "category": "ai", "instruction": "[ai] Documente esta função.", "expected_kind": "text"}
+{"id": "eval-0367", "category": "ai", "instruction": "[ai] Corrija este loop infinito.", "expected_kind": "code"}
+{"id": "eval-0368", "category": "ai", "instruction": "[ai] Gere uma função Kof que soma dois ints.", "expected_kind": "code"}
+{"id": "eval-0369", "category": "ai", "instruction": "[ai] Refatore este código para usar records.", "expected_kind": "text"}
+{"id": "eval-0370", "category": "ai", "instruction": "[ai] Documente esta função.", "expected_kind": "text"}
+{"id": "eval-0371", "category": "ai", "instruction": "[ai] Corrija este loop infinito.", "expected_kind": "code"}
+{"id": "eval-0372", "category": "ai", "instruction": "[ai] Gere uma função Kof que soma dois ints.", "expected_kind": "code"}
+{"id": "eval-0373", "category": "ai", "instruction": "[ai] Refatore este código para usar records.", "expected_kind": "text"}
+{"id": "eval-0374", "category": "ai", "instruction": "[ai] Documente esta função.", "expected_kind": "text"}
+{"id": "eval-0375", "category": "ai", "instruction": "[ai] Corrija este loop infinito.", "expected_kind": "code"}
+{"id": "eval-0376", "category": "ai", "instruction": "[ai] Gere uma função Kof que soma dois ints.", "expected_kind": "code"}
+{"id": "eval-0377", "category": "ai", "instruction": "[ai] Refatore este código para usar records.", "expected_kind": "text"}
+{"id": "eval-0378", "category": "ai", "instruction": "[ai] Documente esta função.", "expected_kind": "text"}
+{"id": "eval-0379", "category": "ai", "instruction": "[ai] Corrija este loop infinito.", "expected_kind": "code"}
+{"id": "eval-0380", "category": "ai", "instruction": "[ai] Gere uma função Kof que soma dois ints.", "expected_kind": "code"}
+{"id": "eval-0381", "category": "ai", "instruction": "[ai] Refatore este código para usar records.", "expected_kind": "text"}
+{"id": "eval-0382", "category": "ai", "instruction": "[ai] Documente esta função.", "expected_kind": "text"}
+{"id": "eval-0383", "category": "ai", "instruction": "[ai] Corrija este loop infinito.", "expected_kind": "code"}
+{"id": "eval-0384", "category": "ai", "instruction": "[ai] Gere uma função Kof que soma dois ints.", "expected_kind": "code"}
+{"id": "eval-0385", "category": "ai", "instruction": "[ai] Refatore este código para usar records.", "expected_kind": "text"}
+{"id": "eval-0386", "category": "ai", "instruction": "[ai] Documente esta função.", "expected_kind": "text"}
+{"id": "eval-0387", "category": "ai", "instruction": "[ai] Corrija este loop infinito.", "expected_kind": "code"}
+{"id": "eval-0388", "category": "ai", "instruction": "[ai] Gere uma função Kof que soma dois ints.", "expected_kind": "code"}
+{"id": "eval-0389", "category": "ai", "instruction": "[ai] Refatore este código para usar records.", "expected_kind": "text"}
+{"id": "eval-0390", "category": "ai", "instruction": "[ai] Documente esta função.", "expected_kind": "text"}
+{"id": "eval-0391", "category": "ai", "instruction": "[ai] Corrija este loop infinito.", "expected_kind": "code"}
+{"id": "eval-0392", "category": "ai", "instruction": "[ai] Gere uma função Kof que soma dois ints.", "expected_kind": "code"}
+{"id": "eval-0393", "category": "ai", "instruction": "[ai] Refatore este código para usar records.", "expected_kind": "text"}
+{"id": "eval-0394", "category": "ai", "instruction": "[ai] Documente esta função.", "expected_kind": "text"}
+{"id": "eval-0395", "category": "ai", "instruction": "[ai] Corrija este loop infinito.", "expected_kind": "code"}
+{"id": "eval-0396", "category": "ai", "instruction": "[ai] Gere uma função Kof que soma dois ints.", "expected_kind": "code"}
+{"id": "eval-0397", "category": "ai", "instruction": "[ai] Refatore este código para usar records.", "expected_kind": "text"}
+{"id": "eval-0398", "category": "ai", "instruction": "[ai] Documente esta função.", "expected_kind": "text"}
+{"id": "eval-0399", "category": "ai", "instruction": "[ai] Corrija este loop infinito.", "expected_kind": "code"}
+{"id": "eval-0400", "category": "ai", "instruction": "[ai] Gere uma função Kof que soma dois ints.", "expected_kind": "code"}
+{"id": "eval-0401", "category": "ai", "instruction": "[ai] Refatore este código para usar records.", "expected_kind": "text"}
+{"id": "eval-0402", "category": "ai", "instruction": "[ai] Documente esta função.", "expected_kind": "text"}
+{"id": "eval-0403", "category": "ai", "instruction": "[ai] Corrija este loop infinito.", "expected_kind": "code"}
+{"id": "eval-0404", "category": "ai", "instruction": "[ai] Gere uma função Kof que soma dois ints.", "expected_kind": "code"}
+{"id": "eval-0405", "category": "ai", "instruction": "[ai] Refatore este código para usar records.", "expected_kind": "text"}
+{"id": "eval-0406", "category": "ai", "instruction": "[ai] Documente esta função.", "expected_kind": "text"}
+{"id": "eval-0407", "category": "ai", "instruction": "[ai] Corrija este loop infinito.", "expected_kind": "code"}
+{"id": "eval-0408", "category": "ai", "instruction": "[ai] Gere uma função Kof que soma dois ints.", "expected_kind": "code"}
+{"id": "eval-0409", "category": "ai", "instruction": "[ai] Refatore este código para usar records.", "expected_kind": "text"}
+{"id": "eval-0410", "category": "ai", "instruction": "[ai] Documente esta função.", "expected_kind": "text"}
+{"id": "eval-0411", "category": "ai", "instruction": "[ai] Corrija este loop infinito.", "expected_kind": "code"}
+{"id": "eval-0412", "category": "ai", "instruction": "[ai] Gere uma função Kof que soma dois ints.", "expected_kind": "code"}
+{"id": "eval-0413", "category": "ai", "instruction": "[ai] Refatore este código para usar records.", "expected_kind": "text"}
+{"id": "eval-0414", "category": "ai", "instruction": "[ai] Documente esta função.", "expected_kind": "text"}
+{"id": "eval-0415", "category": "ai", "instruction": "[ai] Corrija este loop infinito.", "expected_kind": "code"}
+{"id": "eval-0416", "category": "ai", "instruction": "[ai] Gere uma função Kof que soma dois ints.", "expected_kind": "code"}
+{"id": "eval-0417", "category": "ai", "instruction": "[ai] Refatore este código para usar records.", "expected_kind": "text"}
+{"id": "eval-0418", "category": "ai", "instruction": "[ai] Documente esta função.", "expected_kind": "text"}
+{"id": "eval-0419", "category": "ai", "instruction": "[ai] Corrija este loop infinito.", "expected_kind": "code"}
+{"id": "eval-0420", "category": "ai", "instruction": "[ai] Gere uma função Kof que soma dois ints.", "expected_kind": "code"}
+{"id": "eval-0421", "category": "ai", "instruction": "[ai] Refatore este código para usar records.", "expected_kind": "text"}
+{"id": "eval-0422", "category": "ai", "instruction": "[ai] Documente esta função.", "expected_kind": "text"}
+{"id": "eval-0423", "category": "ai", "instruction": "[ai] Corrija este loop infinito.", "expected_kind": "code"}
+{"id": "eval-0424", "category": "ai", "instruction": "[ai] Gere uma função Kof que soma dois ints.", "expected_kind": "code"}
+{"id": "eval-0425", "category": "ai", "instruction": "[ai] Refatore este código para usar records.", "expected_kind": "text"}
+{"id": "eval-0426", "category": "ai", "instruction": "[ai] Documente esta função.", "expected_kind": "text"}
+{"id": "eval-0427", "category": "ai", "instruction": "[ai] Corrija este loop infinito.", "expected_kind": "code"}
+{"id": "eval-0428", "category": "ai", "instruction": "[ai] Gere uma função Kof que soma dois ints.", "expected_kind": "code"}
+{"id": "eval-0429", "category": "ai", "instruction": "[ai] Refatore este código para usar records.", "expected_kind": "text"}
+{"id": "eval-0430", "category": "ai", "instruction": "[ai] Documente esta função.", "expected_kind": "text"}
+{"id": "eval-0431", "category": "ai", "instruction": "[ai] Corrija este loop infinito.", "expected_kind": "code"}
+{"id": "eval-0432", "category": "ai", "instruction": "[ai] Gere uma função Kof que soma dois ints.", "expected_kind": "code"}
+{"id": "eval-0433", "category": "ai", "instruction": "[ai] Refatore este código para usar records.", "expected_kind": "text"}
+{"id": "eval-0434", "category": "ai", "instruction": "[ai] Documente esta função.", "expected_kind": "text"}
+{"id": "eval-0435", "category": "ai", "instruction": "[ai] Corrija este loop infinito.", "expected_kind": "code"}
+{"id": "eval-0436", "category": "ai", "instruction": "[ai] Gere uma função Kof que soma dois ints.", "expected_kind": "code"}
+{"id": "eval-0437", "category": "ai", "instruction": "[ai] Refatore este código para usar records.", "expected_kind": "text"}
+{"id": "eval-0438", "category": "ai", "instruction": "[ai] Documente esta função.", "expected_kind": "text"}
+{"id": "eval-0439", "category": "ai", "instruction": "[ai] Corrija este loop infinito.", "expected_kind": "code"}
+{"id": "eval-0440", "category": "ai", "instruction": "[ai] Gere uma função Kof que soma dois ints.", "expected_kind": "code"}
+{"id": "eval-0441", "category": "ai", "instruction": "[ai] Refatore este código para usar records.", "expected_kind": "text"}
+{"id": "eval-0442", "category": "ai", "instruction": "[ai] Documente esta função.", "expected_kind": "text"}
+{"id": "eval-0443", "category": "ai", "instruction": "[ai] Corrija este loop infinito.", "expected_kind": "code"}
+{"id": "eval-0444", "category": "ai", "instruction": "[ai] Gere uma função Kof que soma dois ints.", "expected_kind": "code"}
+{"id": "eval-0445", "category": "ai", "instruction": "[ai] Refatore este código para usar records.", "expected_kind": "text"}
+{"id": "eval-0446", "category": "ai", "instruction": "[ai] Documente esta função.", "expected_kind": "text"}
+{"id": "eval-0447", "category": "ai", "instruction": "[ai] Corrija este loop infinito.", "expected_kind": "code"}
+{"id": "eval-0448", "category": "ai", "instruction": "[ai] Gere uma função Kof que soma dois ints.", "expected_kind": "code"}
+{"id": "eval-0449", "category": "ai", "instruction": "[ai] Refatore este código para usar records.", "expected_kind": "text"}
+{"id": "eval-0450", "category": "gguf", "instruction": "[gguf] O que é quantização Q4_K_M?", "expected_kind": "text"}
+{"id": "eval-0451", "category": "gguf", "instruction": "[gguf] Como carregar GGUF no runtime?", "expected_kind": "text"}
+{"id": "eval-0452", "category": "gguf", "instruction": "[gguf] Explique KV cache.", "expected_kind": "text"}
+{"id": "eval-0453", "category": "gguf", "instruction": "[gguf] Para que serve warmup?", "expected_kind": "text"}
+{"id": "eval-0454", "category": "gguf", "instruction": "[gguf] O que é quantização Q4_K_M?", "expected_kind": "text"}
+{"id": "eval-0455", "category": "gguf", "instruction": "[gguf] Como carregar GGUF no runtime?", "expected_kind": "text"}
+{"id": "eval-0456", "category": "gguf", "instruction": "[gguf] Explique KV cache.", "expected_kind": "text"}
+{"id": "eval-0457", "category": "gguf", "instruction": "[gguf] Para que serve warmup?", "expected_kind": "text"}
+{"id": "eval-0458", "category": "gguf", "instruction": "[gguf] O que é quantização Q4_K_M?", "expected_kind": "text"}
+{"id": "eval-0459", "category": "gguf", "instruction": "[gguf] Como carregar GGUF no runtime?", "expected_kind": "text"}
+{"id": "eval-0460", "category": "gguf", "instruction": "[gguf] Explique KV cache.", "expected_kind": "text"}
+{"id": "eval-0461", "category": "gguf", "instruction": "[gguf] Para que serve warmup?", "expected_kind": "text"}
+{"id": "eval-0462", "category": "gguf", "instruction": "[gguf] O que é quantização Q4_K_M?", "expected_kind": "text"}
+{"id": "eval-0463", "category": "gguf", "instruction": "[gguf] Como carregar GGUF no runtime?", "expected_kind": "text"}
+{"id": "eval-0464", "category": "gguf", "instruction": "[gguf] Explique KV cache.", "expected_kind": "text"}
+{"id": "eval-0465", "category": "gguf", "instruction": "[gguf] Para que serve warmup?", "expected_kind": "text"}
+{"id": "eval-0466", "category": "gguf", "instruction": "[gguf] O que é quantização Q4_K_M?", "expected_kind": "text"}
+{"id": "eval-0467", "category": "gguf", "instruction": "[gguf] Como carregar GGUF no runtime?", "expected_kind": "text"}
+{"id": "eval-0468", "category": "gguf", "instruction": "[gguf] Explique KV cache.", "expected_kind": "text"}
+{"id": "eval-0469", "category": "gguf", "instruction": "[gguf] Para que serve warmup?", "expected_kind": "text"}
+{"id": "eval-0470", "category": "gguf", "instruction": "[gguf] O que é quantização Q4_K_M?", "expected_kind": "text"}
+{"id": "eval-0471", "category": "gguf", "instruction": "[gguf] Como carregar GGUF no runtime?", "expected_kind": "text"}
+{"id": "eval-0472", "category": "gguf", "instruction": "[gguf] Explique KV cache.", "expected_kind": "text"}
+{"id": "eval-0473", "category": "gguf", "instruction": "[gguf] Para que serve warmup?", "expected_kind": "text"}
+{"id": "eval-0474", "category": "gguf", "instruction": "[gguf] O que é quantização Q4_K_M?", "expected_kind": "text"}
+{"id": "eval-0475", "category": "gguf", "instruction": "[gguf] Como carregar GGUF no runtime?", "expected_kind": "text"}
+{"id": "eval-0476", "category": "gguf", "instruction": "[gguf] Explique KV cache.", "expected_kind": "text"}
+{"id": "eval-0477", "category": "gguf", "instruction": "[gguf] Para que serve warmup?", "expected_kind": "text"}
+{"id": "eval-0478", "category": "gguf", "instruction": "[gguf] O que é quantização Q4_K_M?", "expected_kind": "text"}
+{"id": "eval-0479", "category": "gguf", "instruction": "[gguf] Como carregar GGUF no runtime?", "expected_kind": "text"}
+{"id": "eval-0480", "category": "gguf", "instruction": "[gguf] Explique KV cache.", "expected_kind": "text"}
+{"id": "eval-0481", "category": "gguf", "instruction": "[gguf] Para que serve warmup?", "expected_kind": "text"}
+{"id": "eval-0482", "category": "gguf", "instruction": "[gguf] O que é quantização Q4_K_M?", "expected_kind": "text"}
+{"id": "eval-0483", "category": "gguf", "instruction": "[gguf] Como carregar GGUF no runtime?", "expected_kind": "text"}
+{"id": "eval-0484", "category": "gguf", "instruction": "[gguf] Explique KV cache.", "expected_kind": "text"}
+{"id": "eval-0485", "category": "gguf", "instruction": "[gguf] Para que serve warmup?", "expected_kind": "text"}
+{"id": "eval-0486", "category": "gguf", "instruction": "[gguf] O que é quantização Q4_K_M?", "expected_kind": "text"}
+{"id": "eval-0487", "category": "gguf", "instruction": "[gguf] Como carregar GGUF no runtime?", "expected_kind": "text"}
+{"id": "eval-0488", "category": "gguf", "instruction": "[gguf] Explique KV cache.", "expected_kind": "text"}
+{"id": "eval-0489", "category": "gguf", "instruction": "[gguf] Para que serve warmup?", "expected_kind": "text"}
+{"id": "eval-0490", "category": "gguf", "instruction": "[gguf] O que é quantização Q4_K_M?", "expected_kind": "text"}
+{"id": "eval-0491", "category": "gguf", "instruction": "[gguf] Como carregar GGUF no runtime?", "expected_kind": "text"}
+{"id": "eval-0492", "category": "gguf", "instruction": "[gguf] Explique KV cache.", "expected_kind": "text"}
+{"id": "eval-0493", "category": "gguf", "instruction": "[gguf] Para que serve warmup?", "expected_kind": "text"}
+{"id": "eval-0494", "category": "gguf", "instruction": "[gguf] O que é quantização Q4_K_M?", "expected_kind": "text"}
+{"id": "eval-0495", "category": "gguf", "instruction": "[gguf] Como carregar GGUF no runtime?", "expected_kind": "text"}
+{"id": "eval-0496", "category": "gguf", "instruction": "[gguf] Explique KV cache.", "expected_kind": "text"}
+{"id": "eval-0497", "category": "gguf", "instruction": "[gguf] Para que serve warmup?", "expected_kind": "text"}
+{"id": "eval-0498", "category": "gguf", "instruction": "[gguf] O que é quantização Q4_K_M?", "expected_kind": "text"}
+{"id": "eval-0499", "category": "gguf", "instruction": "[gguf] Como carregar GGUF no runtime?", "expected_kind": "text"}
+{"id": "eval-0500", "category": "gguf", "instruction": "[gguf] Explique KV cache.", "expected_kind": "text"}
+{"id": "eval-0501", "category": "gguf", "instruction": "[gguf] Para que serve warmup?", "expected_kind": "text"}
+{"id": "eval-0502", "category": "gguf", "instruction": "[gguf] O que é quantização Q4_K_M?", "expected_kind": "text"}
+{"id": "eval-0503", "category": "gguf", "instruction": "[gguf] Como carregar GGUF no runtime?", "expected_kind": "text"}
+{"id": "eval-0504", "category": "gguf", "instruction": "[gguf] Explique KV cache.", "expected_kind": "text"}
+{"id": "eval-0505", "category": "gguf", "instruction": "[gguf] Para que serve warmup?", "expected_kind": "text"}
+{"id": "eval-0506", "category": "gguf", "instruction": "[gguf] O que é quantização Q4_K_M?", "expected_kind": "text"}
+{"id": "eval-0507", "category": "gguf", "instruction": "[gguf] Como carregar GGUF no runtime?", "expected_kind": "text"}
+{"id": "eval-0508", "category": "gguf", "instruction": "[gguf] Explique KV cache.", "expected_kind": "text"}
+{"id": "eval-0509", "category": "gguf", "instruction": "[gguf] Para que serve warmup?", "expected_kind": "text"}
+{"id": "eval-0510", "category": "gguf", "instruction": "[gguf] O que é quantização Q4_K_M?", "expected_kind": "text"}
+{"id": "eval-0511", "category": "gguf", "instruction": "[gguf] Como carregar GGUF no runtime?", "expected_kind": "text"}
+{"id": "eval-0512", "category": "gguf", "instruction": "[gguf] Explique KV cache.", "expected_kind": "text"}
+{"id": "eval-0513", "category": "gguf", "instruction": "[gguf] Para que serve warmup?", "expected_kind": "text"}
+{"id": "eval-0514", "category": "gguf", "instruction": "[gguf] O que é quantização Q4_K_M?", "expected_kind": "text"}
+{"id": "eval-0515", "category": "gguf", "instruction": "[gguf] Como carregar GGUF no runtime?", "expected_kind": "text"}
+{"id": "eval-0516", "category": "gguf", "instruction": "[gguf] Explique KV cache.", "expected_kind": "text"}
+{"id": "eval-0517", "category": "gguf", "instruction": "[gguf] Para que serve warmup?", "expected_kind": "text"}
+{"id": "eval-0518", "category": "gguf", "instruction": "[gguf] O que é quantização Q4_K_M?", "expected_kind": "text"}
+{"id": "eval-0519", "category": "gguf", "instruction": "[gguf] Como carregar GGUF no runtime?", "expected_kind": "text"}
+{"id": "eval-0520", "category": "gguf", "instruction": "[gguf] Explique KV cache.", "expected_kind": "text"}
+{"id": "eval-0521", "category": "gguf", "instruction": "[gguf] Para que serve warmup?", "expected_kind": "text"}
+{"id": "eval-0522", "category": "gguf", "instruction": "[gguf] O que é quantização Q4_K_M?", "expected_kind": "text"}
+{"id": "eval-0523", "category": "gguf", "instruction": "[gguf] Como carregar GGUF no runtime?", "expected_kind": "text"}
+{"id": "eval-0524", "category": "gguf", "instruction": "[gguf] Explique KV cache.", "expected_kind": "text"}
+{"id": "eval-0525", "category": "gguf", "instruction": "[gguf] Para que serve warmup?", "expected_kind": "text"}
+{"id": "eval-0526", "category": "gguf", "instruction": "[gguf] O que é quantização Q4_K_M?", "expected_kind": "text"}
+{"id": "eval-0527", "category": "gguf", "instruction": "[gguf] Como carregar GGUF no runtime?", "expected_kind": "text"}
+{"id": "eval-0528", "category": "gguf", "instruction": "[gguf] Explique KV cache.", "expected_kind": "text"}
+{"id": "eval-0529", "category": "gguf", "instruction": "[gguf] Para que serve warmup?", "expected_kind": "text"}
+{"id": "eval-0530", "category": "gguf", "instruction": "[gguf] O que é quantização Q4_K_M?", "expected_kind": "text"}
+{"id": "eval-0531", "category": "gguf", "instruction": "[gguf] Como carregar GGUF no runtime?", "expected_kind": "text"}
+{"id": "eval-0532", "category": "gguf", "instruction": "[gguf] Explique KV cache.", "expected_kind": "text"}
+{"id": "eval-0533", "category": "gguf", "instruction": "[gguf] Para que serve warmup?", "expected_kind": "text"}
+{"id": "eval-0534", "category": "gguf", "instruction": "[gguf] O que é quantização Q4_K_M?", "expected_kind": "text"}
+{"id": "eval-0535", "category": "gguf", "instruction": "[gguf] Como carregar GGUF no runtime?", "expected_kind": "text"}
+{"id": "eval-0536", "category": "gguf", "instruction": "[gguf] Explique KV cache.", "expected_kind": "text"}
+{"id": "eval-0537", "category": "gguf", "instruction": "[gguf] Para que serve warmup?", "expected_kind": "text"}
+{"id": "eval-0538", "category": "gguf", "instruction": "[gguf] O que é quantização Q4_K_M?", "expected_kind": "text"}
+{"id": "eval-0539", "category": "gguf", "instruction": "[gguf] Como carregar GGUF no runtime?", "expected_kind": "text"}

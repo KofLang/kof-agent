@@ -1,0 +1,17 @@
+{
+  "name": "kof-LM",
+  "version": 1,
+  "architecture": "TinyLlama-1.1B-Chat-v1.0",
+  "language": "pt-BR",
+  "context": 4096,
+  "quantization": [
+    "Q4_K_M",
+    "Q5_K_M",
+    "Q6_K",
+    "Q8_0"
+  ],
+  "dataset_examples": 389,
+  "dataset_checksum": "0188f046a376be2e",
+  "license": "Apache-2.0",
+  "description": "SLM oficial do Kof Agent especializado em linguagem Kof"
+}

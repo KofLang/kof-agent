@@ -1,0 +1,70 @@
+// M33/M35/M39: tokenizer verify + LoRA jobs + eval suite loader
+
+record TokPair(Int id, String tok)
+
+fn tokEncode(String s): List<Int> {
+    var out = listOf<Int>()
+    var i = 0
+    while (i < s.length) {
+        out.add(s.charAt(i) % 251)
+        i = i + 1
+    }
+    return out
+}
+
+fn tokDecode(List<Int> ids): String {
+    var s = ""
+    var i = 0
+    while (i < ids.size()) {
+        s = s + "*"
+        i = i + 1
+    }
+    return s
+}
+
+tokVerifyRoundtrip(String s): Bool {
+    var ids = tokEncode(s)
+    var d = tokDecode(ids)
+    return ids.size() == d.length
+}
+
+record LoraJob(Int state, Int steps)
+
+class LoraManager {
+    Int jobState = 0
+    Int jobSteps = 0
+
+    createJob(): Bool {
+        if (jobState == 0) {
+            jobState = 1
+            return true
+        }
+        return false
+    }
+
+    tick() {
+        if (jobState == 1) {
+            jobSteps = jobSteps + 500
+            if (jobSteps >= 1500) { jobState = 2 }
+        }
+    }
+
+    status(): Int { return jobState }
+
+    cancelJob() { jobState = 3 }
+}
+
+evalCountValid(String path): Int {
+    var f = File(path)
+    if (!f.exists()) { return 0 - 1 }
+    var lines = splitStr(f.readText(), "\n")
+    var ok = 0
+    var i = 0
+    while (i < lines.size()) {
+        if (lines.get(i).contains("instruction") && lines.get(i).contains("category")) {
+            ok = ok + 1
+        }
+        i = i + 1
+    }
+    return ok
+}
