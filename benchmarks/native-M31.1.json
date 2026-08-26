@@ -1,0 +1,1 @@
+{"milestone": "M31.1", "target": "native", "compiler": "@416ff4b", "dataset": {"examples": 389, "train": 350, "validation": 20, "test": 19, "checksum16": "0188f046a376be2e", "source": "Kof4j/training + agent specs/docs/tests"}}

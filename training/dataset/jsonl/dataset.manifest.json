@@ -1,0 +1,7 @@
+{
+  "dataset_version": "koflm-ds-v1",
+  "seed": 42,
+  "documents": 437,
+  "examples": 389,
+  "checksum": "0188f046a376be2ecc842c904d2bd15ce07868d714098f1aa32f19dc3d794d03"
+}

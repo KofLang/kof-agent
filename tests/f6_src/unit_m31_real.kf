@@ -1,0 +1,15 @@
+test "real dataset train file valid" {
+    var st = dsCountValid("training/dataset/jsonl/dataset_train.jsonl")
+    assert(st.total > 300)
+}
+
+test "real dataset validation exists" {
+    var st = dsCountValid("training/dataset/jsonl/dataset_validation.jsonl")
+    assert(st.total >= 15)
+}
+
+test "manifest checksum present" {
+    var f = File("training/dataset/jsonl/dataset.manifest.json")
+    var t = f.readText()
+    assert(t.contains("koflm-ds-v1"))
+}

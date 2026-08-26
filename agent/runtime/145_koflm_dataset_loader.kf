@@ -1,0 +1,31 @@
+// M31.1: loader do dataset real gerado (valida estrutura Alpaca)
+
+record DsStats(Int total, Int trainLike)
+
+dsValidateLine(String line): Bool {
+    return line.contains("instruction") && line.contains("bucket")
+}
+
+dsCountValid(String path): DsStats {
+    var f = File(path)
+    if (!f.exists()) {
+        return DsStats(0 - 1, 0)
+    }
+    var lines = splitStr(f.readText(), "\n")
+    var ok = 0
+    var tr = 0
+    var i = 0
+    while (i < lines.size()) {
+        var l = lines.get(i)
+        if (l.length > 10) {
+            if (dsValidateLine(l)) {
+                ok = ok + 1
+            }
+            if (l.contains("train")) {
+                tr = tr + 1
+            }
+        }
+        i = i + 1
+    }
+    return DsStats(ok, tr)
+}
