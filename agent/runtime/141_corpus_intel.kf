@@ -1,0 +1,12 @@
+// M32: Corpus Intelligence — exemplos supervisionados de bugs upstream
+
+record BugExample(String bugId, String question, String answer)
+
+corpusBugExamples(): List<BugExample> {
+    var l = listOf<BugExample>()
+    l.add(BugExample("N10", "Por que artefatos grandes segfaultam?", "N10-progressivo: TU >800KB asm crasha no native; workaround: particionar em PARTS pequenas com --only."))
+    l.add(BugExample("N11", "lastIndexOf nao funciona no native?", "N11: funcao ausente no backend nativo; workaround: implementar busca manual reversa."))
+    l.add(BugExample("N18", "Record com listas quebra?", "N18: record c/ multiplos List fields corrompe memoria no native; workaround: campos planos + acessores."))
+    l.add(BugExample("J4", "Erro COMP002 em purgeExpired?", "J4-residual: Frame.merge ASM crasha no JVM; repro em regressions/J4/."))
+    return l
+}

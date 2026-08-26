@@ -1,0 +1,56 @@
+// M31: Dataset Builder PT-BR — categorização, dedup, split determinístico
+
+record DsExample(String category, String inputText, String outputText, Int hash)
+
+fn dsHash(String s): Int {
+    var h = 0
+    var i = 0
+    while (i < s.length) {
+        h = (h * 31 + s.charAt(i)) % 999983
+        i = i + 1
+    }
+    return h
+}
+
+fn dsCategoryFor(String path): String {
+    if (path.contains("bugs")) { return "BUG" }
+    if (path.contains("tests")) { return "TEST" }
+    if (path.contains("specs")) { return "COMPILER" }
+    if (path.contains("runtime")) { return "RUNTIME" }
+    return "LANGUAGE"
+}
+
+class DatasetBuilder {
+    List<DsExample> examples = listOf<DsExample>()
+
+    add(String path, String inp, String out) {
+        var h = dsHash(inp)
+        var i = 0
+        while (i < examples.size()) {
+            if (examples.get(i).hash == h) { return }
+            i = i + 1
+        }
+        examples.add(DsExample(dsCategoryFor(path), inp, out, h))
+    }
+
+    count(): Int { return examples.size() }
+
+    splitBucket(Int seed, Int idx): String {
+        var v = (seed * 1103515245 + idx * 12345) % 100
+        if (v < 0) { v = 0 - v }
+        if (v < 90) { return "train" }
+        if (v < 95) { return "validation" }
+        return "test"
+    }
+
+    toAlpaca(Int seed): List<String> {
+        var out = listOf<String>()
+        var i = 0
+        while (i < examples.size()) {
+            var e = examples.get(i)
+            out.add("{\"bucket\":\"" + splitBucket(seed, i) + "\",\"category\":\"" + e.category + "\",\"input\":\"" + e.inputText + "\",\"output\":\"" + e.outputText + "\"}")
+            i = i + 1
+        }
+        return out
+    }
+}

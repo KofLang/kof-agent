@@ -1,0 +1,24 @@
+test "dataset dedup same input" {
+    var d = DatasetBuilder()
+    d.add("docs/x.md", "o que e kof", "linguagem")
+    d.add("docs/y.md", "o que e kof", "outra")
+    var n = d.count()
+    assert(n == 1)
+}
+
+test "category from path bugs" {
+    var d = DatasetBuilder()
+    d.add("compiler/bugs/N10", "q", "a")
+    var e = d.toAlpaca(42)
+    var s = e.get(0)
+    assert(s.contains("BUG"))
+}
+
+test "split deterministic buckets" {
+    var d = DatasetBuilder()
+    d.add("runtime/a.kf", "i1", "o1")
+    d.add("tests/b.kf", "i2", "o2")
+    var a = d.toAlpaca(42)
+    var b = d.toAlpaca(42)
+    assert(a.size() == b.size())
+}

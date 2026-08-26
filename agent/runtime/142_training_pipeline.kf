@@ -1,0 +1,11 @@
+// M33: Training Pipeline — configs TinyLlama QLoRA
+
+record TrainCfg(Int rank, Int alpha, Int ctx, Int epochs)
+
+defaultTrainCfg(): TrainCfg {
+    return TrainCfg(32, 64, 2048, 3)
+}
+
+trainingConfigJson(TrainCfg c): String {
+    return "{\"base\":\"TinyLlama-1.1B-Chat\",\"qlora\":true,\"bits\":4,\"rank\":" + c.rank + ",\"alpha\":" + c.alpha + ",\"context\":" + c.ctx + ",\"epochs\":" + c.epochs + ",\"lr\":2e-4,\"scheduler\":\"cosine\",\"seed\":42}"
+}

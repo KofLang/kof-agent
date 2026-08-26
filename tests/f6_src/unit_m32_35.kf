@@ -1,0 +1,25 @@
+test "corpus bug examples non empty" {
+    var l = corpusBugExamples()
+    var n = l.size()
+    assert(n >= 4)
+}
+
+test "training config defaults qlora r32" {
+    var c = defaultTrainCfg()
+    assert(c.rank == 32)
+    assert(c.alpha == 64)
+    var j = trainingConfigJson(c)
+    assert(j.contains("TinyLlama"))
+}
+
+test "gguf quants four entries" {
+    var q = ggufQuants()
+    var n = q.size()
+    assert(n == 4)
+}
+
+test "model manifest fields" {
+    var m = modelManifestJson("ds-v1", 123456)
+    assert(m.contains("KofLM-v1"))
+}
+

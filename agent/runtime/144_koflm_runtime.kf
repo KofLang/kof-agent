@@ -1,0 +1,48 @@
+// M35: KofLM Runtime — integração ModelManager + ModelRunner
+
+record KoflmMetrics(Int genTokens, Int elapsedMs)
+
+class KoflmRuntime {
+    ModelManager manager
+    ModelRunner runner
+    Bool ready = false
+
+    constructor() {
+        manager = ModelManager()
+        runner = ModelRunner()
+    }
+
+    registerOfficialModel(): Bool {
+        return manager.register("koflm-v1", "models/gguf/koflm-v1-q4.gguf", 1)
+    }
+
+    loadModel(GgufHandle h) {
+        runner.loadModel(h)
+        ready = true
+    }
+
+    isReady(): Bool { return ready }
+
+    warmup() {
+        if (ready) {
+            var cfg = RunnerConfig(1, 0, 100, 42)
+            runner.generate(0, cfg)
+        }
+    }
+
+    chat(Int promptToken, Int maxTokens): String {
+        var cfg = RunnerConfig(maxTokens, 0, 100, 42)
+        var out = runner.generate(promptToken, cfg)
+        var s = ""
+        var i = 0
+        while (i < out.size()) {
+            s = s + out.get(i) + " "
+            i = i + 1
+        }
+        return s
+    }
+
+    cancel() {
+        runner.cancelGeneration()
+    }
+}

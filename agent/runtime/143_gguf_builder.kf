@@ -1,0 +1,16 @@
+// M34: GGUF Builder — manifesto + quants oficiais
+
+record QuantEntry(String name, Int bits)
+
+ggufQuants(): List<QuantEntry> {
+    var l = listOf<QuantEntry>()
+    l.add(QuantEntry("Q4_K_M", 4))
+    l.add(QuantEntry("Q5_K_M", 5))
+    l.add(QuantEntry("Q6_K", 6))
+    l.add(QuantEntry("Q8_0", 8))
+    return l
+}
+
+modelManifestJson(String dsVersion, Int dsHash): String {
+    return "{\"model\":\"KofLM-v1\",\"base\":\"TinyLlama-1.1B-Chat\",\"lang\":\"PT-BR\",\"dataset_version\":\"" + dsVersion + "\",\"dataset_hash\":" + dsHash + ",\"compiler_head\":\"416ff4b\",\"ctx\":2048}"
+}
