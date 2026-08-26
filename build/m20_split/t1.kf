@@ -1,0 +1,7 @@
+test "runtime rejects bad dag" {
+    var b = EventBus()
+    var rt = AgentRuntime(b, RealTimeClock())
+    var nodes = listOf<PlanNode>()
+    nodes.add(PlanNode("a", 0, 5))
+    assert(!rt.dryRun(nodes))
+}

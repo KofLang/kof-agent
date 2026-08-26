@@ -1,0 +1,4 @@
+test "failure kind classified native" {
+    var f = failureSignature("N99 whatever")
+    assert(f.kind == "native")
+}

@@ -1,0 +1,4 @@
+record L16(Int v)
+mainX16() {
+    var l = L16(1)
+}

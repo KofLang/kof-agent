@@ -1,0 +1,5 @@
+test "quant compat monotonic" {
+    var m = ModelManager()
+    assert(m.supportsQuant(4, 8))
+    assert(!m.supportsQuant(8, 4))
+}

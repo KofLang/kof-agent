@@ -1,0 +1,9 @@
+test "lru evicts oldest beyond capacity" {
+    var c = LruCache()
+    c.initLru(2)
+    c.put("k1", "v1")
+    c.put("k2", "v2")
+    c.put("k3", "v3")
+    var n = c.size()
+    assert(n == 2)
+}

@@ -1,0 +1,9 @@
+test "batch respects parallelism loop" {
+    var b = EventBus()
+    var o = ToolOrchestrator(b, RealTimeClock())
+    var ids = listOf<String>()
+    ids.add("p1")
+    ids.add("p2")
+    var done = o.executeBatch(ids, OrchTool(1, 1, 100, 0), 2)
+    assert(done == 2)
+}

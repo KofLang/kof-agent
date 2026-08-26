@@ -1,0 +1,5 @@
+record M10(Int v)
+main() {
+    var m = M10(10)
+    println(m.v())
+}

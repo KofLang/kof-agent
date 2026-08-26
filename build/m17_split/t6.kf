@@ -1,0 +1,6 @@
+test "list tensors two entries" {
+    var h = openGGUF("fixtures/tiny.gguf")
+    var l = listTensors(h)
+    var n = l.size()
+    assert(n == 2)
+}

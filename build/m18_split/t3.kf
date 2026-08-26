@@ -1,0 +1,9 @@
+test "generate bounded by maxTokens" {
+    var h = openGGUF("fixtures/tiny.gguf")
+    var r = ModelRunner()
+    r.loadModel(h)
+    var cfg = RunnerConfig(5, 0, 100, 7)
+    var out = r.generate(1, cfg)
+    var n = out.size()
+    assert(n > 0 && n <= 5)
+}

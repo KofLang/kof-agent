@@ -1,0 +1,11 @@
+test "lru cache hit and miss" {
+    var c = LruCache()
+    c.initLru(4)
+    c.put("a", "1")
+    var hit = c.get("a")
+    var miss = c.get("z")
+    assert(hit == "1")
+    assert(miss == "")
+    assert(c.hits == 1)
+    assert(c.misses == 1)
+}

@@ -1,0 +1,7 @@
+test "unload resets" {
+    var h = openGGUF("fixtures/tiny.gguf")
+    var r = ModelRunner()
+    r.loadModel(h)
+    r.unloadModel()
+    assert(!r.modelIsLoaded())
+}

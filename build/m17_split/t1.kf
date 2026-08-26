@@ -1,0 +1,4 @@
+test "bad magic yields error" {
+    var h = openGGUF("fixtures/bad_magic.gguf")
+    assert(ggufErrorCount(h) >= 1)
+}

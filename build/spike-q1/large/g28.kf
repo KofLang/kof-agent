@@ -1,0 +1,4 @@
+record L28(Int v)
+mainX28() {
+    var l = L28(1)
+}

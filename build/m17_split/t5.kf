@@ -1,0 +1,5 @@
+test "tensor lookup by name" {
+    var h = openGGUF("fixtures/tiny.gguf")
+    assert(hasTensor(h, "tok_embd"))
+    assert(!hasTensor(h, "nope"))
+}

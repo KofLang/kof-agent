@@ -1,0 +1,140 @@
+LC_BOOTING(): Int { return 0 }
+LC_INITIALIZING(): Int { return 1 }
+LC_READY(): Int { return 2 }
+LC_BUSY(): Int { return 3 }
+LC_STOPPING(): Int { return 4 }
+LC_STOPPED(): Int { return 5 }
+LC_FAILED(): Int { return 6 }
+
+lcName(Int st): String {
+    if (st == LC_BOOTING()) { return "BOOTING" }
+    if (st == LC_INITIALIZING()) { return "INITIALIZING" }
+    if (st == LC_READY()) { return "READY" }
+    if (st == LC_BUSY()) { return "BUSY" }
+    if (st == LC_STOPPING()) { return "STOPPING" }
+    if (st == LC_STOPPED()) { return "STOPPED" }
+    return "FAILED"
+}
+
+interface LifecycleHook {
+    onTransition(Int from, Int to): Bool
+}
+
+class Lifecycle {
+    Int st = LC_BOOTING()
+    String lastError = ""
+    List<LifecycleHook> bootHooks = listOf<LifecycleHook>()
+    List<LifecycleHook> readyHooks = listOf<LifecycleHook>()
+    List<LifecycleHook> shutdownHooks = listOf<LifecycleHook>()
+    List<LifecycleHook> crashHooks = listOf<LifecycleHook>()
+
+    state(): Int {
+        return st
+    }
+
+    stateName(): String {
+        return lcName(st)
+    }
+
+    isAlive(): Bool {
+        return st != LC_STOPPED() && st != LC_FAILED()
+    }
+
+    registerBoot(LifecycleHook h) {
+        bootHooks.add(h)
+    }
+
+    registerReady(LifecycleHook h) {
+        readyHooks.add(h)
+    }
+
+    registerShutdown(LifecycleHook h) {
+        shutdownHooks.add(h)
+    }
+
+    registerCrash(LifecycleHook h) {
+        crashHooks.add(h)
+    }
+
+    allowed(Int from, Int to): Bool {
+        if (to == LC_FAILED()) {
+            return from != LC_STOPPED() && from != LC_FAILED()
+        }
+        if (from == LC_BOOTING()) {
+            return to == LC_INITIALIZING()
+        }
+        if (from == LC_INITIALIZING()) {
+            return to == LC_READY()
+        }
+        if (from == LC_READY()) {
+            return to == LC_BUSY() || to == LC_STOPPING()
+        }
+        if (from == LC_BUSY()) {
+            return to == LC_READY() || to == LC_STOPPING()
+        }
+        if (from == LC_STOPPING()) {
+            return to == LC_STOPPED()
+        }
+        return false
+    }
+
+    transition(Int to) {
+        if (!allowed(st, to)) {
+            throw "lifecycle: illegal transition " + lcName(st) + " -> " + lcName(to)
+        }
+        var from = st
+        var target = to
+        var hooks = bootHooks
+        if (target == LC_READY()) {
+            hooks = readyHooks
+        } else if (target == LC_STOPPING()) {
+            hooks = shutdownHooks
+        }
+        for (var h in hooks) {
+            var cont = h.onTransition(from, target)
+            if (!cont) {
+                throw "lifecycle: hook veto on transition to " + lcName(target)
+            }
+        }
+        st = target
+    }
+
+    crash(String reason) {
+        if (!isAlive()) {
+            return
+        }
+        var from = st
+        lastError = reason
+        for (var h in crashHooks) {
+            try {
+                h.onTransition(from, LC_FAILED())
+            } catch (String e) {
+                println("lifecycle: crash hook failed: " + e)
+            }
+        }
+        st = LC_FAILED()
+    }
+
+    summaryJson(): String {
+        var out = "{\"state\":\"" + stateName() + "\",\"lastError\":\"" + escapeJson(lastError) + "\"}"
+        return out
+    }
+}
+
+class NameRecorder implements LifecycleHook {
+    List<String> items = listOf<String>()
+    String prefix = ""
+    constructor(String p) {
+        prefix = p
+    }
+    onTransition(Int from, Int to): Bool {
+        items.add(prefix + ":" + lcName(from) + "->" + lcName(to))
+        return true
+    }
+    recorded(): Int {
+        return items.size
+    }
+    last(): String {
+        return items.get(items.size - 1)
+    }
+}

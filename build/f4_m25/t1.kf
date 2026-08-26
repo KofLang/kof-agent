@@ -1,0 +1,7 @@
+test "journal replay bounded count" {
+    var j = ExecutionJournal()
+    j.append("e", "1")
+    j.append("e", "2")
+    var c = j.replayTo(1)
+    assert(c == 1)
+}

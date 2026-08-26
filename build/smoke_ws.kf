@@ -1,0 +1,1200 @@
+record CheckRec(String id, Bool ok, String detail)
+
+interface TimeSource {
+    nowMs(): Long
+}
+
+class RealTimeClock implements TimeSource {
+    constructor() {
+    }
+    nowMs(): Long {
+        return now()
+    }
+}
+
+class FixedClock implements TimeSource {
+    Long value = 0
+    constructor(Long v) {
+        value = v
+    }
+    nowMs(): Long {
+        return value
+    }
+    advance(Long ms) {
+        value = value + ms
+    }
+}
+
+parseIntStr(String s): Int {
+    var n = 0
+    var i = 0
+    if (s.length == 0) {
+        throw "parse: empty integer"
+    }
+    var start = 0
+    if (s.charAt(0) == 45) {
+        start = 1
+        if (s.length == 1) {
+            throw "parse: invalid integer '" + s + "'"
+        }
+    }
+    i = start
+    while (i < s.length) {
+        var c = s.charAt(i)
+        if (c < 48 || c > 57) {
+            throw "parse: invalid integer '" + s + "'"
+        }
+        n = n * 10 + (c - 48)
+        i = i + 1
+    }
+    if (start == 1) {
+        n = 0 - n
+    }
+    return n
+}
+
+parseBoolStr(String s): Bool {
+    var v = s.toLowerCase()
+    if (v == "true" || v == "1" || v == "yes" || v == "on") {
+        return true
+    }
+    if (v == "false" || v == "0" || v == "no" || v == "off" || v == "") {
+        return false
+    }
+    throw "parse: invalid boolean '" + s + "'"
+}
+
+escapeJson(String s): String {
+    var out = ""
+    var i = 0
+    while (i < s.length) {
+        var c = s.charAt(i)
+        if (c == 34) {
+            out = out + "\\\""
+        } else if (c == 92) {
+            out = out + "\\\\"
+        } else if (c == 10) {
+            out = out + "\\n"
+        } else if (c == 13) {
+            out = out + "\\r"
+        } else if (c == 9) {
+            out = out + "\\t"
+        } else {
+            out = out + s.substring(i, i + 1)
+        }
+        i = i + 1
+    }
+    return out
+}
+
+joinPath(String a, String b): String {
+    if (a == "") {
+        return b
+    }
+    if (a.substring(a.length - 1, a.length) == "/") {
+        return a + b
+    }
+    return a + "/" + b
+}
+
+splitStr(String s, String sep): List<String> {
+    var out = listOf<String>()
+    if (s.length == 0) {
+        return out
+    }
+    var sc = sep.charAt(0)
+    var start = 0
+    var i = 0
+    while (i < s.length) {
+        if (s.charAt(i) == sc) {
+            out.add(s.substring(start, i))
+            start = i + 1
+        }
+        i = i + 1
+    }
+    out.add(s.substring(start, s.length))
+    return out
+}
+
+loadArgsFile(String path): List<String> {
+    var argv = listOf<String>()
+    var f = File(path)
+    if (!f.exists()) {
+        return argv
+    }
+    var txt = f.readText()
+    var lines = splitStr(txt, "\n")
+    for (var line in lines) {
+        var t = line.trim()
+        if (t.length > 0) {
+            argv.add(t)
+        }
+    }
+    return argv
+}
+
+sortInts(Int[] a, Int n) {
+    var i = 1
+    while (i < n) {
+        var key = a[i]
+        var j = i - 1
+        var placed = false
+        while (!placed) {
+            if (j < 0) {
+                placed = true
+            } else {
+                if (a[j] > key) {
+                    a[j + 1] = a[j]
+                    j = j - 1
+                } else {
+                    placed = true
+                }
+            }
+        }
+        a[j + 1] = key
+        i = i + 1
+    }
+}
+
+record LogLine(Long ts, String level, String req, String msg)
+
+LOG_TRACE(): Int { return 0 }
+LOG_DEBUG(): Int { return 1 }
+LOG_INFO(): Int { return 2 }
+LOG_WARN(): Int { return 3 }
+LOG_ERROR(): Int { return 4 }
+LOG_FATAL(): Int { return 5 }
+
+logLevelName(Int lvl): String {
+    if (lvl == 0) { return "TRACE" }
+    if (lvl == 1) { return "DEBUG" }
+    if (lvl == 2) { return "INFO" }
+    if (lvl == 3) { return "WARN" }
+    if (lvl == 4) { return "ERROR" }
+    return "FATAL"
+}
+
+logLevelFromName(String s): Int {
+    var v = s.toUpperCase()
+    if (v == "TRACE") { return 0 }
+    if (v == "DEBUG") { return 1 }
+    if (v == "INFO") { return 2 }
+    if (v == "WARN") { return 3 }
+    if (v == "ERROR") { return 4 }
+    if (v == "FATAL") { return 5 }
+    return -1
+}
+
+class Logger {
+    Int level = LOG_INFO()
+    Bool color = false
+    Bool json = false
+    Bool quiet = false
+    String requestId = "-"
+    TimeSource clock
+
+    constructor(TimeSource ts) {
+        clock = ts
+    }
+
+    configure(Int lvl, Bool col, Bool js) {
+        level = lvl
+        color = col
+        json = js
+    }
+
+    setRequestId(String rid) {
+        requestId = rid
+    }
+
+    trace(String m): String { return write(LOG_TRACE(), m) }
+    debug(String m): String { return write(LOG_DEBUG(), m) }
+    info(String m): String { return write(LOG_INFO(), m) }
+    warn(String m): String { return write(LOG_WARN(), m) }
+    error(String m): String { return write(LOG_ERROR(), m) }
+    fatal(String m): String { return write(LOG_FATAL(), m) }
+
+    isEnabled(Int lvl): Bool {
+        return lvl >= level
+    }
+
+    write(Int lvl, String msg): String {
+        if (!isEnabled(lvl)) {
+            return ""
+        }
+        var ts = clock.nowMs()
+        var name = logLevelName(lvl)
+        var line = ""
+        if (json) {
+            line = "{\"ts\":\"" + ts + "\",\"level\":\"" + name + "\",\"req\":\"" + escapeJson(requestId) + "\",\"msg\":\"" + escapeJson(msg) + "\"}"
+        } else {
+            var body = "[" + name + "] [" + requestId + "] " + msg
+            if (color) {
+                body = ansiFor(lvl) + body + "\u001b[0m"
+            }
+            line = ts + " " + body
+        }
+        if (!quiet) {
+            println(line)
+        }
+        return line
+    }
+
+    ansiFor(Int lvl): String {
+        if (lvl <= LOG_DEBUG()) {
+            return "\u001b[90m"
+        }
+        if (lvl == LOG_INFO()) {
+            return "\u001b[36m"
+        }
+        if (lvl == LOG_WARN()) {
+            return "\u001b[33m"
+        }
+        if (lvl == LOG_ERROR()) {
+            return "\u001b[31m"
+        }
+        return "\u001b[35m"
+    }
+}
+
+record CfgEntry(String key, String value)
+
+class Config {
+    List<CfgEntry> entries = listOf<CfgEntry>()
+    String sourcePath = ""
+    Bool loaded = false
+
+    loadFile(String path): Bool {
+        entries = listOf<CfgEntry>()
+        sourcePath = path
+        var f = File(path)
+        if (!f.exists()) {
+            loaded = false
+            return false
+        }
+        if (!f.isFile()) {
+            loaded = false
+            return false
+        }
+        var text = f.readText()
+        parseInto(text)
+        loaded = true
+        return true
+    }
+
+    reload(): Bool {
+        return loadFile(sourcePath)
+    }
+
+    parseInto(String text) {
+        var lines = splitStr(text, "\n")
+        for (var raw in lines) {
+            var line = raw.trim()
+            if (line.length > 0) {
+                if (!line.startsWith("#")) {
+                    var kv = splitStr(line, "=")
+                    if (kv.size == 2) {
+                        var k = kv.get(0).trim()
+                        var v = kv.get(1).trim()
+                        entries.add(CfgEntry(k, v))
+                    }
+                }
+            }
+        }
+    }
+
+    has(String key): Bool {
+        for (var e in entries) {
+            if (e.key == key) {
+                return true
+            }
+        }
+        return false
+    }
+
+    getRaw(String key): String {
+        for (var e in entries) {
+            if (e.key == key) {
+                return e.value
+            }
+        }
+        throw "config: missing key '" + key + "'"
+    }
+
+    getStr(String key, String def): String {
+        if (!has(key)) {
+            return def
+        }
+        return getRaw(key)
+    }
+
+    getInt(String key, Int def): Int {
+        if (!has(key)) {
+            return def
+        }
+        var v = getRaw(key)
+        try {
+            return parseIntStr(v)
+        } catch (String e) {
+            throw "config: invalid integer for '" + key + "': '" + v + "'"
+        }
+    }
+
+    getBool(String key, Bool def): Bool {
+        if (!has(key)) {
+            return def
+        }
+        var v = getRaw(key)
+        try {
+            return parseBoolStr(v)
+        } catch (String e) {
+            throw "config: invalid boolean for '" + key + "': '" + v + "'"
+        }
+    }
+
+    snapshotJson(): String {
+        var out = "{\"source\":\"" + escapeJson(sourcePath) + "\",\"loaded\":"
+        if (loaded) {
+            out = out + "true"
+        } else {
+            out = out + "false"
+        }
+        out = out + ",\"entries\":["
+        var first = true
+        for (var e in entries) {
+            if (!first) {
+                out = out + ","
+            }
+            first = false
+            out = out + "{\"key\":\"" + escapeJson(e.key) + "\",\"value\":\"" + escapeJson(e.value) + "\"}"
+        }
+        out = out + "]}"
+        return out
+    }
+}
+
+TASK_CREATED(): Int { return 0 }
+TASK_QUEUED(): Int { return 1 }
+TASK_RUNNING(): Int { return 2 }
+TASK_WAITING(): Int { return 3 }
+TASK_COMPLETED(): Int { return 4 }
+TASK_CANCELLED(): Int { return 5 }
+TASK_FAILED(): Int { return 6 }
+
+taskStateName(Int st): String {
+    if (st == TASK_CREATED()) { return "CREATED" }
+    if (st == TASK_QUEUED()) { return "QUEUED" }
+    if (st == TASK_RUNNING()) { return "RUNNING" }
+    if (st == TASK_WAITING()) { return "WAITING" }
+    if (st == TASK_COMPLETED()) { return "COMPLETED" }
+    if (st == TASK_CANCELLED()) { return "CANCELLED" }
+    return "FAILED"
+}
+
+interface ContextView {
+    incMetric(String name)
+}
+
+interface TaskBody {
+    run(ContextView v)
+}
+
+class Future {
+    Bool done = false
+    Bool ok = false
+    Int result = 0
+    String error = ""
+    constructor() {
+    }
+}
+
+class TaskNode {
+    Int id
+    Int priority
+    Int seq
+    String name
+    Int st = TASK_CREATED()
+    Bool cancelled = false
+    TaskBody body
+    constructor(Int tid, Int prio, Int sq, String nm, TaskBody b) {
+        id = tid
+        priority = prio
+        seq = sq
+        name = nm
+        body = b
+    }
+}
+
+class FutureJob implements TaskBody {
+    TaskBody inner
+    Future future
+    constructor(TaskBody i, Future f) {
+        inner = i
+        future = f
+    }
+    run(ContextView v) {
+        try {
+            inner.run(v)
+            future.ok = true
+        } catch (String e) {
+            future.error = e
+            throw e
+        } finally {
+            future.done = true
+        }
+    }
+}
+
+class Scheduler {
+    List<TaskNode> tasks = listOf<TaskNode>()
+    Int[] heapPrio = new Int[64]
+    Int[] heapSeq = new Int[64]
+    Int[] heapIdx = new Int[64]
+    Int heapSize = 0
+    Int heapCap = 64
+    Int nextId = 1
+    Int nextSeq = 1
+    Int maxPending = 0
+    Bool accepting = true
+    Int launchedCount = 0
+    Int completedCount = 0
+    Int failedCount = 0
+    Int cancelledCount = 0
+    Int rejectedCount = 0
+    String lastError = ""
+    ContextView view
+
+    constructor(ContextView v) {
+        view = v
+    }
+
+    ensureCap(Int need) {
+        if (need <= heapCap) {
+            return
+        }
+        var nc = heapCap * 2
+        while (nc < need) {
+            nc = nc * 2
+        }
+        var np = new Int[nc]
+        var ns = new Int[nc]
+        var ni = new Int[nc]
+        var i = 0
+        while (i < heapSize) {
+            np[i] = heapPrio[i]
+            ns[i] = heapSeq[i]
+            ni[i] = heapIdx[i]
+            i = i + 1
+        }
+        heapPrio = np
+        heapSeq = ns
+        heapIdx = ni
+        heapCap = nc
+    }
+
+    lessThan(Int a, Int b): Bool {
+        if (heapPrio[a] > heapPrio[b]) {
+            return true
+        }
+        if (heapPrio[a] < heapPrio[b]) {
+            return false
+        }
+        return heapSeq[a] < heapSeq[b]
+    }
+
+    swapAt(Int a, Int b) {
+        var tp = heapPrio[a]
+        heapPrio[a] = heapPrio[b]
+        heapPrio[b] = tp
+        var ts = heapSeq[a]
+        heapSeq[a] = heapSeq[b]
+        heapSeq[b] = ts
+        var ti = heapIdx[a]
+        heapIdx[a] = heapIdx[b]
+        heapIdx[b] = ti
+    }
+
+    heapPush(Int taskIndex) {
+        ensureCap(heapSize + 1)
+        var i = heapSize
+        heapPrio[i] = tasks.get(taskIndex).priority
+        heapSeq[i] = tasks.get(taskIndex).seq
+        heapIdx[i] = taskIndex
+        heapSize = heapSize + 1
+        while (i > 0) {
+            var parent = (i - 1) / 2
+            if (lessThan(i, parent)) {
+                swapAt(i, parent)
+                i = parent
+            } else {
+                break
+            }
+        }
+    }
+
+    heapPop(): Int {
+        var top = heapIdx[0]
+        heapSize = heapSize - 1
+        if (heapSize > 0) {
+            heapPrio[0] = heapPrio[heapSize]
+            heapSeq[0] = heapSeq[heapSize]
+            heapIdx[0] = heapIdx[heapSize]
+            var i = 0
+            while (true) {
+                var l = i * 2 + 1
+                var r = l + 1
+                var m = i
+                if (l < heapSize) {
+                    if (lessThan(l, m)) {
+                        m = l
+                    }
+                }
+                if (r < heapSize) {
+                    if (lessThan(r, m)) {
+                        m = r
+                    }
+                }
+                if (m == i) {
+                    break
+                }
+                swapAt(i, m)
+                i = m
+            }
+        }
+        return top
+    }
+
+    launch(TaskBody body, String name, Int priority): Int {
+        if (!accepting) {
+            rejectedCount = rejectedCount + 1
+            throw "scheduler: rejecting launch after shutdown"
+        }
+        if (maxPending > 0 && heapSize >= maxPending) {
+            rejectedCount = rejectedCount + 1
+            throw "scheduler: backpressure (pending=" + heapSize + ", max=" + maxPending + ")"
+        }
+        var node = TaskNode(nextId, priority, nextSeq, name, body)
+        nextId = nextId + 1
+        nextSeq = nextSeq + 1
+        node.st = TASK_QUEUED()
+        tasks.add(node)
+        heapPush(tasks.size - 1)
+        launchedCount = launchedCount + 1
+        return node.id
+    }
+
+    launchFuture(TaskBody body, String name, Int priority): Future {
+        var f = Future()
+        var wrapped = FutureJob(body, f)
+        launch(wrapped, name, priority)
+        return f
+    }
+
+    cancel(Int taskId): Bool {
+        var idx = taskId - 1
+        if (idx < 0 || idx >= tasks.size) {
+            return false
+        }
+        var node = tasks.get(idx)
+        if (node.st == TASK_QUEUED() && !node.cancelled) {
+            node.cancelled = true
+            node.st = TASK_CANCELLED()
+            cancelledCount = cancelledCount + 1
+            return true
+        }
+        return false
+    }
+
+    executeOne(): Bool {
+        if (heapSize == 0) {
+            return false
+        }
+        var idx = heapPop()
+        var node = tasks.get(idx)
+        if (node.cancelled || node.st == TASK_CANCELLED()) {
+            return true
+        }
+        node.st = TASK_RUNNING()
+        try {
+            node.body.run(view)
+            node.st = TASK_COMPLETED()
+            completedCount = completedCount + 1
+        } catch (String e) {
+            node.st = TASK_FAILED()
+            failedCount = failedCount + 1
+            lastError = e
+        }
+        return true
+    }
+
+    run(Int maxTasks): Int {
+        var n = 0
+        while (n < maxTasks) {
+            if (!executeOne()) {
+                break
+            }
+            n = n + 1
+        }
+        return n
+    }
+
+    drain() {
+        while (executeOne()) {
+        }
+    }
+
+    await(Future f) {
+        while (!f.done) {
+            if (heapSize == 0) {
+                throw "scheduler: deadlock in await (future unresolved, queue empty)"
+            }
+            executeOne()
+        }
+    }
+
+    pending(): Int {
+        return heapSize
+    }
+
+    gracefulShutdown() {
+        accepting = false
+        drain()
+    }
+
+    statsJson(): String {
+        return "{\"pending\":" + heapSize + ",\"launched\":" + launchedCount + ",\"completed\":" + completedCount + ",\"failed\":" + failedCount + ",\"cancelled\":" + cancelledCount + ",\"rejected\":" + rejectedCount + ",\"accepting\":" + accepting + "}"
+    }
+}
+
+class WorkerPool {
+    Int size = 1
+    Scheduler sched
+    String affinityHint = ""
+
+    constructor(Scheduler s, Int n) {
+        sched = s
+        if (n != 1) {
+            throw "TP001: worker pool size " + n + " unsupported on this target (upstream CONC001); use 1"
+        }
+        size = n
+    }
+
+    launch(TaskBody body, String name): Int {
+        return sched.launch(body, name, 5)
+    }
+
+    dynamicResize(Int n) {
+        throw "TP001: dynamic pool resize unsupported on this target (upstream CONC001)"
+    }
+
+    setAffinity(String hint) {
+        throw "TP002: affinity unsupported on this target"
+    }
+}
+
+record EventEnvelope(String topic, String payload, Int seq)
+
+interface EventHandler {
+    onEvent(EventEnvelope e): Bool
+}
+
+class Subscription {
+    Int id
+    String topic
+    EventHandler h
+    Bool once = false
+    constructor(Int sid, String t, EventHandler handler, Bool onceFlag) {
+        id = sid
+        topic = t
+        h = handler
+        once = onceFlag
+    }
+}
+
+class EventBus {
+    List<Subscription> subs = listOf<Subscription>()
+    Int nextId = 1
+    Int seq = 1
+
+    subscribe(String topic, EventHandler h): Int {
+        var s = Subscription(nextId, topic, h, false)
+        nextId = nextId + 1
+        subs.add(s)
+        return s.id
+    }
+
+    once(String topic, EventHandler h): Int {
+        var s = Subscription(nextId, topic, h, true)
+        nextId = nextId + 1
+        subs.add(s)
+        return s.id
+    }
+
+    unsubscribe(Int id): Bool {
+        var i = 0
+        while (i < subs.size) {
+            if (subs.get(i).id == id) {
+                subs.remove(i)
+                return true
+            }
+            i = i + 1
+        }
+        return false
+    }
+
+    publishEnvelope(EventEnvelope e): Int {
+        var matched = listOf<Int>()
+        var i = 0
+        while (i < subs.size) {
+            var s = subs.get(i)
+            if (s.topic == e.topic || s.topic == "*") {
+                matched.add(i)
+            }
+            i = i + 1
+        }
+        var called = 0
+        for (var m in matched) {
+            var sub = subs.get(m)
+            if (sub.once) {
+                unsubscribe(sub.id)
+            }
+            called = called + 1
+            var cont = sub.h.onEvent(e)
+            if (!cont) {
+                break
+            }
+        }
+        return called
+    }
+
+    publish(String topic, String payload): Int {
+        var env = EventEnvelope(topic, payload, seq)
+        seq = seq + 1
+        return publishEnvelope(env)
+    }
+
+    broadcast(String payload): Int {
+        return publish("*", payload)
+    }
+
+    publishAsync(Scheduler sched, ContextView view, String topic, String payload): Int {
+        var job = PublishJob(this, topic, payload)
+        return sched.launch(job, "event.publish", 5)
+    }
+
+    statsJson(): String {
+        return "{\"subscribers\":" + subs.size + ",\"published\":" + (seq - 1) + "}"
+    }
+}
+
+class PublishJob implements TaskBody {
+    EventBus bus
+    String topic
+    String payload
+    constructor(EventBus b, String t, String p) {
+        bus = b
+        topic = t
+        payload = p
+    }
+    run(ContextView v) {
+        bus.publish(topic, payload)
+    }
+}
+
+LC_BOOTING(): Int { return 0 }
+LC_INITIALIZING(): Int { return 1 }
+LC_READY(): Int { return 2 }
+LC_BUSY(): Int { return 3 }
+LC_STOPPING(): Int { return 4 }
+LC_STOPPED(): Int { return 5 }
+LC_FAILED(): Int { return 6 }
+
+lcName(Int st): String {
+    if (st == LC_BOOTING()) { return "BOOTING" }
+    if (st == LC_INITIALIZING()) { return "INITIALIZING" }
+    if (st == LC_READY()) { return "READY" }
+    if (st == LC_BUSY()) { return "BUSY" }
+    if (st == LC_STOPPING()) { return "STOPPING" }
+    if (st == LC_STOPPED()) { return "STOPPED" }
+    return "FAILED"
+}
+
+interface LifecycleHook {
+    onTransition(Int from, Int to): Bool
+}
+
+class Lifecycle {
+    Int st = LC_BOOTING()
+    String lastError = ""
+    List<LifecycleHook> bootHooks = listOf<LifecycleHook>()
+    List<LifecycleHook> readyHooks = listOf<LifecycleHook>()
+    List<LifecycleHook> shutdownHooks = listOf<LifecycleHook>()
+    List<LifecycleHook> crashHooks = listOf<LifecycleHook>()
+
+    state(): Int {
+        return st
+    }
+
+    stateName(): String {
+        return lcName(st)
+    }
+
+    isAlive(): Bool {
+        return st != LC_STOPPED() && st != LC_FAILED()
+    }
+
+    registerBoot(LifecycleHook h) {
+        bootHooks.add(h)
+    }
+
+    registerReady(LifecycleHook h) {
+        readyHooks.add(h)
+    }
+
+    registerShutdown(LifecycleHook h) {
+        shutdownHooks.add(h)
+    }
+
+    registerCrash(LifecycleHook h) {
+        crashHooks.add(h)
+    }
+
+    allowed(Int from, Int to): Bool {
+        if (to == LC_FAILED()) {
+            return from != LC_STOPPED() && from != LC_FAILED()
+        }
+        if (from == LC_BOOTING()) {
+            return to == LC_INITIALIZING()
+        }
+        if (from == LC_INITIALIZING()) {
+            return to == LC_READY()
+        }
+        if (from == LC_READY()) {
+            return to == LC_BUSY() || to == LC_STOPPING()
+        }
+        if (from == LC_BUSY()) {
+            return to == LC_READY() || to == LC_STOPPING()
+        }
+        if (from == LC_STOPPING()) {
+            return to == LC_STOPPED()
+        }
+        return false
+    }
+
+    transition(Int to) {
+        if (!allowed(st, to)) {
+            throw "lifecycle: illegal transition " + lcName(st) + " -> " + lcName(to)
+        }
+        var from = st
+        var target = to
+        var hooks = bootHooks
+        if (target == LC_READY()) {
+            hooks = readyHooks
+        } else if (target == LC_STOPPING()) {
+            hooks = shutdownHooks
+        }
+        for (var h in hooks) {
+            var cont = h.onTransition(from, target)
+            if (!cont) {
+                throw "lifecycle: hook veto on transition to " + lcName(target)
+            }
+        }
+        st = target
+    }
+
+    crash(String reason) {
+        if (!isAlive()) {
+            return
+        }
+        var from = st
+        lastError = reason
+        for (var h in crashHooks) {
+            try {
+                h.onTransition(from, LC_FAILED())
+            } catch (String e) {
+                println("lifecycle: crash hook failed: " + e)
+            }
+        }
+        st = LC_FAILED()
+    }
+
+    summaryJson(): String {
+        var out = "{\"state\":\"" + stateName() + "\",\"lastError\":\"" + escapeJson(lastError) + "\"}"
+        return out
+    }
+}
+
+class NameRecorder implements LifecycleHook {
+    List<String> items = listOf<String>()
+    String prefix = ""
+    constructor(String p) {
+        prefix = p
+    }
+    onTransition(Int from, Int to): Bool {
+        items.add(prefix + ":" + lcName(from) + "->" + lcName(to))
+        return true
+    }
+    recorded(): Int {
+        return items.size
+    }
+    last(): String {
+        return items.get(items.size - 1)
+    }
+}
+
+class WorkspaceReport {
+    String root = ""
+    Bool valid = false
+    Bool hasGit = false
+    Bool hasConfigFile = false
+    Bool hasCacheDir = false
+    Int kfFiles = 0
+    Int totalEntries = 0
+    Int ignoreRules = 0
+    String detail = ""
+}
+
+countKfFiles(String dir, Int depth): Int {
+    if (depth > 3) {
+        return 0
+    }
+    var d = Directory(dir)
+    if (!d.exists() || !d.isDirectory()) {
+        return 0
+    }
+    var names = d.list()
+    var n = 0
+    for (var name in names) {
+        var child = joinPath(dir, name)
+        var f = File(child)
+        if (f.isFile()) {
+            if (name.length >= 3) {
+                var ext = name.substring(name.length - 3, name.length)
+                if (ext == ".kf") {
+                    n = n + 1
+                }
+            }
+        } else if (f.isDirectory()) {
+            if (name != ".git") {
+                n = n + countKfFiles(child, depth + 1)
+            }
+        }
+    }
+    return n
+}
+
+listTopEntries(String dir): Int {
+    var d = Directory(dir)
+    if (!d.exists() || !d.isDirectory()) {
+        return 0
+    }
+    var names = d.list()
+    return names.size
+}
+
+scanWorkspace(String root): WorkspaceReport {
+    var r = WorkspaceReport()
+    r.root = root
+    var d = Directory(root)
+    if (!d.exists()) {
+        r.valid = false
+        r.detail = "root does not exist"
+        return r
+    }
+    if (!d.isDirectory()) {
+        r.valid = false
+        r.detail = "root is not a directory"
+        return r
+    }
+    r.valid = true
+    r.detail = "ok"
+    var gitDir = Directory(joinPath(root, ".git"))
+    r.hasGit = gitDir.exists()
+    var cfgFile = File(joinPath(root, "kof.config"))
+    r.hasConfigFile = cfgFile.exists()
+    var cacheDir = Directory(joinPath(root, "build"))
+    r.hasCacheDir = cacheDir.exists()
+    r.kfFiles = countKfFiles(root, 1)
+    r.totalEntries = listTopEntries(root)
+    var gi = File(joinPath(root, ".gitignore"))
+    if (gi.exists() && gi.isFile()) {
+        var txt = gi.readText()
+        var lines = splitStr(txt, "\n")
+        for (var raw in lines) {
+            var line = raw.trim()
+            if (line.length > 0) {
+                var first = line.substring(0, 1)
+                if (first != "#") {
+                    r.ignoreRules = r.ignoreRules + 1
+                }
+            }
+        }
+    }
+    return r
+}
+
+class Metrics {
+    Long startedAt = 0
+    Int eventsPublished = 0
+    Int handlersCalled = 0
+    Int eventsFailed = 0
+    Int tasksLaunched = 0
+    Int tasksCompleted = 0
+    Int tasksFailed = 0
+    Int tasksCancelled = 0
+    Int tasksRejected = 0
+
+    constructor() {
+    }
+
+    start(TimeSource clock) {
+        startedAt = clock.nowMs()
+    }
+
+    incByName(String name) {
+        if (name == "events.published") {
+            eventsPublished = eventsPublished + 1
+        } else if (name == "events.handlers") {
+            handlersCalled = handlersCalled + 1
+        } else if (name == "events.failed") {
+            eventsFailed = eventsFailed + 1
+        } else if (name == "tasks.launched") {
+            tasksLaunched = tasksLaunched + 1
+        } else if (name == "tasks.completed") {
+            tasksCompleted = tasksCompleted + 1
+        } else if (name == "tasks.failed") {
+            tasksFailed = tasksFailed + 1
+        } else if (name == "tasks.cancelled") {
+            tasksCancelled = tasksCancelled + 1
+        } else if (name == "tasks.rejected") {
+            tasksRejected = tasksRejected + 1
+        }
+    }
+
+    uptimeMs(TimeSource clock): Long {
+        return clock.nowMs() - startedAt
+    }
+
+    snapshotJson(TimeSource clock): String {
+        var out = "{\"uptimeMs\":" + uptimeMs(clock)
+        out = out + ",\"events\":{\"published\":" + eventsPublished + ",\"handlersCalled\":" + handlersCalled + ",\"failed\":" + eventsFailed + "}"
+        out = out + ",\"tasks\":{\"launched\":" + tasksLaunched + ",\"completed\":" + tasksCompleted + ",\"failed\":" + tasksFailed + ",\"cancelled\":" + tasksCancelled + ",\"rejected\":" + tasksRejected + "}"
+        out = out + "}"
+        return out
+    }
+}
+
+class RuntimeContext implements ContextView {
+    Config cfg
+    Logger logger
+    EventBus bus = EventBus()
+    Scheduler sched
+    WorkerPool pool
+    Lifecycle life = Lifecycle()
+    Metrics met = Metrics()
+    TimeSource clock
+
+    constructor(Config c, TimeSource ts) {
+        cfg = c
+        clock = ts
+        logger = Logger(ts)
+        var lvlName = c.getStr("log.level", "INFO")
+        var lvl = logLevelFromName(lvlName)
+        if (lvl < 0) {
+            lvl = LOG_INFO()
+        }
+        var col = false
+        try {
+            col = c.getBool("log.color", false)
+        } catch (String e) {
+            col = false
+        }
+        var js = false
+        try {
+            js = c.getBool("log.json", false)
+        } catch (String e) {
+            js = false
+        }
+        logger.configure(lvl, col, js)
+        met.start(ts)
+    }
+
+    incMetric(String name) {
+        met.incByName(name)
+    }
+
+    wire() {
+        sched = Scheduler(this)
+        pool = WorkerPool(sched, 1)
+    }
+
+    finishBoot(): Bool {
+        life.transition(LC_READY())
+        return true
+    }
+
+    shutdownGraceful() {
+        if (life.state() == LC_READY()) {
+            life.transition(LC_STOPPING())
+        }
+        sched.gracefulShutdown()
+        life.transition(LC_STOPPED())
+    }
+}
+
+runtimeStatusJson(RuntimeContext ctx): String {
+    var out = "{\"state\":\"" + ctx.life.stateName() + "\""
+    out = out + ",\"scheduler\":" + ctx.sched.statsJson()
+    out = out + ",\"bus\":" + ctx.bus.statsJson()
+    out = out + ",\"metrics\":" + ctx.met.snapshotJson(ctx.clock)
+    out = out + "}"
+    return out
+}
+
+test "parse int positive" {
+    assert(parseIntStr("42") == 42)
+    assert(parseIntStr("0") == 0)
+    assert(parseIntStr("007") == 7)
+}
+
+test "parse int negative" {
+    assert(parseIntStr("-13") == -13)
+}
+
+test "parse int invalid throws" {
+    var threw = false
+    try {
+        parseIntStr("12x")
+    } catch (String e) {
+        threw = true
+    }
+    assert(threw)
+}
+
+test "parse bool variants" {
+    assert(parseBoolStr("true"))
+    assert(parseBoolStr("YES"))
+    assert(parseBoolStr("0") == false)
+    assert(parseBoolStr("") == false)
+}
+
+test "escape json special chars" {
+    assert(escapeJson("plain") == "plain")
+    assert(escapeJson("a\"b") == "a\\\"b")
+    assert(escapeJson("a\nb") == "a\\nb")
+}
+
+test "split str basic" {
+    var l = splitStr("a,b,c", ",")
+    assert(l.size == 3)
+    assert(l.get(0) == "a")
+    assert(l.get(2) == "c")
+}
+
+test "join path" {
+    assert(joinPath("data", "users.txt") == "data/users.txt")
+    assert(joinPath("", "x") == "x")
+}
+
+main() {
+}

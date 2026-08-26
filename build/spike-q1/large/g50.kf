@@ -1,0 +1,4 @@
+record L50(Int v)
+mainX50() {
+    var l = L50(1)
+}

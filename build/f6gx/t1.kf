@@ -1,0 +1,7 @@
+test "forward runs all layers counting steps" {
+    var g = GraphExecutor()
+    g.buildPlan(4, 8)
+    var x = tensorNew(1, 8)
+    var y = g.forwardAllLayers(x)
+    assert(g.stepCount() == 4)
+}

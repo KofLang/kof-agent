@@ -1,0 +1,6 @@
+test "tokenizer info bos eos" {
+    var h = openGGUF("fixtures/tiny.gguf")
+    var ti = tokenizerInfo(h)
+    var bos = ti.bosId
+    assert(bos == 1)
+}

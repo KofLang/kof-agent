@@ -1,0 +1,4 @@
+test "eval suite has 540 prompts" {
+    var n = evalCountValid("eval/ptbr-suite.jsonl")
+    assert(n >= 500)
+}

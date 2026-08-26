@@ -1,0 +1,84 @@
+record ToolRollback(String kind, String backupPath)
+
+
+class ToolResult {
+    String status = "ok"
+    String data = ""
+    Long durationMs = 0
+    ToolRollback rollback = ToolRollback("", "")
+    constructor() {
+    }
+}
+
+toolOk(String data): ToolResult {
+    var r = ToolResult()
+    r.status = "ok"
+    r.data = data
+    return r
+}
+
+toolErr(String code, String detail): ToolResult {
+    var r = ToolResult()
+    r.status = "error"
+    r.data = code + "|" + detail
+    return r
+}
+
+toolGap(String gapCode, String detail): ToolResult {
+    var r = ToolResult()
+    r.status = "gap"
+    r.data = gapCode + "|" + detail
+    return r
+}
+
+toolDenied(String perm): ToolResult {
+    var r = ToolResult()
+    r.status = "denied"
+    r.data = perm
+    return r
+}
+
+toolCancelled(): ToolResult {
+    var r = ToolResult()
+    r.status = "cancelled"
+    r.data = ""
+    return r
+}
+
+
+toolExec(ToolRegistry reg, ToolCtx ctx, ToolCall call): ToolResult {
+    if (ctx.cancelled) {
+        var cr = ToolResult()
+        cr.status = "cancelled"
+        return cr
+    }
+    var e = reg.findById(call.toolId)
+    if (e.spec.id == "") {
+        ctx.bus.publish("tool.failed", call.toolId)
+        var nf = ToolResult()
+        nf.status = "error"
+        nf.data = "TOOL-NOTFOUND|" + call.toolId
+        return nf
+    }
+    var miss = reg.entryMissingPerm(ctx, e)
+    if (miss != "") {
+        ctx.bus.publish("tool.denied", call.toolId + ":" + miss)
+        var dn = ToolResult()
+        dn.status = "denied"
+        dn.data = miss
+        return dn
+    }
+    ctx.bus.publish("tool.started", call.toolId + ":" + ctx.requestId)
+    ctx.met.incByName("tasks.launched")
+    var t0 = ctx.clock.nowMs()
+    var r = e.handler.call(ctx, call)
+    r.durationMs = ctx.clock.nowMs() - t0
+    if (r.status == "ok") {
+        ctx.met.incByName("tasks.completed")
+        ctx.bus.publish("tool.finished", call.toolId)
+    } else {
+        ctx.met.incByName("tasks.failed")
+        ctx.bus.publish("tool.failed", call.toolId)
+    }
+    return r
+}

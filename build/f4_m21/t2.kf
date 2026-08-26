@@ -1,0 +1,7 @@
+test "lsp completion prefix filter" {
+    var s = LspServer()
+    s.didOpen("/w/token.kf")
+    var c = s.completion("tok")
+    var n = c.size()
+    assert(n >= 1)
+}

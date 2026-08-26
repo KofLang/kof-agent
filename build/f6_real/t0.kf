@@ -1,0 +1,4 @@
+test "real dataset train file valid" {
+    var st = dsCountValid("training/dataset/jsonl/dataset_train.jsonl")
+    assert(st.total > 300)
+}

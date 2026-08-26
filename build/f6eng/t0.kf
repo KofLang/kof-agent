@@ -1,0 +1,9 @@
+test "engine session lifecycle" {
+    var h = openGGUF("fixtures/tiny.gguf")
+    var e = InferenceEngine()
+    e.bind(h)
+    var sid = e.createSession()
+    assert(e.isActive(sid))
+    e.destroySession(sid)
+    assert(!e.isActive(sid))
+}

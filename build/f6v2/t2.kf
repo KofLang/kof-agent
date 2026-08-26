@@ -1,0 +1,6 @@
+test "lora single job only" {
+    var m = LoraManager()
+    m.createJob()
+    m.jobState = 2
+    assert(!m.createJob())
+}

@@ -1,0 +1,7 @@
+test "model duplicate rejected and remove works" {
+    var m = ModelManager()
+    m.register("llama", "/m/l.gguf", 2)
+    assert(!m.register("llama", "/x", 1))
+    m.remove("llama")
+    assert(m.count() == 0)
+}

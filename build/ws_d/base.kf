@@ -1,0 +1,4 @@
+record Base(Int v)
+
+main() {
+}

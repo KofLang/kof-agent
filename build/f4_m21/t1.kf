@@ -1,0 +1,8 @@
+test "lsp didopen counts doc and symbol" {
+    var s = LspServer()
+    s.didOpen("/w/main.kf")
+    var d = s.docCount()
+    var n = s.symbolCount()
+    assert(d == 1)
+    assert(n == 1)
+}

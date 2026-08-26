@@ -1,0 +1,5 @@
+test "zz tc2" {
+    var h = openGGUF("fixtures/tiny.gguf")
+    var tc = ggufTensorCount2(h)
+    assert(tc == 2)
+}

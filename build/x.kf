@@ -1,0 +1,252 @@
+record CheckRec(String id, Bool ok, String detail)
+
+interface TimeSource {
+    nowMs(): Long
+}
+
+class FixedClock implements TimeSource {
+    Long value = 0
+    constructor(Long v) {
+        value = v
+    }
+    nowMs(): Long {
+        return value
+    }
+    advance(Long ms) {
+        value = value + ms
+    }
+}
+
+parseIntStr(String s): Int {
+    var n = 0
+    var i = 0
+    if (s.length == 0) {
+        throw "parse: empty integer"
+    }
+    var start = 0
+    if (s.charAt(0) == 45) {
+        start = 1
+        if (s.length == 1) {
+            throw "parse: invalid integer '" + s + "'"
+        }
+    }
+    i = start
+    while (i < s.length) {
+        var c = s.charAt(i)
+        if (c < 48 || c > 57) {
+            throw "parse: invalid integer '" + s + "'"
+        }
+        n = n * 10 + (c - 48)
+        i = i + 1
+    }
+    if (start == 1) {
+        n = 0 - n
+    }
+    return n
+}
+
+parseBoolStr(String s): Bool {
+    var v = s.toLowerCase()
+    if (v == "true" || v == "1" || v == "yes" || v == "on") {
+        return true
+    }
+    if (v == "false" || v == "0" || v == "no" || v == "off" || v == "") {
+        return false
+    }
+    throw "parse: invalid boolean '" + s + "'"
+}
+
+escapeJson(String s): String {
+    var out = ""
+    var i = 0
+    while (i < s.length) {
+        var c = s.charAt(i)
+        if (c == 34) {
+            out = out + "\\\""
+        } else if (c == 92) {
+            out = out + "\\\\"
+        } else if (c == 10) {
+            out = out + "\\n"
+        } else if (c == 13) {
+            out = out + "\\r"
+        } else if (c == 9) {
+            out = out + "\\t"
+        } else {
+            out = out + s.substring(i, i + 1)
+        }
+        i = i + 1
+    }
+    return out
+}
+
+joinPath(String a, String b): String {
+    if (a == "") {
+        return b
+    }
+    if (a.substring(a.length - 1, a.length) == "/") {
+        return a + b
+    }
+    return a + "/" + b
+}
+
+splitStr(String s, String sep): List<String> {
+    var out = listOf<String>()
+    if (s.length == 0) {
+        return out
+    }
+    var sc = sep.charAt(0)
+    var start = 0
+    var i = 0
+    while (i < s.length) {
+        if (s.charAt(i) == sc) {
+            out.add(s.substring(start, i))
+            start = i + 1
+        }
+        i = i + 1
+    }
+    out.add(s.substring(start, s.length))
+    return out
+}
+
+loadArgsFile(String path): List<String> {
+    var argv = listOf<String>()
+    var f = File(path)
+    if (!f.exists()) {
+        return argv
+    }
+    var txt = f.readText()
+    var lines = splitStr(txt, "\n")
+    for (var line in lines) {
+        var t = line.trim()
+        if (t.length > 0) {
+            argv.add(t)
+        }
+    }
+    return argv
+}
+
+sortInts(Int[] a, Int n) {
+    var i = 1
+    while (i < n) {
+        var key = a[i]
+        var j = i - 1
+        var placed = false
+        while (!placed) {
+            if (j < 0) {
+                placed = true
+            } else {
+                if (a[j] > key) {
+                    a[j + 1] = a[j]
+                    j = j - 1
+                } else {
+                    placed = true
+                }
+            }
+        }
+        a[j + 1] = key
+        i = i + 1
+    }
+}
+
+mkFile(String path, String content): Bool {
+    var parent = ""
+    var parts = splitStr(path, "/")
+    if (parts.size > 1) {
+        var i = 0
+        while (i < parts.size - 1) {
+            if (parent == "") {
+                parent = parts.get(i)
+            } else {
+                parent = joinPath(parent, parts.get(i))
+            }
+            i = i + 1
+        }
+        var d = Directory(parent)
+        if (!d.exists()) {
+            d.createDirectories()
+        }
+    }
+    var f = File(path)
+    if (f.exists()) {
+        f.delete()
+    }
+    return f.writeText(content)
+}
+
+class EventCounter implements EventHandler {
+    Int count = 0
+    constructor() {
+    }
+    onEvent(EventEnvelope e): Bool {
+        count = count + 1
+        return true
+    }
+}
+
+class RecordingHandler implements EventHandler {
+    List<String> seen = listOf<String>()
+    constructor() {
+    }
+    onEvent(EventEnvelope e): Bool {
+        seen.add(e.topic + "=" + e.payload)
+        return true
+    }
+}
+
+freshBus(): EventBus {
+    return EventBus()
+}
+
+// M22: Formatter/Linter/Trace core
+
+record LintIssue(Int line, String ruleId, String severity)
+record TraceEventJson(String name, Int ts, Int dur)
+
+fmtIndentLine(String line, Int depth): String {
+    var sp = ""
+    var i = 0
+    while (i < depth * 4) {
+        sp = sp + " "
+        i = i + 1
+    }
+    return sp + line
+}
+
+lintCheckUnusedParam(String fnLine, Int lineNo): LintIssue {
+    if (fnLine.contains("_unused")) {
+        return LintIssue(lineNo, "STYLE001", "warn")
+    }
+    return LintIssue(0 - 1, "", "")
+}
+
+lintCheckLongLine(String line, Int lineNo, Int maxLen): LintIssue {
+    if (line.length > maxLen) {
+        return LintIssue(lineNo, "STYLE002", "warn")
+    }
+    return LintIssue(0 - 1, "", "")
+}
+
+class TraceExporter {
+    List<TraceEventJson> events = listOf<TraceEventJson>()
+
+    add(String name, Int ts, Int dur) {
+        events.add(TraceEventJson(name, ts, dur))
+    }
+
+    toChromeJson(): String {
+        var out = "["
+        var i = 0
+        while (i < events.size()) {
+            var e = events.get(i)
+            if (i > 0) { out = out + "," }
+            out = out + "{\"name\":\"" + e.name + "\",\"ts\":" + e.ts + ",\"dur\":" + e.dur + "}"
+            i = i + 1
+        }
+        return out + "]"
+    }
+}
+
+test "formatter indent depth" {
+    var l = fmtIndentLine("x()", 2)
+    assert(l.startsWith("        x()"))
+}

@@ -1,0 +1,4 @@
+test "config parse toml fields" {
+    var c = koflmParseConfig("backend = \"auto\"\nthreads = 8\n")
+    assert(c.threads == 8)
+}

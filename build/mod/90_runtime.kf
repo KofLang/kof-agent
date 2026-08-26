@@ -1,0 +1,66 @@
+class RuntimeContext implements ContextView {
+    Config cfg
+    Logger logger
+    EventBus bus = EventBus()
+    Scheduler sched
+    WorkerPool pool
+    Lifecycle life = Lifecycle()
+    Metrics met = Metrics()
+    TimeSource clock
+
+    constructor(Config c, TimeSource ts) {
+        cfg = c
+        clock = ts
+        logger = Logger(ts)
+        var lvlName = c.getStr("log.level", "INFO")
+        var lvl = logLevelFromName(lvlName)
+        if (lvl < 0) {
+            lvl = LOG_INFO()
+        }
+        var col = false
+        try {
+            col = c.getBool("log.color", false)
+        } catch (String e) {
+            col = false
+        }
+        var js = false
+        try {
+            js = c.getBool("log.json", false)
+        } catch (String e) {
+            js = false
+        }
+        logger.configure(lvl, col, js)
+        met.start(ts)
+    }
+
+    incMetric(String name) {
+        met.incByName(name)
+    }
+
+    wire() {
+        sched = Scheduler(this)
+        pool = WorkerPool(sched, 1)
+    }
+
+    finishBoot(): Bool {
+        life.transition(LC_READY())
+        return true
+    }
+
+    shutdownGraceful() {
+        if (life.state() == LC_READY()) {
+            life.transition(LC_STOPPING())
+        }
+        sched.gracefulShutdown()
+        life.transition(LC_STOPPED())
+    }
+}
+
+runtimeStatusJson(RuntimeContext ctx): String {
+    var out = "{\"state\":\"" + ctx.life.stateName() + "\""
+    out = out + ",\"scheduler\":" + ctx.sched.statsJson()
+    out = out + ",\"bus\":" + ctx.bus.statsJson()
+    out = out + ",\"metrics\":" + ctx.met.snapshotJson(ctx.clock)
+    out = out + "}"
+    return out
+}

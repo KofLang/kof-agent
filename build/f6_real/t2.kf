@@ -1,0 +1,5 @@
+test "manifest checksum present" {
+    var f = File("training/dataset/jsonl/dataset.manifest.json")
+    var t = f.readText()
+    assert(t.contains("koflm-ds-v1"))
+}

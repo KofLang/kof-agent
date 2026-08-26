@@ -1,0 +1,5 @@
+test "leak detector growth levels" {
+    assert(detectLeak(300, 300, 200) == 0)
+    assert(detectLeak(400, 300, 200) == 1)
+    assert(detectLeak(800, 300, 200) == 2)
+}

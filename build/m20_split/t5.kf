@@ -1,0 +1,9 @@
+test "stream emits start and final" {
+    var b = EventBus()
+    var rt = AgentRuntime(b, RealTimeClock())
+    var nodes = listOf<PlanNode>()
+    nodes.add(PlanNode("s1", 0, -1))
+    var evs = rt.streamRun(nodes, OrchTool(1, 1, 100, 0))
+    var n = evs.size()
+    assert(n == 2)
+}

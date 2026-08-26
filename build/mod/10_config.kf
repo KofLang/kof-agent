@@ -1,0 +1,115 @@
+record CfgEntry(String key, String value)
+
+class Config {
+    List<CfgEntry> entries = listOf<CfgEntry>()
+    String sourcePath = ""
+    Bool loaded = false
+
+    loadFile(String path): Bool {
+        entries = listOf<CfgEntry>()
+        sourcePath = path
+        var f = File(path)
+        if (!f.exists()) {
+            loaded = false
+            return false
+        }
+        if (!f.isFile()) {
+            loaded = false
+            return false
+        }
+        var text = f.readText()
+        parseInto(text)
+        loaded = true
+        return true
+    }
+
+    reload(): Bool {
+        return loadFile(sourcePath)
+    }
+
+    parseInto(String text) {
+        var lines = splitStr(text, "\n")
+        for (var raw in lines) {
+            var line = raw.trim()
+            if (line.length > 0) {
+                if (!line.startsWith("#")) {
+                    var kv = splitStr(line, "=")
+                    if (kv.size == 2) {
+                        var k = kv.get(0).trim()
+                        var v = kv.get(1).trim()
+                        entries.add(CfgEntry(k, v))
+                    }
+                }
+            }
+        }
+    }
+
+    has(String key): Bool {
+        for (var e in entries) {
+            if (e.key == key) {
+                return true
+            }
+        }
+        return false
+    }
+
+    getRaw(String key): String {
+        for (var e in entries) {
+            if (e.key == key) {
+                return e.value
+            }
+        }
+        throw "config: missing key '" + key + "'"
+    }
+
+    getStr(String key, String def): String {
+        if (!has(key)) {
+            return def
+        }
+        return getRaw(key)
+    }
+
+    getInt(String key, Int def): Int {
+        if (!has(key)) {
+            return def
+        }
+        var v = getRaw(key)
+        try {
+            return parseIntStr(v)
+        } catch (String e) {
+            throw "config: invalid integer for '" + key + "': '" + v + "'"
+        }
+    }
+
+    getBool(String key, Bool def): Bool {
+        if (!has(key)) {
+            return def
+        }
+        var v = getRaw(key)
+        try {
+            return parseBoolStr(v)
+        } catch (String e) {
+            throw "config: invalid boolean for '" + key + "': '" + v + "'"
+        }
+    }
+
+    snapshotJson(): String {
+        var out = "{\"source\":\"" + escapeJson(sourcePath) + "\",\"loaded\":"
+        if (loaded) {
+            out = out + "true"
+        } else {
+            out = out + "false"
+        }
+        out = out + ",\"entries\":["
+        var first = true
+        for (var e in entries) {
+            if (!first) {
+                out = out + ","
+            }
+            first = false
+            out = out + "{\"key\":\"" + escapeJson(e.key) + "\",\"value\":\"" + escapeJson(e.value) + "\"}"
+        }
+        out = out + "]}"
+        return out
+    }
+}

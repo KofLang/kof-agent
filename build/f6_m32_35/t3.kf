@@ -1,0 +1,4 @@
+test "model manifest fields" {
+    var m = modelManifestJson("ds-v1", 123456)
+    assert(m.contains("KofLM-v1"))
+}

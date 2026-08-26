@@ -1,0 +1,15 @@
+n18iso(String e): GgufHeader {
+    var errs = listOf<String>()
+    if (e == "add") {
+        errs.add("E_MAGIC")
+    }
+    var v = 3
+    var out = new Int[errs.size()]
+    println("built=" + out.length)
+    return GgufHeader(v, errs.size(), 0, 32)
+}
+
+test "zz n18" {
+    var h = n18iso("add")
+    println("v=" + h.version + " tc=" + h.tensorCount)
+}

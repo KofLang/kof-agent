@@ -1,0 +1,12 @@
+test "zz b19" {
+    var b = EventBus()
+    var o = ToolOrchestrator(b, RealTimeClock())
+    var clk = RealTimeClock()
+    var t0 = clk.nowMs()
+    var ids = listOf<String>()
+    var i = 0
+    while (i < 200) { ids.add("t" + i); i = i + 1 }
+    var ok = o.executeSequential(ids, OrchTool(1, 1, 100, 0))
+    var t1 = clk.nowMs()
+    println("BENCH19 tools=" + ok + " ms=" + (t1 - t0))
+}

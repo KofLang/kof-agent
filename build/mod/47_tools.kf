@@ -1,0 +1,610 @@
+record ToolSpec(String id, String name, String category, String description, String inputSchema, String outputSchema, String permission)
+record ToolCall(String toolId, String requestId, String a, String b, Int n)
+PERM_FS_READ(): String { return "filesystem.read" }
+PERM_FS_WRITE(): String { return "filesystem.write" }
+PERM_COMPILER_EXEC(): String { return "compiler.execute" }
+PERM_GIT_WRITE(): String { return "git.write" }
+PERM_SYSTEM_EXEC(): String { return "system.execute" }
+PERM_WEB_NETWORK(): String { return "web.network" }
+
+
+
+
+
+
+
+class ToolCtx {
+    String requestId = "-"
+    EventBus bus
+    TimeSource clock
+    List<String> grants = listOf<String>()
+    Bool cancelled = false
+    Metrics met = Metrics()
+    WorkspaceIndex wsi
+
+    constructor(EventBus b, TimeSource ts) {
+        bus = b
+        clock = ts
+        wsi = WorkspaceIndex(".", b, ts)
+    }
+
+    grant(String p) {
+        grants.add(p)
+    }
+
+    revoke(String p) {
+        var i = 0
+        while (i < grants.size) {
+            if (grants.get(i) == p) {
+                grants.remove(i)
+                return
+            }
+            i = i + 1
+        }
+    }
+
+    hasGrant(String p): Bool {
+        for (var g in grants) {
+            if (g == p) {
+                return true
+            }
+        }
+        return false
+    }
+}
+
+class ToolEntry {
+    ToolSpec spec
+    DispatchHandler handler
+    Int version = 1
+    constructor(ToolSpec s, DispatchHandler h) {
+        spec = s
+        handler = h
+    }
+}
+
+class ToolRegistry {
+    List<ToolEntry> entries = listOf<ToolEntry>()
+
+    register(ToolSpec s, ToolHandler h) {
+        entries.add(ToolEntry(s, h))
+    }
+
+    findById(String id): ToolEntry {
+        for (var e in entries) {
+            if (e.spec.id == id) {
+                return e
+            }
+        }
+        return ToolEntry(ToolSpec("", "", "", "", "", "", ""), DispatchHandler())
+    }
+
+    hasId(String id): Bool {
+        for (var e in entries) {
+            if (e.spec.id == id) {
+                return true
+            }
+        }
+        return false
+    }
+
+    byCategory(String cat): List<ToolSpec> {
+        var out = listOf<ToolSpec>()
+        for (var e in entries) {
+            if (e.spec.category == cat) {
+                out.add(e.spec)
+            }
+        }
+        return out
+    }
+
+    size(): Int {
+        return entries.size
+    }
+
+    missingPermFor(ToolCtx c, String id): String {
+        var e = findById(id)
+        return entryMissingPerm(c, e)
+    }
+
+    entryMissingPerm(ToolCtx c, ToolEntry e): String {
+        var need = e.spec.permission
+        if (need == "") {
+            return ""
+        }
+        if (!c.hasGrant(need)) {
+            return need
+        }
+        return ""
+    }
+}
+
+class DispatchHandler {
+    constructor() {
+    }
+    call(ToolCtx c, ToolCall t): ToolResult {
+        if (t.toolId == "fs.read") {
+            return tlFsRead(c, t)
+        }
+        if (t.toolId == "fs.exists") {
+            return tlFsExists(c, t)
+        }
+        if (t.toolId == "fs.metadata") {
+            return tlFsMetadata(c, t)
+        }
+        if (t.toolId == "fs.list") {
+            return tlFsList(c, t)
+        }
+        if (t.toolId == "fs.append") {
+            return tlFsAppend(c, t)
+        }
+        if (t.toolId == "fs.copy") {
+            return tlFsCopy(c, t)
+        }
+        if (t.toolId == "fs.mkdir") {
+            return tlFsMkdir(c, t)
+        }
+        if (t.toolId == "fs.write") {
+            return tlFsWrite(c, t)
+        }
+        if (t.toolId == "fs.delete") {
+            return tlFsDelete(c, t)
+        }
+        if (t.toolId == "fs.rename") {
+            return tlFsRename(c, t)
+        }
+        if (t.toolId == "fs.rollbackRestore") {
+            return tlFsRestoreBackup(c, t)
+        }
+        if (t.toolId.startsWith("ws.")) {
+            return tlWorkspace(c, t)
+        }
+        if (t.toolId == "search.text") {
+            return tlSearchText(c, t)
+        }
+        if (t.toolId == "search.symbol") {
+            return tlSearchSymbol(c, t)
+        }
+        if (t.toolId == "search.path") {
+            return tlSearchPath(c, t)
+        }
+        if (t.toolId == "patch.file") {
+            return tlPatchFile(c, t)
+        }
+        if (t.toolId == "patch.replace") {
+            return tlPatchReplace(c, t)
+        }
+        if (t.toolId == "patch.append") {
+            return tlPatchAppend(c, t)
+        }
+        if (t.toolId == "diff.file") {
+            return tlDiffFile(c, t)
+        }
+        if (t.toolId == "git.branch") {
+            return tlGitBranch(c, t)
+        }
+        if (t.toolId == "git.log") {
+            return tlGitLog(c, t)
+        }
+        if (t.toolId.startsWith("compiler.")) {
+            return toolGap("GW-EXEC", "process.run indisponivel (J2/GW001); usar ponte scripts/golden_compiler.sh")
+        }
+        if (t.toolId.startsWith("ast.")) {
+            return toolGap("GW-AST-DUMP", "compilador ainda nao expoe AST estruturada")
+        }
+        if (t.toolId.startsWith("web.") || t.toolId.startsWith("http.")) {
+            return toolGap("GW-NET", "rede chega com kof.http/kof.web na plataforma")
+        }
+        if (t.toolId.startsWith("ui.")) {
+            return toolGap("GW-UI", "ui via kof.ui/KofJS em milestone futura")
+        }
+        if (t.toolId.startsWith("system.")) {
+            return toolGap("GW-SYS", "execucao de sistema depende de process.run upstream")
+        }
+        return toolErr("TOOL-NOTFOUND", t.toolId)
+    }
+}
+tlBackup(String path): String {
+    var bak = path + ".katool-bak"
+    var src = File(path)
+    if (src.exists() && src.isFile()) {
+        var b = File(bak)
+        if (b.exists()) {
+            b.delete()
+        }
+        b.writeText(src.readText())
+        return bak
+    }
+    return ""
+}
+
+replaceAllStr(String body, String from, String to): String {
+    var out = ""
+    var rest = body
+    while (rest.length > 0) {
+        var at = rest.indexOf(from)
+        if (at < 0) {
+            out = out + rest
+            rest = ""
+        } else {
+            out = out + rest.substring(0, at) + to
+            rest = rest.substring(at + from.length, rest.length)
+        }
+    }
+    return out
+}
+
+tlFsRead(ToolCtx c, ToolCall t): ToolResult {
+    var f = File(t.a)
+    if (!f.exists() || !f.isFile()) {
+        return toolErr("FS-NOTFOUND", t.a)
+    }
+    return toolOk(f.readText())
+}
+
+tlFsExists(ToolCtx c, ToolCall t): ToolResult {
+    var f = File(t.a)
+    var d = Directory(t.a)
+    var isFile = f.exists() && f.isFile()
+    var isDir = d.exists() && d.isDirectory()
+    if (isFile) {
+        return toolOk("{\"exists\":true,\"kind\":\"file\"}")
+    }
+    if (isDir) {
+        return toolOk("{\"exists\":true,\"kind\":\"dir\"}")
+    }
+    return toolOk("{\"exists\":false}")
+}
+
+tlFsMetadata(ToolCtx c, ToolCall t): ToolResult {
+    var f = File(t.a)
+    if (!f.exists() || !f.isFile()) {
+        return toolErr("FS-NOTFOUND", t.a)
+    }
+    var txt = f.readText()
+    return toolOk("{\"size\":" + txt.length + ",\"hash\":" + wsHash(txt) + "}")
+}
+
+tlFsList(ToolCtx c, ToolCall t): ToolResult {
+    var d = Directory(t.a)
+    if (!d.exists() || !d.isDirectory()) {
+        return toolErr("FS-NOTFOUND", t.a)
+    }
+    var names = d.list()
+    var out = "["
+    var first = true
+    for (var n in names) {
+        if (!first) {
+            out = out + ","
+        }
+        first = false
+        out = out + "\"" + escapeJson(n) + "\""
+    }
+    return toolOk(out + "]")
+}
+
+tlFsAppend(ToolCtx c, ToolCall t): ToolResult {
+    var f = File(t.a)
+    if (!f.appendText(t.b)) {
+        return toolErr("FS-WRITEFAIL", t.a)
+    }
+    return toolOk("appended")
+}
+
+tlFsCopy(ToolCtx c, ToolCall t): ToolResult {
+    var s = File(t.a)
+    if (!s.exists() || !s.isFile()) {
+        return toolErr("FS-NOTFOUND", t.a)
+    }
+    var d = File(t.b)
+    if (d.exists()) {
+        d.delete()
+    }
+    if (!d.writeText(s.readText())) {
+        return toolErr("FS-WRITEFAIL", t.b)
+    }
+    return toolOk("copied")
+}
+
+tlFsMkdir(ToolCtx c, ToolCall t): ToolResult {
+    var d = Directory(t.a)
+    if (d.exists()) {
+        return toolOk("exists")
+    }
+    if (!d.createDirectories()) {
+        return toolErr("FS-MKDIRFAIL", t.a)
+    }
+    return toolOk("created")
+}
+
+tlFsWrite(ToolCtx c, ToolCall t): ToolResult {
+    var existed = File(t.a).exists()
+    var bak = tlBackup(t.a)
+    var f = File(t.a)
+    if (!f.writeText(t.b)) {
+        return toolErr("FS-WRITEFAIL", t.a)
+    }
+    var r = toolOk("{\"bytes\":" + t.b.length + "}")
+    if (existed) {
+        r.rollback = ToolRollback("restore", bak)
+    } else {
+        r.rollback = ToolRollback("delete-created", t.a)
+    }
+    c.bus.publish("patch.applied", t.a)
+    return r
+}
+
+tlFsDelete(ToolCtx c, ToolCall t): ToolResult {
+    var f = File(t.a)
+    if (!f.exists()) {
+        return toolErr("FS-NOTFOUND", t.a)
+    }
+    var bak = tlBackup(t.a)
+    if (!f.delete()) {
+        return toolErr("FS-DELETEFAIL", t.a)
+    }
+    var r = toolOk("deleted")
+    r.rollback = ToolRollback("restore", bak)
+    return r
+}
+
+tlFsRename(ToolCtx c, ToolCall t): ToolResult {
+    var s = File(t.a)
+    if (!s.exists()) {
+        return toolErr("FS-NOTFOUND", t.a)
+    }
+    var d = File(t.b)
+    if (d.exists()) {
+        return toolErr("FS-EXISTS", t.b)
+    }
+    var content = s.readText()
+    s.delete()
+    if (!d.writeText(content)) {
+        return toolErr("FS-WRITEFAIL", t.b)
+    }
+    return toolOk("renamed")
+}
+
+tlFsRestoreBackup(ToolCtx c, ToolCall t): ToolResult {
+    var bak = File(t.a)
+    if (!bak.exists()) {
+        return toolErr("FS-NOBACKUP", t.a)
+    }
+    var target = File(t.b)
+    if (target.exists()) {
+        target.delete()
+    }
+    target.writeText(bak.readText())
+    bak.delete()
+    return toolOk("restored")
+}
+tlWorkspace(ToolCtx c, ToolCall t): ToolResult {
+    var idx = c.wsi
+    if (!idx.loaded) {
+        return toolGap("WS-NOTLOADED", "host injeta WorkspaceIndex carregado")
+    }
+    if (t.toolId == "ws.snapshot") {
+        if (!idx.save()) {
+            return toolErr("WS-SAVEFAIL", idx.root)
+        }
+        return toolOk(idx.statsJson())
+    }
+    if (t.toolId == "ws.diff") {
+        var d = idx.diffVsCurrent()
+        return toolOk("{\"added\":" + d.added.size + ",\"modified\":" + d.modified.size + ",\"deleted\":" + d.deleted.size + ",\"renamed\":" + d.renamedOld.size + "}")
+    }
+    if (t.toolId == "ws.findSymbol") {
+        var hits = idx.findSymbol(t.a)
+        var out = "["
+        var first = true
+        for (var h in hits) {
+            if (!first) {
+                out = out + ","
+            }
+            first = false
+            out = out + "{\"name\":\"" + escapeJson(h.name) + "\",\"kind\":\"" + h.kind + "\",\"file\":\"" + escapeJson(h.file) + "\"}"
+        }
+        return toolOk(out + "]")
+    }
+    if (t.toolId == "ws.findFile") {
+        var out2 = "["
+        var first2 = true
+        for (var ff in idx.current.files) {
+            if (ff.path.contains(t.a)) {
+                if (!first2) {
+                    out2 = out2 + ","
+                }
+                first2 = false
+                out2 = out2 + "\"" + escapeJson(ff.path) + "\""
+            }
+        }
+        return toolOk(out2 + "]")
+    }
+    if (t.toolId == "ws.graph") {
+        var cyc = idx.cycles()
+        return toolOk("{\"edges\":" + idx.current.deps.size + ",\"cycles\":" + cyc.size + "}")
+    }
+    if (t.toolId == "ws.invalidate") {
+        var pf = File(joinPath(joinPath(idx.root, "build"), "workspace.idx"))
+        if (pf.exists()) {
+            pf.delete()
+        }
+        idx.loaded = false
+        return toolOk("invalidated")
+    }
+    if (t.toolId == "ws.open") {
+        var snap = idx.fullRescan()
+        return toolOk("{\"files\":" + snap.files.size + ",\"symbols\":" + snap.symbols.size + "}")
+    }
+    return toolErr("TOOL-NOTFOUND", t.toolId)
+}
+
+tlSearchText(ToolCtx c, ToolCall t): ToolResult {
+    var idx = c.wsi
+    if (!idx.loaded) {
+        return toolGap("WS-NOTLOADED", "search usa indice do workspace")
+    }
+    var out = "["
+    var first = true
+    for (var ff in idx.current.files) {
+        var rf = File(ff.path)
+        if (rf.exists() && rf.isFile()) {
+            var body = rf.readText()
+            var n = wsCountOccurrences(body, t.a)
+            if (n > 0) {
+                if (!first) {
+                    out = out + ","
+                }
+                first = false
+                out = out + "{\"file\":\"" + escapeJson(ff.path) + "\",\"count\":" + n + "}"
+            }
+        }
+    }
+    return toolOk(out + "]")
+}
+
+tlSearchSymbol(ToolCtx c, ToolCall t): ToolResult {
+    return tlWorkspace(c, ToolCall("ws.findSymbol", t.requestId, t.a, "", 0))
+}
+
+tlSearchPath(ToolCtx c, ToolCall t): ToolResult {
+    return tlWorkspace(c, ToolCall("ws.findFile", t.requestId, t.a, "", 0))
+}
+
+tlPatchFile(ToolCtx c, ToolCall t): ToolResult {
+    return tlFsWrite(c, t)
+}
+
+tlPatchReplace(ToolCtx c, ToolCall t): ToolResult {
+    var f = File(t.a)
+    if (!f.exists() || !f.isFile()) {
+        return toolErr("FS-NOTFOUND", t.a)
+    }
+    var sep = t.b.indexOf("|")
+    if (sep < 1) {
+        return toolErr("PATCH-ARGS", "esperado from|to")
+    }
+    var from = t.b.substring(0, sep)
+    var to = t.b.substring(sep + 1, t.b.length)
+    var body = f.readText()
+    var n = wsCountOccurrences(body, from)
+    if (n == 0) {
+        return toolErr("PATCH-TARGET-MISSING", from)
+    }
+    var bak = tlBackup(t.a)
+    var replaced = replaceAllStr(body, from, to)
+    if (!f.writeText(replaced)) {
+        return toolErr("FS-WRITEFAIL", t.a)
+    }
+    var r = toolOk("{\"replacements\":" + n + "}")
+    r.rollback = ToolRollback("restore", bak)
+    c.bus.publish("patch.applied", t.a)
+    return r
+}
+
+tlPatchAppend(ToolCtx c, ToolCall t): ToolResult {
+    var f = File(t.a)
+    var cur = ""
+    if (f.exists() && f.isFile()) {
+        cur = f.readText()
+    }
+    return tlFsWrite(c, ToolCall("fs.write", t.requestId, t.a, cur + t.b, 0))
+}
+
+tlDiffFile(ToolCtx c, ToolCall t): ToolResult {
+    var fa = File(t.a)
+    var fb = File(t.b)
+    if (!fa.exists() || !fb.exists()) {
+        return toolErr("FS-NOTFOUND", t.a + "|" + t.b)
+    }
+    var la = splitStr(fa.readText(), "\n")
+    var lb = splitStr(fb.readText(), "\n")
+    var samePrefix = 0
+    var minL = la.size
+    if (lb.size < minL) {
+        minL = lb.size
+    }
+    var i = 0
+    while (i < minL) {
+        if (la.get(i) == lb.get(i)) {
+            samePrefix = i + 1
+            i = i + 1
+        } else {
+            i = minL
+        }
+    }
+    var added = lb.size - samePrefix
+    var removed = la.size - samePrefix
+    var same = added == 0 && removed == 0
+    return toolOk("{\"same\":" + same + ",\"addedLines\":" + added + ",\"removedLines\":" + removed + ",\"firstDiffLine\":" + samePrefix + "}")
+}
+
+tlGitBranch(ToolCtx c, ToolCall t): ToolResult {
+    var gi = wsGitInfo(t.a)
+    return toolOk("{\"branch\":\"" + escapeJson(gi.branch) + "\",\"commit\":\"" + escapeJson(gi.commit) + "\"}")
+}
+
+tlGitLog(ToolCtx c, ToolCall t): ToolResult {
+    var lf = File(joinPath(joinPath(joinPath(t.a, ".git"), "logs"), "HEAD"))
+    if (!lf.exists() || !lf.isFile()) {
+        return toolGap("GIT-NOLOG", "sem reflog em " + t.a)
+    }
+    var lines = splitStr(lf.readText(), "\n")
+    var count = 0
+    for (var x in lines) {
+        if (x.trim().length > 0) {
+            count = count + 1
+        }
+    }
+    return toolOk("{\"entries\":" + count + "}")
+}
+
+regTool(ToolRegistry reg, String id, String name, String cat, String desc, String inS, String outS, String perm) {
+    reg.register(ToolSpec(id, name, cat, desc, inS, outS, perm), DispatchHandler())
+}
+
+defaultRegistry(): ToolRegistry {
+    var r = ToolRegistry()
+    var dh = DispatchHandler()
+    regTool(r, "fs.read", "readFile", "Filesystem", "le arquivo texto utf-8", "path", "content", PERM_FS_READ())
+    regTool(r, "fs.exists", "exists", "Filesystem", "existencia de arquivo ou diretorio", "path", "{exists,kind}", PERM_FS_READ())
+    regTool(r, "fs.metadata", "metadata", "Filesystem", "tamanho e hash do arquivo", "path", "{size,hash}", PERM_FS_READ())
+    regTool(r, "fs.list", "listDirectory", "Filesystem", "lista entradas do diretorio", "dir", "[names]", PERM_FS_READ())
+    regTool(r, "fs.append", "appendFile", "Filesystem", "anexa texto ao arquivo", "path,content", "ok", PERM_FS_WRITE())
+    regTool(r, "fs.copy", "copyFile", "Filesystem", "copia arquivo", "src,dst", "ok", PERM_FS_WRITE())
+    regTool(r, "fs.mkdir", "createDirectory", "Filesystem", "cria diretorios recursivamente", "dir", "ok", PERM_FS_WRITE())
+    regTool(r, "fs.readDirRaw", "readRaw", "Filesystem", "leitura bruta interna", "path", "content", PERM_FS_READ())
+    regTool(r, "fs.write", "writeFile", "Filesystem", "escreve arquivo com backup p/ rollback", "path,content", "{bytes}", PERM_FS_WRITE())
+    regTool(r, "fs.delete", "deleteFile", "Filesystem", "remove arquivo com backup", "path", "ok", PERM_FS_WRITE())
+    regTool(r, "fs.rename", "renameFile", "Filesystem", "renomeia/move arquivo", "from,to", "ok", PERM_FS_WRITE())
+    regTool(r, "fs.rollbackRestore", "restoreBackup", "Filesystem", "restaura a partir de backup .katool-bak", "backupPath,target", "ok", PERM_FS_WRITE())
+    regTool(r, "ws.open", "workspace.open", "Workspace", "reindexa o workspace", "-", "{files,symbols}", "")
+    regTool(r, "ws.snapshot", "workspace.snapshot", "Workspace", "persiste o snapshot atual", "-", "statsJson", "")
+    regTool(r, "ws.diff", "workspace.diff", "Workspace", "diff corrente vs indice", "-", "{added,modified,deleted,renamed}", "")
+    regTool(r, "ws.findSymbol", "workspace.findSymbol", "Workspace", "busca simbolo declarado", "name", "[hits]", "")
+    regTool(r, "ws.findFile", "workspace.findFile", "Workspace", "busca arquivo por substring", "substr", "[paths]", "")
+    regTool(r, "ws.graph", "workspace.graph", "Workspace", "resumo do grafo de dependencias", "-", "{edges,cycles}", "")
+    regTool(r, "ws.invalidate", "workspace.invalidate", "Workspace", "invalida cache persistido", "-", "ok", PERM_FS_WRITE())
+    regTool(r, "search.text", "search.text", "Search", "ocorrencias de texto nos arquivos do indice", "needle", "[{file,count}]", PERM_FS_READ())
+    regTool(r, "search.symbol", "search.symbol", "Search", "delega para ws.findSymbol", "name", "[hits]", PERM_FS_READ())
+    regTool(r, "search.path", "search.path", "Search", "delega para ws.findFile", "substr", "[paths]", PERM_FS_READ())
+    regTool(r, "patch.file", "patch.file", "Patch", "escreve conteudo completo com backup", "path,content", "{bytes}", PERM_FS_WRITE())
+    regTool(r, "patch.replace", "patch.replace", "Patch", "substitui todas as ocorrencias", "file,from,to(n)", "{replacements}", PERM_FS_WRITE())
+    regTool(r, "patch.append", "patch.append", "Patch", "anexa conteudo via write com backup", "path,text", "{bytes}", PERM_FS_WRITE())
+    regTool(r, "diff.file", "diff.file", "Diff", "diff posicional entre dois arquivos", "a,b", "{same,addedLines,removedLines,firstDiffLine}", PERM_FS_READ())
+    regTool(r, "git.branch", "git.branch", "Git", "branch/commit lidos de .git (somente leitura)", "root", "{branch,commit}", PERM_FS_READ())
+    regTool(r, "git.log", "git.log", "Git", "contagem de entradas do reflog local", "root", "{entries}", PERM_FS_READ())
+    var gapPerms = ""
+    regTool(r, "compiler.check", "check", "Compiler", "via Compiler Gateway", "file", "CheckResult", PERM_COMPILER_EXEC())
+    regTool(r, "compiler.build", "build", "Compiler", "via Compiler Gateway", "file,target", "CheckResult", PERM_COMPILER_EXEC())
+    regTool(r, "compiler.run", "run", "Compiler", "via Compiler Gateway", "file", "stdout", PERM_COMPILER_EXEC())
+    regTool(r, "compiler.diagnostics", "diagnostics", "Diagnostics", "via Compiler Gateway", "file", "[DiagnosticRec]", PERM_COMPILER_EXEC())
+    regTool(r, "ast.findNode", "findNode", "AST", "aguarda GW-AST-DUMP", "-", "-", gapPerms)
+    regTool(r, "web.request", "request", "Web", "aguarda GW-NET", "-", "-", PERM_WEB_NETWORK())
+    regTool(r, "http.request", "httpRequest", "HTTP", "aguarda GW-NET", "-", "-", PERM_WEB_NETWORK())
+    regTool(r, "system.exec", "exec", "System", "aguarda GW-SYS", "cmd", "Result", PERM_SYSTEM_EXEC())
+    regTool(r, "ui.preview", "preview", "UI", "agorda plataforma ui", "-", "-", "")
+    return r
+}
+
+

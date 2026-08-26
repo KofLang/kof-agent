@@ -1,0 +1,5 @@
+test "autoselect falls back when no vulkan icd" {
+    var info = backendAutoSelect()
+    assert(info.backend != "")
+    assert(info.threads > 0)
+}

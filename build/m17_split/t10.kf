@@ -1,0 +1,6 @@
+test "rope ctx len" {
+    var h = openGGUF("fixtures/tiny.gguf")
+    var ri = ropeInfo(h)
+    var ctx = ri.ctxLen
+    assert(ctx == 512)
+}

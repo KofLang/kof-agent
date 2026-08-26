@@ -1,0 +1,7 @@
+test "load and info" {
+    var h = openGGUF("fixtures/tiny.gguf")
+    var r = ModelRunner()
+    r.loadModel(h)
+    assert(r.modelIsLoaded())
+    assert(r.ctxLen == 512)
+}

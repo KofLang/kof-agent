@@ -1,0 +1,4 @@
+test "lsp frame has content length" {
+    var f = lspFrame("{\"a\":1}", 7)
+    assert(f.startsWith("Content-Length:"))
+}

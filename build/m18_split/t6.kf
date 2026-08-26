@@ -1,0 +1,9 @@
+test "cancel stops generation" {
+    var h = openGGUF("fixtures/tiny.gguf")
+    var r = ModelRunner()
+    r.loadModel(h)
+    r.cancelGeneration()
+    var evs = r.streamGenerate(1, RunnerConfig(10, 0, 100, 3))
+    var n = evs.size()
+    assert(n <= 1)
+}

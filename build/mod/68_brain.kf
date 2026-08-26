@@ -1,0 +1,243 @@
+record BrainPlan(String intent, String entitiesJson, String contextJson, Int confidence, String ambiguitiesJson, String candidateToolsCsv, String candidateRecipesCsv, String candidateSymbolsCsv)
+
+B_INTENT_UNKNOWN(): String { return "Unknown" }
+
+brainSynonymIntent(String token): String {
+    var s = retLower(token)
+    if (s == "crie" || s == "cria" || s == "criar" || s == "faz" || s == "fazer" || s == "gera" || s == "gere" || s == "gerar") {
+        return "create"
+    }
+    if (s == "edite" || s == "edita" || s == "editar" || s == "mude" || s == "mudar" || s == "altere") {
+        return "edit"
+    }
+    if (s == "arruma" || s == "arrumar" || s == "corrija" || s == "corrigir" || s == "conserta") {
+        return "repair"
+    }
+    if (s == "explique" || s == "explicar" || s == "o-que-e") {
+        return "explain"
+    }
+    if (s == "refatore" || s == "refatorar") {
+        return "refactor"
+    }
+    if (s == "busque" || s == "buscar" || s == "procure" || s == "procurar") {
+        return "search"
+    }
+    if (s == "rode" || s == "rodar" || s == "teste" || s == "testar" || s == "execute") {
+        return "runtests"
+    }
+    return ""
+}
+
+brainResolveIntent(List<String> tokens): String {
+    var verb = ""
+    var obj = ""
+    for (var t in tokens) {
+        var iv = brainSynonymIntent(t)
+        if (iv != "" && verb == "") {
+            verb = iv
+        }
+    }
+    var joined = ""
+    for (var t in tokens) {
+        joined = joined + retLower(t) + " "
+    }
+    if (joined.contains(" site ") || joined.contains("website")) {
+        obj = "Website"
+    } else if (joined.contains("crud")) {
+        obj = "CRUD"
+    } else if (joined.contains(" api ")) {
+        obj = "API"
+    } else if (joined.contains("rpa")) {
+        obj = "RPA"
+    } else if (joined.contains(" ui ") || joined.contains("tela")) {
+        obj = "UI"
+    } else if (joined.contains("docs") || joined.contains("documentacao")) {
+        obj = "Docs"
+    } else if (joined.contains("teste")) {
+        obj = "Tests"
+    } else if (joined.contains("erro") || joined.contains("diagnostico")) {
+        obj = "Diagnostic"
+    } else if (joined.contains("simbolo") || joined.contains("funcao") || joined.contains("classe")) {
+        obj = "Symbol"
+    }
+    if (verb == "") {
+        return B_INTENT_UNKNOWN()
+    }
+    if (obj == "Website" && verb == "create") {
+        return "CreateWebsite"
+    }
+    if (obj == "Website" && verb == "edit") {
+        return "EditWebsite"
+    }
+    if (obj == "API" && (verb == "create" || verb == "edit")) {
+        return "CreateAPI"
+    }
+    if (obj == "CRUD") {
+        return "GenerateCRUD"
+    }
+    if (obj == "Diagnostic" && verb == "repair") {
+        return "RepairDiagnostic"
+    }
+    if ((obj == "Diagnostic" && verb == "explain") || (verb == "explain" && obj == "")) {
+        return "ExplainDiagnostic"
+    }
+    if (verb == "refactor") {
+        return "Refactor"
+    }
+    if (obj == "Symbol" && verb == "search") {
+        return "SearchSymbol"
+    }
+    if (obj == "RPA") {
+        return "CreateRPA"
+    }
+    if ((obj == "Tests" && verb == "runtests") || verb == "runtests") {
+        return "RunTests"
+    }
+    if (obj == "UI") {
+        return "CreateUI"
+    }
+    if (obj == "Docs") {
+        return "GenerateDocs"
+    }
+    if (verb == "create") {
+        return "CreateFeature"
+    }
+    if (verb == "edit") {
+        return "EditFeature"
+    }
+    if (verb == "repair") {
+        return "RepairGeneric"
+    }
+    if (verb == "search") {
+        return "SearchGeneric"
+    }
+    return B_INTENT_UNKNOWN()
+}
+
+brainExtractEntities(String text): String {
+    var quoted = ""
+    var q1 = text.indexOf("\"")
+    if (q1 >= 0) {
+        var q2 = text.indexOf("\"", q1 + 1)
+        if (q2 > q1) {
+            quoted = text.substring(q1 + 1, q2)
+        }
+    }
+    var codes = ""
+    for (var code in listOf<String>("ARITH001", "SEM011", "SEM015", "SEM010", "CONC001", "E999")) {
+        if (text.contains(code)) {
+            codes = code
+        }
+    }
+    var paths = ""
+    for (var t in splitStr(text, " ")) {
+        if (t.endsWith(".kf") || t.startsWith("build/") || t.contains("/")) {
+            paths = t
+        }
+    }
+    return "{\"quoted\":\"" + escapeJson(quoted) + "\",\"diagCode\":\"" + codes + "\",\"path\":\"" + escapeJson(paths) + "\"}"
+}
+
+brainRequiredEntity(String intent): String {
+    if (intent == "RepairDiagnostic") {
+        return "diagCode"
+    }
+    if (intent == "EditWebsite" || intent == "EditFeature" || intent == "Refactor") {
+        return "path"
+    }
+    return ""
+}
+
+brainConfidence(String intent, Bool hasVerb, Bool hasObj, Int ctxItems): Int {
+    var score = 20
+    if (hasVerb) {
+        score = score + 30
+    }
+    if (intent != B_INTENT_UNKNOWN() && intent.contains("Create") || intent.contains("Edit") || intent.contains("Repair") || intent.contains("Search") || intent.contains("Run")) {
+        score = score + 25
+    }
+    if (ctxItems > 0) {
+        score = score + 15
+    }
+    if (score > 95) {
+        score = 95
+    }
+    return score
+}
+
+brainCandidateTools(String intent): String {
+    if (intent == "RepairDiagnostic") {
+        return "compiler.check,search.text,patch.replace"
+    }
+    if (intent.startsWith("Create") || intent == "GenerateCRUD") {
+        return "fs.write,ws.open,search.text"
+    }
+    if (intent == "RunTests") {
+        return "compiler.run"
+    }
+    if (intent == "SearchSymbol") {
+        return "search.symbol"
+    }
+    return ""
+}
+
+brainAmbiguitiesJson(String required, String entitiesJson, List<String> historyPaths): String {
+    if (required == "") {
+        return "[]"
+    }
+    var has = entitiesJson.contains("\"" + required + "\":\"")
+    var filled = false
+    if (entitiesJson.contains(required)) {
+        var keyPart = "\"" + required + "\":\""
+        var at = entitiesJson.indexOf(keyPart)
+        if (at >= 0) {
+            var vstart = at + keyPart.length
+            var vend = entitiesJson.indexOf("\"", vstart)
+            if (vend > vstart) {
+                filled = true
+            }
+        }
+    }
+    if (!filled && historyPaths.size > 0) {
+        filled = true
+    }
+    if (!filled) {
+        return "[{\"missing\":\"" + required + "\",\"question\":\"Qual " + required + "?\"}]"
+    }
+    return "[]"
+}
+
+brainProcess(EventBus bus, CorpusIndex ix, String text, List<String> recentFiles, List<String> historyPaths): BrainPlan {
+    bus.publish("brain.started", text)
+    var tokens = retTokenize(text)
+    var intent = brainResolveIntent(tokens)
+    var entities = brainExtractEntities(text)
+    var context = retBuildContext(ix, text, 5, 2000, recentFiles)
+    var required = brainRequiredEntity(intent)
+    var amb = brainAmbiguitiesJson(required, entities, historyPaths)
+    var conf = brainConfidence(intent, tokens.size > 0, intent != B_INTENT_UNKNOWN(), 1)
+    if (amb != "[]") {
+        bus.publish("brain.ambiguity", amb)
+        conf = 40
+    }
+    bus.publish("brain.intent", intent)
+    bus.publish("brain.completed", intent + " conf=" + conf)
+    var tools = brainCandidateTools(intent)
+    var recipes = ""
+    if (intent.contains("Website") || intent == "CreateAPI") {
+        recipes = "recipe-rest-api"
+    }
+    var syms = ""
+    return BrainPlan(intent, entities, context, conf, amb, tools, recipes, syms)
+}
+
+brainPlanJson(BrainPlan p): String {
+    var out = "{\"intent\":\"" + p.intent + "\",\"confidence\":" + p.confidence
+    out = out + ",\"entities\":" + p.entitiesJson
+    out = out + ",\"context\":" + p.contextJson
+    out = out + ",\"ambiguities\":" + p.ambiguitiesJson
+    out = out + ",\"tools\":\"" + p.candidateToolsCsv + "\""
+    out = out + ",\"recipes\":\"" + p.candidateRecipesCsv + "\""
+    out = out + "}"
+    return out
+}

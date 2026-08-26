@@ -1,0 +1,4 @@
+record L23(Int v)
+mainX23() {
+    var l = L23(1)
+}

@@ -1,0 +1,4 @@
+record L42(Int v)
+mainX42() {
+    var l = L42(1)
+}

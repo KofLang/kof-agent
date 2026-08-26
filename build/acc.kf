@@ -1,0 +1,11 @@
+test "zz acc2" {
+    var h = openGGUF("fixtures/tiny.gguf")
+    var v = ggufVersion(h)
+    assert(v == 3)
+}
+
+test "zz acc3" {
+    var h = openGGUF("fixtures/tiny.gguf")
+    var v = ggufVersion(h)
+    assert(v == 0)
+}

@@ -1,0 +1,8 @@
+test "stream emits token events" {
+    var h = openGGUF("fixtures/tiny.gguf")
+    var r = ModelRunner()
+    r.loadModel(h)
+    var evs = r.streamGenerate(1, RunnerConfig(3, 0, 100, 11))
+    var n = evs.size()
+    assert(n >= 1 && n <= 3)
+}

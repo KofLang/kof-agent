@@ -1,0 +1,4 @@
+test "plugin permission bitmask grant" {
+    assert(pluginAllowed(3, 1))
+    assert(pluginAllowed(3, 2))
+}

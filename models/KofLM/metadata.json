@@ -1,0 +1,12 @@
+{
+  "name": "KofLM",
+  "family": "KofLM",
+  "architecture": "tinyllama-1.1b",
+  "checkpoint_origin": "TinyLlama-1.1B",
+  "language": "pt-BR",
+  "runtime": "KOF Native Runtime",
+  "format": "GGUF",
+  "quantization": "Q4_K_M",
+  "version": "1.0.0",
+  "variants": ["KofLM-Q4.gguf", "KofLM-Q5.gguf", "KofLM-Q6.gguf", "KofLM-Q8.gguf", "KofLM-F16.gguf"]
+}

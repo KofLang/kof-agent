@@ -1,0 +1,9 @@
+model = "KofLM"
+backend = "auto"
+threads = 6
+context = 4096
+temperature = 0.7
+top_k = 40
+top_p = 0.95
+repeat_penalty = 1.1
+seed = 42

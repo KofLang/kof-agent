@@ -1,0 +1,8 @@
+test "runtime validates good dag" {
+    var b = EventBus()
+    var rt = AgentRuntime(b, RealTimeClock())
+    var nodes = listOf<PlanNode>()
+    nodes.add(PlanNode("fetch", 0, -1))
+    nodes.add(PlanNode("parse", 1, 0))
+    assert(rt.dryRun(nodes))
+}

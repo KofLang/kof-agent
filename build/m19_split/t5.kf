@@ -1,0 +1,7 @@
+test "trace spans measure durations" {
+    var b = EventBus()
+    var o = ToolOrchestrator(b, RealTimeClock())
+    var before = o.trace.spanCount()
+    o.executeTool("traced", OrchTool(1, 1, 100, 0))
+    assert(o.trace.spanCount() > before)
+}

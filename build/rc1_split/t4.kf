@@ -1,0 +1,5 @@
+test "slow tool detector levels" {
+    assert(detectSlowTool(50) == 0)
+    assert(detectSlowTool(2000) == 1)
+    assert(detectSlowTool(9000) == 2)
+}

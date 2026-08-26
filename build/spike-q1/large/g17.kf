@@ -1,0 +1,4 @@
+record L17(Int v)
+mainX17() {
+    var l = L17(1)
+}

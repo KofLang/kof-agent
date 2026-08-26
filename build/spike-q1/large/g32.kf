@@ -1,0 +1,4 @@
+record L32(Int v)
+mainX32() {
+    var l = L32(1)
+}

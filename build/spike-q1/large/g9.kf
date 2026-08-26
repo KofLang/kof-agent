@@ -1,0 +1,4 @@
+record L9(Int v)
+mainX9() {
+    var l = L9(1)
+}

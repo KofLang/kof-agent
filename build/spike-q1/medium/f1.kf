@@ -1,0 +1,35 @@
+record M1(Int v)
+main() {
+    var m = M1(1)
+    println(m.v())
+}
+// touch 1
+// touch 2
+// touch 3
+// touch 4
+// touch 5
+// touch 6
+// touch 7
+// touch 8
+// touch 9
+// touch 10
+// touch 11
+// touch 12
+// touch 13
+// touch 14
+// touch 15
+// touch 16
+// touch 17
+// touch 18
+// touch 19
+// touch 20
+// touch 21
+// touch 22
+// touch 23
+// touch 24
+// touch 25
+// touch 26
+// touch 27
+// touch 28
+// touch 29
+// touch 30

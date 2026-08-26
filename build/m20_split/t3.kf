@@ -1,0 +1,8 @@
+test "journal records steps" {
+    var b = EventBus()
+    var rt = AgentRuntime(b, RealTimeClock())
+    var nodes = listOf<PlanNode>()
+    nodes.add(PlanNode("j1", 0, -1))
+    rt.runPlan(nodes, OrchTool(1, 1, 100, 0))
+    assert(rt.journalSize() >= 3)
+}

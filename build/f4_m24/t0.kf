@@ -1,0 +1,5 @@
+test "failure signature deterministic same input" {
+    var a = failureSignature("N17 cmp broken")
+    var b = failureSignature("N17 cmp broken")
+    assert(a.hash == b.hash)
+}

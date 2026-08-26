@@ -1,0 +1,5 @@
+test "header valid v3 via accessors" {
+    var h = openGGUF("fixtures/tiny.gguf")
+    assert(ggufVersion(h) == 3)
+    assert(ggufTensorCount(h) == 2)
+}

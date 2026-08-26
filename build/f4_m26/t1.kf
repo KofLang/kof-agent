@@ -1,0 +1,7 @@
+test "metrics overwrite same gauge" {
+    var m = MetricsRegistry()
+    m.setGauge("x", 1)
+    m.setGauge("x", 5)
+    var n = m.metricCount()
+    assert(n == 1)
+}

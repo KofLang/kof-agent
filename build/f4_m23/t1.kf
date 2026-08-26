@@ -1,0 +1,5 @@
+test "plugin duplicate rejected" {
+    var r = PluginRegistry()
+    r.install("p1", "1.0", 3)
+    assert(!r.install("p1", "2.0", 3))
+}

@@ -1,0 +1,5 @@
+test "lsp initialize sets flag" {
+    var s = LspServer()
+    s.handleRequest("initialize", 1)
+    assert(s.initialized == 1)
+}

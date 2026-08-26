@@ -1,0 +1,10 @@
+test "sequential runs all" {
+    var b = EventBus()
+    var o = ToolOrchestrator(b, RealTimeClock())
+    var ids = listOf<String>()
+    ids.add("a")
+    ids.add("b")
+    ids.add("c")
+    var ok = o.executeSequential(ids, OrchTool(1, 1, 100, 0))
+    assert(ok == 3)
+}

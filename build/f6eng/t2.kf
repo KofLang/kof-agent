@@ -1,0 +1,12 @@
+test "generate stream bounded and cancellable" {
+    var h = openGGUF("fixtures/tiny.gguf")
+    var e = InferenceEngine()
+    e.bind(h)
+    e.createSession()
+    var toks = e.generateStream(1, 6)
+    var n = toks.size()
+    assert(n <= 6)
+    e.cancel()
+    var toks2 = e.generateStream(1, 6)
+    assert(toks2.size() == 0)
+}

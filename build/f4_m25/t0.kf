@@ -1,0 +1,6 @@
+test "journal append increments seq" {
+    var j = ExecutionJournal()
+    var s1 = j.append("step", "a")
+    var s2 = j.append("step", "b")
+    assert(s2 > s1)
+}

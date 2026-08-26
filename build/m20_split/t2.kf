@@ -1,0 +1,8 @@
+test "run executes plan end to end" {
+    var b = EventBus()
+    var rt = AgentRuntime(b, RealTimeClock())
+    var nodes = listOf<PlanNode>()
+    nodes.add(PlanNode("t1", 0, -1))
+    var r = rt.runPlan(nodes, OrchTool(1, 1, 100, 0))
+    assert(r.failedSteps == 0)
+}

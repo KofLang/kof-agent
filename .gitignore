@@ -1,2 +1,1 @@
-models/base/TinyLlama-1.1B-Chat/*.gguf
-build/
+*.gguf

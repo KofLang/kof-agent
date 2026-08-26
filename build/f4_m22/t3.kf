@@ -1,0 +1,6 @@
+test "chrome trace json export" {
+    var t = TraceExporter()
+    t.add("span1", 1, 2)
+    var j = t.toChromeJson()
+    assert(j.startsWith("[{\"name\":\"span1\""))
+}

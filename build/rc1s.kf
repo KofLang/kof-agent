@@ -1,0 +1,14 @@
+test "zz stress" {
+    var c = LruCache()
+    c.initLru(128)
+    var clk = RealTimeClock()
+    var t0 = clk.nowMs()
+    var i = 0
+    while (i < 50000) {
+        c.put("k" + (i % 1000), "v")
+        c.get("k" + (i % 1000))
+        i = i + 1
+    }
+    var t1 = clk.nowMs()
+    println("BENCH_RC1 ops=100000 ms=" + (t1 - t0) + " size=" + c.size())
+}

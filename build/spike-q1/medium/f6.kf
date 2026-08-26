@@ -1,0 +1,5 @@
+record M6(Int v)
+main() {
+    var m = M6(6)
+    println(m.v())
+}

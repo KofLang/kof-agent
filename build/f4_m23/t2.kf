@@ -1,0 +1,7 @@
+test "plugin remove works" {
+    var r = PluginRegistry()
+    r.install("p2", "1.0", 0)
+    r.remove("p2")
+    var n = r.count()
+    assert(n == 0)
+}

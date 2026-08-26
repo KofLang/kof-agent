@@ -1,0 +1,6 @@
+test "prometheus export format" {
+    var m = MetricsRegistry()
+    m.setGauge("ram_mb", 120)
+    var e = m.exportPrometheus()
+    assert(e.startsWith("ram_mb 120"))
+}

@@ -1,0 +1,4 @@
+record L20(Int v)
+mainX20() {
+    var l = L20(1)
+}

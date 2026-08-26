@@ -1,0 +1,12 @@
+test "generate deterministic same seed" {
+    var h = openGGUF("fixtures/tiny.gguf")
+    var r = ModelRunner()
+    r.loadModel(h)
+    var cfg = RunnerConfig(4, 0, 100, 9)
+    var a = r.generate(2, cfg)
+    r.resetContext()
+    var b = r.generate(2, cfg)
+    var x = a.get(0)
+    var y = b.get(0)
+    assert(x == y)
+}

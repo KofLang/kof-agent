@@ -1,0 +1,4 @@
+test "real dataset validation exists" {
+    var st = dsCountValid("training/dataset/jsonl/dataset_validation.jsonl")
+    assert(st.total >= 15)
+}

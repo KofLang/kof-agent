@@ -1,0 +1,7 @@
+test "session open close" {
+    var svc = AgentService()
+    var sid = svc.openSession("chat")
+    assert(svc.sessionCount() == 1)
+    svc.closeSession(sid)
+    assert(svc.sessionCount() == 0)
+}

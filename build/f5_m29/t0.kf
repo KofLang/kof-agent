@@ -1,0 +1,6 @@
+test "chunker indexes overlapping chunks" {
+    var w = WorkspaceMemory()
+    w.indexText("a.kf", "0123456789012345678901234567890123456789012345678901234567890123456789")
+    var n = w.chunkCount()
+    assert(n >= 1)
+}

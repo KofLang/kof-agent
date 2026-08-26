@@ -1,0 +1,4 @@
+record L19(Int v)
+mainX19() {
+    var l = L19(1)
+}

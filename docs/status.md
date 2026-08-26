@@ -18,7 +18,7 @@
 | RC1 | ✅ Hardening 6/6 nativo + stress 100k ops (LruCache/sandbox/detectores) |
 | FASE 5 núcleo | ✅ M27–M30 9/9 nativos (service/AI-engine/workspace-memory/model-manager) |
 | FASE 6 | ✅ KofLM v1: núcleo 9/9 + dataset v2 453 exemplos (real+sintético, dedup SHA256) + eval 540 + LoRA manager + tokenizer verify (16/16 F6 total) |
-| KofLM inferência real | ✅ TinyLlama Q4 local: 37 tok/s decode (CPU) · llama.cpp CPU+Vulkan buildado · RX 6600 aguarda ICD RADV |
+| KofLM inferência real | ✅ **KofLM** Q4 local: 37 tok/s decode (CPU) · llama.cpp CPU+Vulkan buildado · RX 6600 aguarda ICD RADV |
 | N19-SUSPECT | 🔴 novo: crash combinando 152+144 (~1MB asm); engine aguarda workaround |
 | GraphExecutor | ✅ decoder plan N-layers/forward-all/steps (2/2) |
 | Backend abstraction | ✅ CPUBackend real + auto-select vulkan→opengl→cpu + koflm.toml parser (3/3) |

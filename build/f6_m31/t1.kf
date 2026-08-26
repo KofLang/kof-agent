@@ -1,0 +1,7 @@
+test "category from path bugs" {
+    var d = DatasetBuilder()
+    d.add("compiler/bugs/N10", "q", "a")
+    var e = d.toAlpaca(42)
+    var s = e.get(0)
+    assert(s.contains("BUG"))
+}

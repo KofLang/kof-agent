@@ -1,0 +1,4 @@
+test "linter long line rule" {
+    var i = lintCheckLongLine("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", 1, 10)
+    assert(i.ruleId == "STYLE002")
+}

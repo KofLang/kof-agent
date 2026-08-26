@@ -1,0 +1,4 @@
+test "model register unique" {
+    var m = ModelManager()
+    assert(m.register("qwen", "/m/q.gguf", 3))
+}

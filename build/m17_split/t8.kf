@@ -1,0 +1,5 @@
+test "missing file typed error" {
+    var h = openGGUF("fixtures/nope.gguf")
+    var n = ggufErrorCount(h)
+    assert(n == 1)
+}

@@ -1,0 +1,8 @@
+test "journal diff counts since seq" {
+    var j = ExecutionJournal()
+    j.append("e", "1")
+    var mark = j.append("e", "2")
+    j.append("e", "3")
+    var d = j.diffFrom(mark)
+    assert(d == 1)
+}

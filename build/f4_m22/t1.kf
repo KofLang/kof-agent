@@ -1,0 +1,4 @@
+test "linter unused param rule" {
+    var i = lintCheckUnusedParam("fn f(_unused a)", 3)
+    assert(i.line == 3)
+}

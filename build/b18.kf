@@ -1,0 +1,15 @@
+fn benchMain2() {
+    var h = openGGUF("fixtures/tiny.gguf")
+    var r = ModelRunner()
+    r.loadModel(h)
+    var clk = RealTimeClock()
+    var t0 = clk.nowMs()
+    var cfg = RunnerConfig(256, 0, 100, 42)
+    var out = r.generate(1, cfg)
+    var t1 = clk.nowMs()
+    println("BENCH tokens=" + out.size() + " ms=" + (t1 - t0))
+}
+
+test "zz b" {
+    benchMain2()
+}

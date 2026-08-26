@@ -1,0 +1,4461 @@
+record CheckRec(String id, Bool ok, String detail)
+
+interface TimeSource {
+    nowMs(): Long
+}
+
+class FixedClock implements TimeSource {
+    Long value = 0
+    constructor(Long v) {
+        value = v
+    }
+    nowMs(): Long {
+        return value
+    }
+    advance(Long ms) {
+        value = value + ms
+    }
+}
+
+parseIntStr(String s): Int {
+    var n = 0
+    var i = 0
+    if (s.length == 0) {
+        throw "parse: empty integer"
+    }
+    var start = 0
+    if (s.charAt(0) == 45) {
+        start = 1
+        if (s.length == 1) {
+            throw "parse: invalid integer '" + s + "'"
+        }
+    }
+    i = start
+    while (i < s.length) {
+        var c = s.charAt(i)
+        if (c < 48 || c > 57) {
+            throw "parse: invalid integer '" + s + "'"
+        }
+        n = n * 10 + (c - 48)
+        i = i + 1
+    }
+    if (start == 1) {
+        n = 0 - n
+    }
+    return n
+}
+
+parseBoolStr(String s): Bool {
+    var v = s.toLowerCase()
+    if (v == "true" || v == "1" || v == "yes" || v == "on") {
+        return true
+    }
+    if (v == "false" || v == "0" || v == "no" || v == "off" || v == "") {
+        return false
+    }
+    throw "parse: invalid boolean '" + s + "'"
+}
+
+escapeJson(String s): String {
+    var out = ""
+    var i = 0
+    while (i < s.length) {
+        var c = s.charAt(i)
+        if (c == 34) {
+            out = out + "\\\""
+        } else if (c == 92) {
+            out = out + "\\\\"
+        } else if (c == 10) {
+            out = out + "\\n"
+        } else if (c == 13) {
+            out = out + "\\r"
+        } else if (c == 9) {
+            out = out + "\\t"
+        } else {
+            out = out + s.substring(i, i + 1)
+        }
+        i = i + 1
+    }
+    return out
+}
+
+joinPath(String a, String b): String {
+    if (a == "") {
+        return b
+    }
+    if (a.substring(a.length - 1, a.length) == "/") {
+        return a + b
+    }
+    return a + "/" + b
+}
+
+splitStr(String s, String sep): List<String> {
+    var out = listOf<String>()
+    if (s.length == 0) {
+        return out
+    }
+    var sc = sep.charAt(0)
+    var start = 0
+    var i = 0
+    while (i < s.length) {
+        if (s.charAt(i) == sc) {
+            out.add(s.substring(start, i))
+            start = i + 1
+        }
+        i = i + 1
+    }
+    out.add(s.substring(start, s.length))
+    return out
+}
+
+loadArgsFile(String path): List<String> {
+    var argv = listOf<String>()
+    var f = File(path)
+    if (!f.exists()) {
+        return argv
+    }
+    var txt = f.readText()
+    var lines = splitStr(txt, "\n")
+    for (var line in lines) {
+        var t = line.trim()
+        if (t.length > 0) {
+            argv.add(t)
+        }
+    }
+    return argv
+}
+
+sortInts(Int[] a, Int n) {
+    var i = 1
+    while (i < n) {
+        var key = a[i]
+        var j = i - 1
+        var placed = false
+        while (!placed) {
+            if (j < 0) {
+                placed = true
+            } else {
+                if (a[j] > key) {
+                    a[j + 1] = a[j]
+                    j = j - 1
+                } else {
+                    placed = true
+                }
+            }
+        }
+        a[j + 1] = key
+        i = i + 1
+    }
+}
+
+mkFile(String path, String content): Bool {
+    var parent = ""
+    var parts = splitStr(path, "/")
+    if (parts.size > 1) {
+        var i = 0
+        while (i < parts.size - 1) {
+            if (parent == "") {
+                parent = parts.get(i)
+            } else {
+                parent = joinPath(parent, parts.get(i))
+            }
+            i = i + 1
+        }
+        var d = Directory(parent)
+        if (!d.exists()) {
+            d.createDirectories()
+        }
+    }
+    var f = File(path)
+    if (f.exists()) {
+        f.delete()
+    }
+    return f.writeText(content)
+}
+
+class EventCounter implements EventHandler {
+    Int count = 0
+    constructor() {
+    }
+    onEvent(EventEnvelope e): Bool {
+        count = count + 1
+        return true
+    }
+}
+
+class RecordingHandler implements EventHandler {
+    List<String> seen = listOf<String>()
+    constructor() {
+    }
+    onEvent(EventEnvelope e): Bool {
+        seen.add(e.topic + "=" + e.payload)
+        return true
+    }
+}
+
+freshBus(): EventBus {
+    return EventBus()
+}
+
+record ToolRollback(String kind, String backupPath)
+
+
+class ToolResult {
+    String status = "ok"
+    String data = ""
+    Long durationMs = 0
+    ToolRollback rollback = ToolRollback("", "")
+    constructor() {
+    }
+}
+
+toolOk(String data): ToolResult {
+    var r = ToolResult()
+    r.status = "ok"
+    r.data = data
+    return r
+}
+
+toolErr(String code, String detail): ToolResult {
+    var r = ToolResult()
+    r.status = "error"
+    r.data = code + "|" + detail
+    return r
+}
+
+toolGap(String gapCode, String detail): ToolResult {
+    var r = ToolResult()
+    r.status = "gap"
+    r.data = gapCode + "|" + detail
+    return r
+}
+
+toolDenied(String perm): ToolResult {
+    var r = ToolResult()
+    r.status = "denied"
+    r.data = perm
+    return r
+}
+
+toolCancelled(): ToolResult {
+    var r = ToolResult()
+    r.status = "cancelled"
+    r.data = ""
+    return r
+}
+
+
+toolExec(ToolRegistry reg, ToolCtx ctx, ToolCall call): ToolResult {
+    if (ctx.cancelled) {
+        var cr = ToolResult()
+        cr.status = "cancelled"
+        return cr
+    }
+    var e = reg.findById(call.toolId)
+    if (e.spec.id == "") {
+        ctx.bus.publish("tool.failed", call.toolId)
+        var nf = ToolResult()
+        nf.status = "error"
+        nf.data = "TOOL-NOTFOUND|" + call.toolId
+        return nf
+    }
+    var miss = reg.entryMissingPerm(ctx, e)
+    if (miss != "") {
+        ctx.bus.publish("tool.denied", call.toolId + ":" + miss)
+        var dn = ToolResult()
+        dn.status = "denied"
+        dn.data = miss
+        return dn
+    }
+    ctx.bus.publish("tool.started", call.toolId + ":" + ctx.requestId)
+    ctx.met.incByName("tasks.launched")
+    var t0 = ctx.clock.nowMs()
+    var r = e.handler.call(ctx, call)
+    r.durationMs = ctx.clock.nowMs() - t0
+    if (r.status == "ok") {
+        ctx.met.incByName("tasks.completed")
+        ctx.bus.publish("tool.finished", call.toolId)
+    } else {
+        ctx.met.incByName("tasks.failed")
+        ctx.bus.publish("tool.failed", call.toolId)
+    }
+    return r
+}
+record LogLine(Long ts, String level, String req, String msg)
+
+LOG_TRACE(): Int { return 0 }
+LOG_DEBUG(): Int { return 1 }
+LOG_INFO(): Int { return 2 }
+LOG_WARN(): Int { return 3 }
+LOG_ERROR(): Int { return 4 }
+LOG_FATAL(): Int { return 5 }
+
+logLevelName(Int lvl): String {
+    if (lvl == 0) { return "TRACE" }
+    if (lvl == 1) { return "DEBUG" }
+    if (lvl == 2) { return "INFO" }
+    if (lvl == 3) { return "WARN" }
+    if (lvl == 4) { return "ERROR" }
+    return "FATAL"
+}
+
+logLevelFromName(String s): Int {
+    var v = s.toUpperCase()
+    if (v == "TRACE") { return 0 }
+    if (v == "DEBUG") { return 1 }
+    if (v == "INFO") { return 2 }
+    if (v == "WARN") { return 3 }
+    if (v == "ERROR") { return 4 }
+    if (v == "FATAL") { return 5 }
+    return -1
+}
+
+class Logger {
+    Int level = LOG_INFO()
+    Bool color = false
+    Bool json = false
+    Bool quiet = false
+    String requestId = "-"
+    TimeSource clock
+
+    constructor(TimeSource ts) {
+        clock = ts
+    }
+
+    configure(Int lvl, Bool col, Bool js) {
+        level = lvl
+        color = col
+        json = js
+    }
+
+    setRequestId(String rid) {
+        requestId = rid
+    }
+
+    trace(String m): String { return write(LOG_TRACE(), m) }
+    debug(String m): String { return write(LOG_DEBUG(), m) }
+    info(String m): String { return write(LOG_INFO(), m) }
+    warn(String m): String { return write(LOG_WARN(), m) }
+    error(String m): String { return write(LOG_ERROR(), m) }
+    fatal(String m): String { return write(LOG_FATAL(), m) }
+
+    isEnabled(Int lvl): Bool {
+        return lvl >= level
+    }
+
+    write(Int lvl, String msg): String {
+        if (!isEnabled(lvl)) {
+            return ""
+        }
+        var ts = clock.nowMs()
+        var name = logLevelName(lvl)
+        var line = ""
+        if (json) {
+            line = "{\"ts\":\"" + ts + "\",\"level\":\"" + name + "\",\"req\":\"" + escapeJson(requestId) + "\",\"msg\":\"" + escapeJson(msg) + "\"}"
+        } else {
+            var body = "[" + name + "] [" + requestId + "] " + msg
+            if (color) {
+                body = ansiFor(lvl) + body + "\u001b[0m"
+            }
+            line = ts + " " + body
+        }
+        if (!quiet) {
+            println(line)
+        }
+        return line
+    }
+
+    ansiFor(Int lvl): String {
+        if (lvl <= LOG_DEBUG()) {
+            return "\u001b[90m"
+        }
+        if (lvl == LOG_INFO()) {
+            return "\u001b[36m"
+        }
+        if (lvl == LOG_WARN()) {
+            return "\u001b[33m"
+        }
+        if (lvl == LOG_ERROR()) {
+            return "\u001b[31m"
+        }
+        return "\u001b[35m"
+    }
+}
+
+record CfgEntry(String key, String value)
+
+class Config {
+    List<CfgEntry> entries = listOf<CfgEntry>()
+    String sourcePath = ""
+    Bool loaded = false
+
+    loadFile(String path): Bool {
+        entries = listOf<CfgEntry>()
+        sourcePath = path
+        var f = File(path)
+        if (!f.exists()) {
+            loaded = false
+            return false
+        }
+        if (!f.isFile()) {
+            loaded = false
+            return false
+        }
+        var text = f.readText()
+        parseInto(text)
+        loaded = true
+        return true
+    }
+
+    reload(): Bool {
+        return loadFile(sourcePath)
+    }
+
+    parseInto(String text) {
+        var lines = splitStr(text, "\n")
+        for (var raw in lines) {
+            var line = raw.trim()
+            if (line.length > 0) {
+                if (!line.startsWith("#")) {
+                    var kv = splitStr(line, "=")
+                    if (kv.size == 2) {
+                        var k = kv.get(0).trim()
+                        var v = kv.get(1).trim()
+                        entries.add(CfgEntry(k, v))
+                    }
+                }
+            }
+        }
+    }
+
+    has(String key): Bool {
+        for (var e in entries) {
+            if (e.key == key) {
+                return true
+            }
+        }
+        return false
+    }
+
+    getRaw(String key): String {
+        for (var e in entries) {
+            if (e.key == key) {
+                return e.value
+            }
+        }
+        throw "config: missing key '" + key + "'"
+    }
+
+    getStr(String key, String def): String {
+        if (!has(key)) {
+            return def
+        }
+        return getRaw(key)
+    }
+
+    getInt(String key, Int def): Int {
+        if (!has(key)) {
+            return def
+        }
+        var v = getRaw(key)
+        try {
+            return parseIntStr(v)
+        } catch (String e) {
+            throw "config: invalid integer for '" + key + "': '" + v + "'"
+        }
+    }
+
+    getBool(String key, Bool def): Bool {
+        if (!has(key)) {
+            return def
+        }
+        var v = getRaw(key)
+        try {
+            return parseBoolStr(v)
+        } catch (String e) {
+            throw "config: invalid boolean for '" + key + "': '" + v + "'"
+        }
+    }
+
+    snapshotJson(): String {
+        var out = "{\"source\":\"" + escapeJson(sourcePath) + "\",\"loaded\":"
+        if (loaded) {
+            out = out + "true"
+        } else {
+            out = out + "false"
+        }
+        out = out + ",\"entries\":["
+        var first = true
+        for (var e in entries) {
+            if (!first) {
+                out = out + ","
+            }
+            first = false
+            out = out + "{\"key\":\"" + escapeJson(e.key) + "\",\"value\":\"" + escapeJson(e.value) + "\"}"
+        }
+        out = out + "]}"
+        return out
+    }
+}
+
+TASK_CREATED(): Int { return 0 }
+TASK_QUEUED(): Int { return 1 }
+TASK_RUNNING(): Int { return 2 }
+TASK_WAITING(): Int { return 3 }
+TASK_COMPLETED(): Int { return 4 }
+TASK_CANCELLED(): Int { return 5 }
+TASK_FAILED(): Int { return 6 }
+
+taskStateName(Int st): String {
+    if (st == TASK_CREATED()) { return "CREATED" }
+    if (st == TASK_QUEUED()) { return "QUEUED" }
+    if (st == TASK_RUNNING()) { return "RUNNING" }
+    if (st == TASK_WAITING()) { return "WAITING" }
+    if (st == TASK_COMPLETED()) { return "COMPLETED" }
+    if (st == TASK_CANCELLED()) { return "CANCELLED" }
+    return "FAILED"
+}
+
+interface ContextView {
+    incMetric(String name)
+}
+
+interface TaskBody {
+    run(ContextView v)
+}
+
+class Future {
+    Bool done = false
+    Bool ok = false
+    Int result = 0
+    String error = ""
+    constructor() {
+    }
+}
+
+class TaskNode {
+    Int id
+    Int priority
+    Int seq
+    String name
+    Int st = TASK_CREATED()
+    Bool cancelled = false
+    TaskBody body
+    constructor(Int tid, Int prio, Int sq, String nm, TaskBody b) {
+        id = tid
+        priority = prio
+        seq = sq
+        name = nm
+        body = b
+    }
+}
+
+class FutureJob implements TaskBody {
+    TaskBody inner
+    Future future
+    constructor(TaskBody i, Future f) {
+        inner = i
+        future = f
+    }
+    run(ContextView v) {
+        try {
+            inner.run(v)
+            future.ok = true
+        } catch (String e) {
+            future.error = e
+            throw e
+        } finally {
+            future.done = true
+        }
+    }
+}
+
+class Scheduler {
+    List<TaskNode> tasks = listOf<TaskNode>()
+    Int[] heapPrio = new Int[64]
+    Int[] heapSeq = new Int[64]
+    Int[] heapIdx = new Int[64]
+    Int heapSize = 0
+    Int heapCap = 64
+    Int nextId = 1
+    Int nextSeq = 1
+    Int maxPending = 0
+    Bool accepting = true
+    Int launchedCount = 0
+    Int completedCount = 0
+    Int failedCount = 0
+    Int cancelledCount = 0
+    Int rejectedCount = 0
+    String lastError = ""
+    ContextView view
+
+    constructor(ContextView v) {
+        view = v
+    }
+
+    ensureCap(Int need) {
+        if (need <= heapCap) {
+            return
+        }
+        var nc = heapCap * 2
+        while (nc < need) {
+            nc = nc * 2
+        }
+        var np = new Int[nc]
+        var ns = new Int[nc]
+        var ni = new Int[nc]
+        var i = 0
+        while (i < heapSize) {
+            np[i] = heapPrio[i]
+            ns[i] = heapSeq[i]
+            ni[i] = heapIdx[i]
+            i = i + 1
+        }
+        heapPrio = np
+        heapSeq = ns
+        heapIdx = ni
+        heapCap = nc
+    }
+
+    lessThan(Int a, Int b): Bool {
+        if (heapPrio[a] > heapPrio[b]) {
+            return true
+        }
+        if (heapPrio[a] < heapPrio[b]) {
+            return false
+        }
+        return heapSeq[a] < heapSeq[b]
+    }
+
+    swapAt(Int a, Int b) {
+        var tp = heapPrio[a]
+        heapPrio[a] = heapPrio[b]
+        heapPrio[b] = tp
+        var ts = heapSeq[a]
+        heapSeq[a] = heapSeq[b]
+        heapSeq[b] = ts
+        var ti = heapIdx[a]
+        heapIdx[a] = heapIdx[b]
+        heapIdx[b] = ti
+    }
+
+    heapPush(Int taskIndex) {
+        ensureCap(heapSize + 1)
+        var i = heapSize
+        heapPrio[i] = tasks.get(taskIndex).priority
+        heapSeq[i] = tasks.get(taskIndex).seq
+        heapIdx[i] = taskIndex
+        heapSize = heapSize + 1
+        while (i > 0) {
+            var parent = (i - 1) / 2
+            if (lessThan(i, parent)) {
+                swapAt(i, parent)
+                i = parent
+            } else {
+                break
+            }
+        }
+    }
+
+    heapPop(): Int {
+        var top = heapIdx[0]
+        heapSize = heapSize - 1
+        if (heapSize > 0) {
+            heapPrio[0] = heapPrio[heapSize]
+            heapSeq[0] = heapSeq[heapSize]
+            heapIdx[0] = heapIdx[heapSize]
+            var i = 0
+            while (true) {
+                var l = i * 2 + 1
+                var r = l + 1
+                var m = i
+                if (l < heapSize) {
+                    if (lessThan(l, m)) {
+                        m = l
+                    }
+                }
+                if (r < heapSize) {
+                    if (lessThan(r, m)) {
+                        m = r
+                    }
+                }
+                if (m == i) {
+                    break
+                }
+                swapAt(i, m)
+                i = m
+            }
+        }
+        return top
+    }
+
+    launch(TaskBody body, String name, Int priority): Int {
+        if (!accepting) {
+            rejectedCount = rejectedCount + 1
+            throw "scheduler: rejecting launch after shutdown"
+        }
+        if (maxPending > 0 && heapSize >= maxPending) {
+            rejectedCount = rejectedCount + 1
+            throw "scheduler: backpressure (pending=" + heapSize + ", max=" + maxPending + ")"
+        }
+        var node = TaskNode(nextId, priority, nextSeq, name, body)
+        nextId = nextId + 1
+        nextSeq = nextSeq + 1
+        node.st = TASK_QUEUED()
+        tasks.add(node)
+        heapPush(tasks.size - 1)
+        launchedCount = launchedCount + 1
+        return node.id
+    }
+
+    launchFuture(TaskBody body, String name, Int priority): Future {
+        var f = Future()
+        var wrapped = FutureJob(body, f)
+        launch(wrapped, name, priority)
+        return f
+    }
+
+    cancel(Int taskId): Bool {
+        var idx = taskId - 1
+        if (idx < 0 || idx >= tasks.size) {
+            return false
+        }
+        var node = tasks.get(idx)
+        if (node.st == TASK_QUEUED() && !node.cancelled) {
+            node.cancelled = true
+            node.st = TASK_CANCELLED()
+            cancelledCount = cancelledCount + 1
+            return true
+        }
+        return false
+    }
+
+    executeOne(): Bool {
+        if (heapSize == 0) {
+            return false
+        }
+        var idx = heapPop()
+        var node = tasks.get(idx)
+        if (node.cancelled || node.st == TASK_CANCELLED()) {
+            return true
+        }
+        node.st = TASK_RUNNING()
+        try {
+            node.body.run(view)
+            node.st = TASK_COMPLETED()
+            completedCount = completedCount + 1
+        } catch (String e) {
+            node.st = TASK_FAILED()
+            failedCount = failedCount + 1
+            lastError = e
+        }
+        return true
+    }
+
+    run(Int maxTasks): Int {
+        var n = 0
+        while (n < maxTasks) {
+            if (!executeOne()) {
+                break
+            }
+            n = n + 1
+        }
+        return n
+    }
+
+    drain() {
+        while (executeOne()) {
+        }
+    }
+
+    await(Future f) {
+        while (!f.done) {
+            if (heapSize == 0) {
+                throw "scheduler: deadlock in await (future unresolved, queue empty)"
+            }
+            executeOne()
+        }
+    }
+
+    pending(): Int {
+        return heapSize
+    }
+
+    gracefulShutdown() {
+        accepting = false
+        drain()
+    }
+
+    statsJson(): String {
+        return "{\"pending\":" + heapSize + ",\"launched\":" + launchedCount + ",\"completed\":" + completedCount + ",\"failed\":" + failedCount + ",\"cancelled\":" + cancelledCount + ",\"rejected\":" + rejectedCount + ",\"accepting\":" + accepting + "}"
+    }
+}
+
+class WorkerPool {
+    Int size = 1
+    Scheduler sched
+    String affinityHint = ""
+
+    constructor(Scheduler s, Int n) {
+        sched = s
+        if (n != 1) {
+            throw "TP001: worker pool size " + n + " unsupported on this target (upstream CONC001); use 1"
+        }
+        size = n
+    }
+
+    launch(TaskBody body, String name): Int {
+        return sched.launch(body, name, 5)
+    }
+
+    dynamicResize(Int n) {
+        throw "TP001: dynamic pool resize unsupported on this target (upstream CONC001)"
+    }
+
+    setAffinity(String hint) {
+        throw "TP002: affinity unsupported on this target"
+    }
+}
+
+record EventEnvelope(String topic, String payload, Int seq)
+
+interface EventHandler {
+    onEvent(EventEnvelope e): Bool
+}
+
+class Subscription {
+    Int id
+    String topic
+    EventHandler h
+    Bool once = false
+    constructor(Int sid, String t, EventHandler handler, Bool onceFlag) {
+        id = sid
+        topic = t
+        h = handler
+        once = onceFlag
+    }
+}
+
+class EventBus {
+    List<Subscription> subs = listOf<Subscription>()
+    Int nextId = 1
+    Int seq = 1
+
+    subscribe(String topic, EventHandler h): Int {
+        var s = Subscription(nextId, topic, h, false)
+        nextId = nextId + 1
+        subs.add(s)
+        return s.id
+    }
+
+    once(String topic, EventHandler h): Int {
+        var s = Subscription(nextId, topic, h, true)
+        nextId = nextId + 1
+        subs.add(s)
+        return s.id
+    }
+
+    unsubscribe(Int id): Bool {
+        var i = 0
+        while (i < subs.size) {
+            if (subs.get(i).id == id) {
+                subs.remove(i)
+                return true
+            }
+            i = i + 1
+        }
+        return false
+    }
+
+    publishEnvelope(EventEnvelope e): Int {
+        var matched = listOf<Int>()
+        var i = 0
+        while (i < subs.size) {
+            var s = subs.get(i)
+            if (s.topic == e.topic || s.topic == "*") {
+                matched.add(i)
+            }
+            i = i + 1
+        }
+        var called = 0
+        for (var m in matched) {
+            var sub = subs.get(m)
+            if (sub.once) {
+                unsubscribe(sub.id)
+            }
+            called = called + 1
+            var cont = sub.h.onEvent(e)
+            if (!cont) {
+                break
+            }
+        }
+        return called
+    }
+
+    publish(String topic, String payload): Int {
+        var env = EventEnvelope(topic, payload, seq)
+        seq = seq + 1
+        return publishEnvelope(env)
+    }
+
+    broadcast(String payload): Int {
+        return publish("*", payload)
+    }
+
+    publishAsync(Scheduler sched, ContextView view, String topic, String payload): Int {
+        var job = PublishJob(this, topic, payload)
+        return sched.launch(job, "event.publish", 5)
+    }
+
+    statsJson(): String {
+        return "{\"subscribers\":" + subs.size + ",\"published\":" + (seq - 1) + "}"
+    }
+}
+
+class PublishJob implements TaskBody {
+    EventBus bus
+    String topic
+    String payload
+    constructor(EventBus b, String t, String p) {
+        bus = b
+        topic = t
+        payload = p
+    }
+    run(ContextView v) {
+        bus.publish(topic, payload)
+    }
+}
+
+LC_BOOTING(): Int { return 0 }
+LC_INITIALIZING(): Int { return 1 }
+LC_READY(): Int { return 2 }
+LC_BUSY(): Int { return 3 }
+LC_STOPPING(): Int { return 4 }
+LC_STOPPED(): Int { return 5 }
+LC_FAILED(): Int { return 6 }
+
+lcName(Int st): String {
+    if (st == LC_BOOTING()) { return "BOOTING" }
+    if (st == LC_INITIALIZING()) { return "INITIALIZING" }
+    if (st == LC_READY()) { return "READY" }
+    if (st == LC_BUSY()) { return "BUSY" }
+    if (st == LC_STOPPING()) { return "STOPPING" }
+    if (st == LC_STOPPED()) { return "STOPPED" }
+    return "FAILED"
+}
+
+interface LifecycleHook {
+    onTransition(Int from, Int to): Bool
+}
+
+class Lifecycle {
+    Int st = LC_BOOTING()
+    String lastError = ""
+    List<LifecycleHook> bootHooks = listOf<LifecycleHook>()
+    List<LifecycleHook> readyHooks = listOf<LifecycleHook>()
+    List<LifecycleHook> shutdownHooks = listOf<LifecycleHook>()
+    List<LifecycleHook> crashHooks = listOf<LifecycleHook>()
+
+    state(): Int {
+        return st
+    }
+
+    stateName(): String {
+        return lcName(st)
+    }
+
+    isAlive(): Bool {
+        return st != LC_STOPPED() && st != LC_FAILED()
+    }
+
+    registerBoot(LifecycleHook h) {
+        bootHooks.add(h)
+    }
+
+    registerReady(LifecycleHook h) {
+        readyHooks.add(h)
+    }
+
+    registerShutdown(LifecycleHook h) {
+        shutdownHooks.add(h)
+    }
+
+    registerCrash(LifecycleHook h) {
+        crashHooks.add(h)
+    }
+
+    allowed(Int from, Int to): Bool {
+        if (to == LC_FAILED()) {
+            return from != LC_STOPPED() && from != LC_FAILED()
+        }
+        if (from == LC_BOOTING()) {
+            return to == LC_INITIALIZING()
+        }
+        if (from == LC_INITIALIZING()) {
+            return to == LC_READY()
+        }
+        if (from == LC_READY()) {
+            return to == LC_BUSY() || to == LC_STOPPING()
+        }
+        if (from == LC_BUSY()) {
+            return to == LC_READY() || to == LC_STOPPING()
+        }
+        if (from == LC_STOPPING()) {
+            return to == LC_STOPPED()
+        }
+        return false
+    }
+
+    transition(Int to) {
+        if (!allowed(st, to)) {
+            throw "lifecycle: illegal transition " + lcName(st) + " -> " + lcName(to)
+        }
+        var from = st
+        var target = to
+        var hooks = bootHooks
+        if (target == LC_READY()) {
+            hooks = readyHooks
+        } else if (target == LC_STOPPING()) {
+            hooks = shutdownHooks
+        }
+        for (var h in hooks) {
+            var cont = h.onTransition(from, target)
+            if (!cont) {
+                throw "lifecycle: hook veto on transition to " + lcName(target)
+            }
+        }
+        st = target
+    }
+
+    crash(String reason) {
+        if (!isAlive()) {
+            return
+        }
+        var from = st
+        lastError = reason
+        for (var h in crashHooks) {
+            try {
+                h.onTransition(from, LC_FAILED())
+            } catch (String e) {
+                println("lifecycle: crash hook failed: " + e)
+            }
+        }
+        st = LC_FAILED()
+    }
+
+    summaryJson(): String {
+        var out = "{\"state\":\"" + stateName() + "\",\"lastError\":\"" + escapeJson(lastError) + "\"}"
+        return out
+    }
+}
+
+class NameRecorder implements LifecycleHook {
+    List<String> items = listOf<String>()
+    String prefix = ""
+    constructor(String p) {
+        prefix = p
+    }
+    onTransition(Int from, Int to): Bool {
+        items.add(prefix + ":" + lcName(from) + "->" + lcName(to))
+        return true
+    }
+    recorded(): Int {
+        return items.size
+    }
+    last(): String {
+        return items.get(items.size - 1)
+    }
+}
+
+class WorkspaceReport {
+    String root = ""
+    Bool valid = false
+    Bool hasGit = false
+    Bool hasConfigFile = false
+    Bool hasCacheDir = false
+    Int kfFiles = 0
+    Int totalEntries = 0
+    Int ignoreRules = 0
+    String detail = ""
+}
+
+countKfFiles(String dir, Int depth): Int {
+    if (depth > 3) {
+        return 0
+    }
+    var d = Directory(dir)
+    if (!d.exists() || !d.isDirectory()) {
+        return 0
+    }
+    var names = d.list()
+    var n = 0
+    for (var name in names) {
+        var child = joinPath(dir, name)
+        var f = File(child)
+        if (f.isFile()) {
+            if (name.length >= 3) {
+                var ext = name.substring(name.length - 3, name.length)
+                if (ext == ".kf") {
+                    n = n + 1
+                }
+            }
+        } else if (f.isDirectory()) {
+            if (name != ".git") {
+                n = n + countKfFiles(child, depth + 1)
+            }
+        }
+    }
+    return n
+}
+
+listTopEntries(String dir): Int {
+    var d = Directory(dir)
+    if (!d.exists() || !d.isDirectory()) {
+        return 0
+    }
+    var names = d.list()
+    return names.size
+}
+
+scanWorkspace(String root): WorkspaceReport {
+    var r = WorkspaceReport()
+    r.root = root
+    var d = Directory(root)
+    if (!d.exists()) {
+        r.valid = false
+        r.detail = "root does not exist"
+        return r
+    }
+    if (!d.isDirectory()) {
+        r.valid = false
+        r.detail = "root is not a directory"
+        return r
+    }
+    r.valid = true
+    r.detail = "ok"
+    var gitDir = Directory(joinPath(root, ".git"))
+    r.hasGit = gitDir.exists()
+    var cfgFile = File(joinPath(root, "kof.config"))
+    r.hasConfigFile = cfgFile.exists()
+    var cacheDir = Directory(joinPath(root, "build"))
+    r.hasCacheDir = cacheDir.exists()
+    r.kfFiles = countKfFiles(root, 1)
+    r.totalEntries = listTopEntries(root)
+    var gi = File(joinPath(root, ".gitignore"))
+    if (gi.exists() && gi.isFile()) {
+        var txt = gi.readText()
+        var lines = splitStr(txt, "\n")
+        for (var raw in lines) {
+            var line = raw.trim()
+            if (line.length > 0) {
+                var first = line.substring(0, 1)
+                if (first != "#") {
+                    r.ignoreRules = r.ignoreRules + 1
+                }
+            }
+        }
+    }
+    return r
+}
+
+WS_IDX_VERSION(): Int { return 3 }
+
+WsSnapEmpty(): WsSnap {
+    return WsSnap()
+}
+
+
+WS_MAGIC_A(): Int { return 87 }
+WS_MAGIC_B(): Int { return 83 }
+WS_MAGIC_C(): Int { return 73 }
+WS_MAGIC_D(): Int { return 88 }
+
+record WsFileRec(String path, Int hash, Int sizeChars)
+record WsSymRec(String name, String kind, String file)
+record WsImpRec(String file, String name)
+record WsEdgeRec(String from, String to)
+record WsGitRec(String branch, String commit)
+class WsSnap {
+    String workspaceId = ""
+    String root = ""
+    String gitBranch = ""
+    String gitCommit = ""
+    String target = ""
+    Long timestamp = 0
+    List<WsFileRec> files = listOf<WsFileRec>()
+    List<WsSymRec> symbols = listOf<WsSymRec>()
+    List<WsImpRec> imports = listOf<WsImpRec>()
+    List<WsEdgeRec> deps = listOf<WsEdgeRec>()
+    constructor() {
+    }
+}
+
+record WsParsedRec(String path, Int hash, String pkg, List<String> imports, List<WsSymRec> syms)
+record WsDiffRec(List<String> added, List<String> modified, List<String> deleted, List<String> renamedOld, List<String> renamedNew, List<String> symAdded, List<String> symRemoved)
+record WsDiagRec(String file, Int hash, Int diagCount, String codes)
+
+wsHash(String s): Int {
+    var h = 5381
+    var i = 0
+    while (i < s.length) {
+        h = h * 33 + s.charAt(i)
+        i = i + 1
+    }
+    return h
+}
+
+wsSanitize(String s): String {
+    var out = ""
+    var i = 0
+    while (i < s.length) {
+        var c = s.charAt(i)
+        if (c == 1 || c == 2 || c == 3) {
+            out = out + "?"
+        } else {
+            out = out + s.substring(i, i + 1)
+        }
+        i = i + 1
+    }
+    return out
+}
+
+wsJoin(List<String> xs, String sep): String {
+    var out = ""
+    var first = true
+    for (var x in xs) {
+        if (!first) {
+            out = out + sep
+        }
+        first = false
+        out = out + x
+    }
+    return out
+}
+
+wsInList(List<String> xs, String v): Bool {
+    for (var x in xs) {
+        if (x == v) {
+            return true
+        }
+    }
+    return false
+}
+
+parseLongSafe(String s): Long {
+    var n = 0
+    var i = 0
+    while (i < s.length) {
+        var c = s.charAt(i)
+        if (c >= 48 && c <= 57) {
+            n = n * 10 + (c - 48)
+        }
+        i = i + 1
+    }
+    return n
+}
+
+wsCountOccurrences(String textIn, String needle): Int {
+    var n = 0
+    var rest = textIn
+    while (rest.length >= needle.length) {
+        var idx = rest.indexOf(needle)
+        if (idx < 0) {
+            break
+        }
+        n = n + 1
+        rest = rest.substring(idx + needle.length, rest.length)
+    }
+    return n
+}
+
+wsFirstToken(String s): String {
+    var out = ""
+    var i = 0
+    while (i < s.length) {
+        var c = s.charAt(i)
+        if (c == 40 || c == 32 || c == 123 || c == 58 || c == 61) {
+            break
+        }
+        out = out + s.substring(i, i + 1)
+        i = i + 1
+    }
+    return out.trim()
+}
+
+wsLastSpace(String s): Int {
+    var found = 0 - 1
+    var i = 0
+    while (i < s.length) {
+        if (s.charAt(i) == 32) {
+            found = i
+        }
+        i = i + 1
+    }
+    return found
+}
+
+wsIsKeyword(String t): Bool {
+    if (t == "if") { return true }
+    if (t == "for") { return true }
+    if (t == "while") { return true }
+    if (t == "switch") { return true }
+    if (t == "return") { return true }
+    if (t == "catch") { return true }
+    if (t == "else") { return true }
+    if (t == "do") { return true }
+    if (t == "spawn") { return true }
+    if (t == "assert") { return true }
+    return false
+}
+
+wsCollectFiles(String dir, Int depth, List<String> out) {
+    if (depth > 6) {
+        return
+    }
+    var d = Directory(dir)
+    if (!d.exists()) {
+        return
+    }
+    if (!d.isDirectory()) {
+        return
+    }
+    var names = d.list()
+    for (var n in names) {
+        var skipIt = n == ".git" || n == "build" || n == "out"
+        if (!skipIt) {
+            var child = joinPath(dir, n)
+            var f = File(child)
+            if (f.isFile()) {
+                if (n.length >= 3) {
+                    var ext = n.substring(n.length - 3, n.length)
+                    if (ext == ".kf") {
+                        out.add(child)
+                    }
+                }
+            } else {
+                if (f.isDirectory()) {
+                    wsCollectFiles(child, depth + 1, out)
+                }
+            }
+        }
+    }
+}
+
+wsParseFile(String path): WsParsedRec {
+    var f = File(path)
+    var txt = ""
+    if (f.exists() && f.isFile()) {
+        txt = f.readText()
+    }
+    var hash = wsHash(txt)
+    var imports = listOf<String>()
+    var syms = listOf<WsSymRec>()
+    var pkg = ""
+    var lines = splitStr(txt, "\n")
+    for (var raw in lines) {
+        var t = raw.trim()
+        if (t.length > 0) {
+            var isComment = t.startsWith("//")
+            if (!isComment) {
+                var isPkg = t.startsWith("package ")
+                var isImp = t.startsWith("import ")
+                if (isPkg) {
+                    pkg = t.substring(8, t.length).trim()
+                }
+                if (isImp) {
+                    imports.add(t.substring(7, t.length).trim())
+                }
+                if (!isPkg && !isImp) {
+                    var kind = ""
+                    if (t.startsWith("record ")) {
+                        kind = "record"
+                    }
+                    if (kind == "" && t.startsWith("interface ")) {
+                        kind = "interface"
+                    }
+                    if (kind == "" && t.startsWith("entity ")) {
+                        kind = "entity"
+                    }
+                    if (kind == "" && t.startsWith("abstract class ")) {
+                        kind = "class"
+                    }
+                    if (kind == "" && t.startsWith("class ")) {
+                        kind = "class"
+                    }
+                    if (kind != "") {
+                        var rest = ""
+                        if (t.startsWith("abstract class ")) {
+                            rest = t.substring(15, t.length)
+                        } else if (t.startsWith("record ")) {
+                            rest = t.substring(7, t.length)
+                        } else if (t.startsWith("interface ")) {
+                            rest = t.substring(10, t.length)
+                        } else if (t.startsWith("entity ")) {
+                            rest = t.substring(7, t.length)
+                        } else {
+                            rest = t.substring(6, t.length)
+                        }
+                        var nm = wsFirstToken(rest)
+                        if (nm.length > 0) {
+                            syms.add(WsSymRec(nm, kind, path))
+                        }
+                    } else {
+                        var p2 = t.indexOf("(")
+                        if (p2 > 0) {
+                            var head = t.substring(0, p2).trim()
+                            var sp = wsLastSpace(head)
+                            var cand = head
+                            if (sp >= 0) {
+                                cand = head.substring(sp + 1, head.length)
+                            }
+                            var looksFn = false
+                            if (cand.length > 0) {
+                                var c0 = cand.charAt(0)
+                                var alpha = (c0 >= 65 && c0 <= 90) || (c0 >= 97 && c0 <= 122) || c0 == 95
+                                if (alpha) {
+                                    var kw = wsIsKeyword(cand)
+                                    if (!kw) {
+                                        var hasRet = t.contains("): ")
+                                        var hasExpr = t.contains(") = ")
+                                        var hasBrace = t.endsWith("{")
+                                        if (hasRet || hasExpr || hasBrace) {
+                                            looksFn = true
+                                        }
+                                    }
+                                }
+                            }
+                            if (looksFn) {
+                                syms.add(WsSymRec(cand, "function", path))
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    return WsParsedRec(path, hash, pkg, imports, syms)
+}
+
+wsGitInfo(String root): WsGitRec {
+    var headFile = File(joinPath(joinPath(root, ".git"), "HEAD"))
+    var branch = ""
+    var commit = ""
+    if (headFile.exists() && headFile.isFile()) {
+        var head = headFile.readText().trim()
+        if (head.startsWith("ref: refs/heads/")) {
+            branch = head.substring(16, head.length).trim()
+            var refFile = File(joinPath(joinPath(root, ".git"), joinPath("refs", "heads")))
+            var shaFile = File(joinPath(joinPath(joinPath(root, ".git"), "refs"), joinPath("heads", branch)))
+            if (shaFile.exists() && shaFile.isFile()) {
+                commit = shaFile.readText().trim()
+            }
+        } else {
+            commit = head
+        }
+    }
+    return WsGitRec(branch, commit)
+}
+
+wsBuildEdges(List<WsParsedRec> parsed, List<WsImpRec> flatImports): List<WsEdgeRec> {
+    var edges = listOf<WsEdgeRec>()
+    for (var imp in flatImports) {
+        var target = ""
+        for (var p in parsed) {
+            if (target == "") {
+                for (var s in p.syms) {
+                    if (target == "" && s.name == imp.name && s.file != imp.file) {
+                        target = p.path
+                    }
+                }
+            }
+        }
+        if (target != "") {
+            edges.add(WsEdgeRec(imp.file, target))
+        }
+    }
+    return edges
+}
+
+wsUnusedImports(List<WsParsedRec> parsed, List<WsImpRec> flatAll): List<WsImpRec> {
+    var unused = listOf<WsImpRec>()
+    for (var imp in flatAll) {
+        var txt = ""
+        var rf = File(imp.file)
+        if (rf.exists() && rf.isFile()) {
+            txt = rf.readText()
+        }
+        var occurrences = wsCountOccurrences(txt, imp.name)
+        if (occurrences <= 1) {
+            unused.add(imp)
+        }
+    }
+    return unused
+}
+
+wsHasCycleRec(String node, List<WsEdgeRec> edges, List<String> visited, List<String> stack, List<String> cycleOut): Bool {
+    if (wsInList(stack, node)) {
+        cycleOut.add(node)
+        return true
+    }
+    if (wsInList(visited, node)) {
+        return false
+    }
+    visited.add(node)
+    stack.add(node)
+    for (var e in edges) {
+        if (e.from == node) {
+            var found = wsHasCycleRec(e.to, edges, visited, stack, cycleOut)
+            if (found) {
+                return true
+            }
+        }
+    }
+    stack.remove(stack.size - 1)
+    return false
+}
+
+wsDetectCycle(List<WsEdgeRec> edges): List<String> {
+    var visited = listOf<String>()
+    var stack = listOf<String>()
+    var cycle = listOf<String>()
+    var roots = listOf<String>()
+    for (var e in edges) {
+        if (!wsInList(roots, e.from)) {
+            roots.add(e.from)
+        }
+    }
+    for (var r in roots) {
+        var found = wsHasCycleRec(r, edges, visited, stack, cycle)
+        if (found) {
+            return cycle
+        }
+    }
+    return cycle
+}
+
+wsFullScan(EventBus bus, String root, TimeSource clock): WsSnap {
+    bus.publish("workspace.indexing", root)
+    var paths = listOf<String>()
+    wsCollectFiles(root, 1, paths)
+    var files = listOf<WsFileRec>()
+    var syms = listOf<WsSymRec>()
+    var imps = listOf<WsImpRec>()
+    var parsedAll = listOf<WsParsedRec>()
+    for (var p in paths) {
+        var pr = wsParseFile(p)
+        parsedAll.add(pr)
+        var sz = 0
+        var rf = File(p)
+        if (rf.exists() && rf.isFile()) {
+            sz = rf.readText().length
+        }
+        files.add(WsFileRec(p, pr.hash, sz))
+        for (var s in pr.syms) {
+            syms.add(s)
+        }
+        for (var i in pr.imports) {
+            imps.add(WsImpRec(p, i))
+        }
+    }
+    var deps = wsBuildEdges(parsedAll, imps)
+    var gi = wsGitInfo(root)
+    var cfg = Config()
+    cfg.loadFile(joinPath(root, "kof.config"))
+    var target = cfg.getStr("target", "native")
+    var wsId = "" + wsHash(root + "|" + gi.branch + "|" + gi.commit)
+    var snap = WsSnap()
+    snap.workspaceId = wsId
+    snap.root = root
+    snap.gitBranch = gi.branch
+    snap.gitCommit = gi.commit
+    snap.target = target
+    snap.timestamp = clock.nowMs()
+    snap.files = files
+    snap.symbols = syms
+    snap.imports = imps
+    snap.deps = deps
+    bus.publish("snapshot.created", root)
+    bus.publish("workspace.indexed", "files=" + files.size + " symbols=" + syms.size)
+    return snap
+}
+
+
+wsMetaLine(String snap): String {
+    return snap.workspaceId + "\u0003" + wsSanitize(snap.root) + "\u0003" + wsSanitize(snap.gitBranch) + "\u0003" + wsSanitize(snap.gitCommit) + "\u0003" + snap.target + "\u0003" + snap.timestamp
+}
+
+wsSerializeIndex(WsSnap snap): String {
+    var filesSec = ""
+    var firstF = true
+    for (var f in snap.files) {
+        if (!firstF) {
+            filesSec = filesSec + "\u0002"
+        }
+        firstF = false
+        filesSec = filesSec + f.path + "\u0003" + f.hash + "\u0003" + f.sizeChars
+    }
+    var symSec = ""
+    var firstS = true
+    for (var x in snap.symbols) {
+        if (!firstS) {
+            symSec = symSec + "\u0002"
+        }
+        firstS = false
+        symSec = symSec + x.name + "\u0003" + x.kind + "\u0003" + x.file
+    }
+    var impSec = ""
+    var firstI = true
+    for (var x in snap.imports) {
+        if (!firstI) {
+            impSec = impSec + "\u0002"
+        }
+        firstI = false
+        impSec = impSec + x.file + "\u0003" + x.name
+    }
+    var depSec = ""
+    var firstD = true
+    for (var x in snap.deps) {
+        if (!firstD) {
+            depSec = depSec + "\u0002"
+        }
+        firstD = false
+        depSec = depSec + x.from + "\u0003" + x.to
+    }
+    var payload = wsMetaLine(snap)
+    payload = payload + "\u0001" + filesSec
+    payload = payload + "\u0001" + symSec
+    payload = payload + "\u0001" + impSec
+    payload = payload + "\u0001" + depSec
+    return payload
+}
+
+wsWriteVersioned(String path, String magic, Int version, String payload): Bool {
+    var crc = wsHash(payload)
+    var head = magic + "|" + version + "|" + crc + "\n"
+    var f = File(path)
+    if (f.exists()) {
+        f.delete()
+    }
+    return f.writeText(head + payload)
+}
+
+wsSaveAll(EventBus bus, String dir, WsSnap snap): Bool {
+    var d = Directory(dir)
+    if (!d.exists()) {
+        d.createDirectories()
+    }
+    var body = wsSerializeIndex(snap)
+    var okIdx = wsWriteVersioned(joinPath(dir, "workspace.idx"), "WSIDX", WS_IDX_VERSION(), body)
+    var okSnap = wsWriteVersioned(joinPath(dir, "workspace.snapshot"), "WSSNP", WS_IDX_VERSION(), body)
+    var hashes = listOf<String>()
+    for (var f in snap.files) {
+        hashes.add("" + f.hash)
+    }
+    var okH = wsWriteVersioned(joinPath(dir, "workspace.hashes"), "WSHSH", WS_IDX_VERSION(), wsJoin(hashes, "\u0002"))
+    bus.publish("snapshot.created", dir)
+    return okIdx && okSnap && okH
+}
+
+wsReadVersioned(String path, String wantMagic): String {
+    var f = File(path)
+    if (!f.exists()) {
+        return ""
+    }
+    if (!f.isFile()) {
+        return ""
+    }
+    var txt = f.readText()
+    var nl = txt.indexOf("\n")
+    if (nl < 0) {
+        return ""
+    }
+    var head = txt.substring(0, nl).trim()
+    var payload = txt.substring(nl + 1, txt.length)
+    var hp = splitStr(head, "|")
+    if (hp.size != 3) {
+        return ""
+    }
+    if (hp.get(0) != wantMagic) {
+        return ""
+    }
+    if (parseIntStr(hp.get(1)) != WS_IDX_VERSION()) {
+        return ""
+    }
+    var crc = parseIntStr(hp.get(2))
+    if (wsHash(payload) != crc) {
+        return ""
+    }
+    return payload
+}
+
+wsSection(String payload, Int idx): String {
+    var parts = splitStr(payload, "\u0001")
+    if (idx < parts.size) {
+        return parts.get(idx)
+    }
+    return ""
+}
+
+wsParseMeta(String sec, String fallbackRoot): WsSnap {
+    var f6 = splitStr(sec, "\u0003")
+    if (f6.size < 6) {
+        return WsSnapEmpty()
+    }
+    var out2 = WsSnap()
+    if (f6.size >= 6) {
+        out2.workspaceId = f6.get(0)
+        out2.root = f6.get(1)
+        out2.gitBranch = f6.get(2)
+        out2.gitCommit = f6.get(3)
+        out2.target = f6.get(4)
+        out2.timestamp = parseLongSafe(f6.get(5))
+    }
+    return out2
+}
+
+wsLoadIndex(String path): WsSnap {
+    var payload = wsReadVersioned(path, "WSIDX")
+    if (payload == "") {
+        return WsSnapEmpty()
+    }
+    var meta = wsParseMeta(wsSection(payload, 0), "")
+    var files = meta.files
+    var fsec = wsSection(payload, 1)
+    for (var entry in splitStr(fsec, "\u0002")) {
+        var fl = splitStr(entry, "\u0003")
+        if (fl.size == 3) {
+            files.add(WsFileRec(fl.get(0), parseIntStr(fl.get(1)), parseIntStr(fl.get(2))))
+        }
+    }
+    var syms = meta.symbols
+    var ssec = wsSection(payload, 2)
+    for (var entry in splitStr(ssec, "\u0002")) {
+        var sl = splitStr(entry, "\u0003")
+        if (sl.size == 3) {
+            syms.add(WsSymRec(sl.get(0), sl.get(1), sl.get(2)))
+        }
+    }
+    var imps = meta.imports
+    var isec = wsSection(payload, 3)
+    for (var entry in splitStr(isec, "\u0002")) {
+        var il = splitStr(entry, "\u0003")
+        if (il.size == 2) {
+            imps.add(WsImpRec(il.get(0), il.get(1)))
+        }
+    }
+    var deps = meta.deps
+    var dsec = wsSection(payload, 4)
+    for (var entry in splitStr(dsec, "\u0002")) {
+        var dl = splitStr(entry, "\u0003")
+        if (dl.size == 2) {
+            deps.add(WsEdgeRec(dl.get(0), dl.get(1)))
+        }
+    }
+    meta.files = files
+    meta.symbols = syms
+    meta.imports = imps
+    meta.deps = deps
+    return meta
+}
+
+wsDiff(List<WsFileRec> prevFiles, List<WsFileRec> nextFiles): WsDiffRec {
+    var added = listOf<String>()
+    var modified = listOf<String>()
+    var unchanged = listOf<String>()
+    var deleted = listOf<String>()
+    for (var nf in nextFiles) {
+        var found = false
+        var oldHash = 0
+        for (var pf in prevFiles) {
+            if (pf.path == nf.path) {
+                found = true
+                oldHash = pf.hash
+            }
+        }
+        if (!found) {
+            added.add(nf.path)
+        } else if (oldHash != nf.hash) {
+            modified.add(nf.path)
+        } else {
+            unchanged.add(nf.path)
+        }
+    }
+    for (var pf in prevFiles) {
+        var still = false
+        for (var nf in nextFiles) {
+            if (nf.path == pf.path) {
+                still = true
+            }
+        }
+        if (!still) {
+            deleted.add(pf.path)
+        }
+    }
+    var renamedOld = listOf<String>()
+    var renamedNew = listOf<String>()
+    for (var delPath in deleted) {
+        var delHash = 0
+        for (var pf in prevFiles) {
+            if (pf.path == delPath) {
+                delHash = pf.hash
+            }
+        }
+        for (var addPath in added) {
+            var addHash = 0
+            for (var nf in nextFiles) {
+                if (nf.path == addPath) {
+                    addHash = nf.hash
+                }
+            }
+            if (addHash == delHash && delHash != 0) {
+                renamedOld.add(delPath)
+                renamedNew.add(addPath)
+            }
+        }
+    }
+    var realAdded = listOf<String>()
+    for (var a in added) {
+        if (!wsInList(renamedNew, a)) {
+            realAdded.add(a)
+        }
+    }
+    var realDeleted = listOf<String>()
+    for (var d in deleted) {
+        if (!wsInList(renamedOld, d)) {
+            realDeleted.add(d)
+        }
+    }
+    return WsDiffRec(realAdded, modified, realDeleted, renamedOld, renamedNew, listOf<String>(), listOf<String>())
+}
+
+class WorkspaceIndex {
+    String root = "."
+    EventBus bus
+    WsSnap current = WsSnap()
+    List<WsDiagRec> diagCache = listOf<WsDiagRec>()
+    Bool loaded = false
+
+    TimeSource clock
+
+    constructor(String r, EventBus b) {
+        root = r
+        bus = b
+        clock = FixedClock(0)
+    }
+
+    constructor(String r, EventBus b, TimeSource ts) {
+        root = r
+        bus = b
+        clock = ts
+    }
+
+    fullRescan(): WsSnap {
+        var snap = wsFullScan(bus, root, clock)
+        var diff = wsDiff(current.files, snap.files)
+        publishFileEvents(diff)
+        current = snap
+        loaded = true
+        return snap
+    }
+
+    incremental(): WsSnap {
+        if (!loaded) {
+            return fullRescan()
+        }
+        var fresh = wsFullScan(bus, root, clock)
+        var diff = wsDiff(current.files, fresh.files)
+        fresh.workspaceId = current.workspaceId
+        current = fresh
+        bus.publish("workspace.changed", "added=" + diff.added.size + " modified=" + diff.modified.size + " deleted=" + diff.deleted.size + " renamed=" + diff.renamedOld.size)
+        publishFileEvents(diff)
+        return fresh
+    }
+
+    publishFileEvents(WsDiffRec d) {
+        for (var a in d.added) {
+            bus.publish("file.added", a)
+        }
+        for (var m in d.modified) {
+            bus.publish("file.modified", m)
+        }
+        for (var x in d.deleted) {
+            bus.publish("file.removed", x)
+        }
+        if (d.renamedOld.size > 0) {
+            bus.publish("file.renamed", d.renamedOld.get(0) + "->" + d.renamedNew.get(0))
+        }
+        bus.publish("diff.computed", "added=" + d.added.size + ",deleted=" + d.deleted.size + ",modified=" + d.modified.size)
+    }
+
+    save(): Bool {
+        return wsSaveAll(bus, joinPath(root, "build"), current)
+    }
+
+    load(): Bool {
+        var idxPath = joinPath(joinPath(root, "build"), "workspace.idx")
+        var snap = wsLoadIndex(idxPath)
+        if (snap.root == "") {
+            loaded = false
+            bus.publish("workspace.cacheInvalid", idxPath)
+            return false
+        }
+        if (snap.root != root) {
+            bus.publish("workspace.cacheInvalid", "root mismatch")
+            return false
+        }
+        current = snap
+        loaded = true
+        return true
+    }
+
+    symbolsOf(String file): List<WsSymRec> {
+        var out = listOf<WsSymRec>()
+        for (var s in current.symbols) {
+            if (s.file == file) {
+                out.add(s)
+            }
+        }
+        return out
+    }
+
+    findSymbol(String name): List<WsSymRec> {
+        var out = listOf<WsSymRec>()
+        for (var s in current.symbols) {
+            if (s.name == name) {
+                out.add(s)
+            }
+        }
+        return out
+    }
+
+    importsOf(String file): List<String> {
+        var out = listOf<String>()
+        for (var i in current.imports) {
+            if (i.file == file) {
+                out.add(i.name)
+            }
+        }
+        return out
+    }
+
+    depsFrom(String file): List<String> {
+        var out = listOf<String>()
+        for (var e in current.deps) {
+            if (e.from == file) {
+                out.add(e.to)
+            }
+        }
+        return out
+    }
+
+    cycles(): List<String> {
+        return wsDetectCycle(current.deps)
+    }
+
+    unusedImports(): List<WsImpRec> {
+        var parsed = listOf<WsParsedRec>()
+        for (var f in current.files) {
+            parsed.add(wsParseFile(f.path))
+        }
+        var flat = current.imports
+        return wsUnusedImports(parsed, flat)
+    }
+
+    diffVsCurrent(): WsDiffRec {
+        var freshPaths = listOf<String>()
+        wsCollectFiles(root, 1, freshPaths)
+        var nextFiles = listOf<WsFileRec>()
+        for (var p in freshPaths) {
+            var pr = wsParseFile(p)
+            var sz = 0
+            nextFiles.add(WsFileRec(p, pr.hash, sz))
+        }
+        return wsDiff(current.files, nextFiles)
+    }
+
+    putDiag(String file, Int hash, Int count, String codes) {
+        diagCache.add(WsDiagRec(file, hash, count, codes))
+    }
+
+    cachedDiag(String file, Int hash): WsDiagRec {
+        for (var d in diagCache) {
+            if (d.file == file && d.hash == hash) {
+                return d
+            }
+        }
+        return WsDiagRec("", 0, -1, "")
+    }
+
+    statsJson(): String {
+        var out = "{\"root\":\"" + escapeJson(root) + "\""
+        out = out + ",\"files\":" + current.files.size
+        out = out + ",\"symbols\":" + current.symbols.size
+        out = out + ",\"imports\":" + current.imports.size
+        out = out + ",\"deps\":" + current.deps.size
+        out = out + ",\"branch\":\"" + escapeJson(current.gitBranch) + "\""
+        out = out + ",\"commit\":\"" + escapeJson(current.gitCommit) + "\""
+        out = out + ",\"target\":\"" + current.target + "\""
+        out = out + ",\"loaded\":" + loaded
+        out = out + "}"
+        return out
+    }
+}
+
+record ToolSpec(String id, String name, String category, String description, String inputSchema, String outputSchema, String permission)
+record ToolCall(String toolId, String requestId, String a, String b, Int n)
+PERM_FS_READ(): String { return "filesystem.read" }
+PERM_FS_WRITE(): String { return "filesystem.write" }
+PERM_COMPILER_EXEC(): String { return "compiler.execute" }
+PERM_GIT_WRITE(): String { return "git.write" }
+PERM_SYSTEM_EXEC(): String { return "system.execute" }
+PERM_WEB_NETWORK(): String { return "web.network" }
+
+
+
+
+
+
+
+class ToolCtx {
+    String requestId = "-"
+    EventBus bus
+    TimeSource clock
+    List<String> grants = listOf<String>()
+    Bool cancelled = false
+    Metrics met = Metrics()
+    WorkspaceIndex wsi
+
+    constructor(EventBus b, TimeSource ts) {
+        bus = b
+        clock = ts
+        wsi = WorkspaceIndex(".", b, ts)
+    }
+
+    grant(String p) {
+        grants.add(p)
+    }
+
+    revoke(String p) {
+        var i = 0
+        while (i < grants.size) {
+            if (grants.get(i) == p) {
+                grants.remove(i)
+                return
+            }
+            i = i + 1
+        }
+    }
+
+    hasGrant(String p): Bool {
+        for (var g in grants) {
+            if (g == p) {
+                return true
+            }
+        }
+        return false
+    }
+}
+
+class ToolEntry {
+    ToolSpec spec
+    DispatchHandler handler
+    Int version = 1
+    constructor(ToolSpec s, DispatchHandler h) {
+        spec = s
+        handler = h
+    }
+}
+
+class ToolRegistry {
+    List<ToolEntry> entries = listOf<ToolEntry>()
+
+    register(ToolSpec s, ToolHandler h) {
+        entries.add(ToolEntry(s, h))
+    }
+
+    findById(String id): ToolEntry {
+        for (var e in entries) {
+            if (e.spec.id == id) {
+                return e
+            }
+        }
+        return ToolEntry(ToolSpec("", "", "", "", "", "", ""), DispatchHandler())
+    }
+
+    hasId(String id): Bool {
+        for (var e in entries) {
+            if (e.spec.id == id) {
+                return true
+            }
+        }
+        return false
+    }
+
+    byCategory(String cat): List<ToolSpec> {
+        var out = listOf<ToolSpec>()
+        for (var e in entries) {
+            if (e.spec.category == cat) {
+                out.add(e.spec)
+            }
+        }
+        return out
+    }
+
+    size(): Int {
+        return entries.size
+    }
+
+    missingPermFor(ToolCtx c, String id): String {
+        var e = findById(id)
+        return entryMissingPerm(c, e)
+    }
+
+    entryMissingPerm(ToolCtx c, ToolEntry e): String {
+        var need = e.spec.permission
+        if (need == "") {
+            return ""
+        }
+        if (!c.hasGrant(need)) {
+            return need
+        }
+        return ""
+    }
+}
+
+class DispatchHandler {
+    constructor() {
+    }
+    call(ToolCtx c, ToolCall t): ToolResult {
+        if (t.toolId == "fs.read") {
+            return tlFsRead(c, t)
+        }
+        if (t.toolId == "fs.exists") {
+            return tlFsExists(c, t)
+        }
+        if (t.toolId == "fs.metadata") {
+            return tlFsMetadata(c, t)
+        }
+        if (t.toolId == "fs.list") {
+            return tlFsList(c, t)
+        }
+        if (t.toolId == "fs.append") {
+            return tlFsAppend(c, t)
+        }
+        if (t.toolId == "fs.copy") {
+            return tlFsCopy(c, t)
+        }
+        if (t.toolId == "fs.mkdir") {
+            return tlFsMkdir(c, t)
+        }
+        if (t.toolId == "fs.write") {
+            return tlFsWrite(c, t)
+        }
+        if (t.toolId == "fs.delete") {
+            return tlFsDelete(c, t)
+        }
+        if (t.toolId == "fs.rename") {
+            return tlFsRename(c, t)
+        }
+        if (t.toolId == "fs.rollbackRestore") {
+            return tlFsRestoreBackup(c, t)
+        }
+        if (t.toolId.startsWith("ws.")) {
+            return tlWorkspace(c, t)
+        }
+        if (t.toolId == "search.text") {
+            return tlSearchText(c, t)
+        }
+        if (t.toolId == "search.symbol") {
+            return tlSearchSymbol(c, t)
+        }
+        if (t.toolId == "search.path") {
+            return tlSearchPath(c, t)
+        }
+        if (t.toolId == "patch.file") {
+            return tlPatchFile(c, t)
+        }
+        if (t.toolId == "patch.replace") {
+            return tlPatchReplace(c, t)
+        }
+        if (t.toolId == "patch.append") {
+            return tlPatchAppend(c, t)
+        }
+        if (t.toolId == "diff.file") {
+            return tlDiffFile(c, t)
+        }
+        if (t.toolId == "git.branch") {
+            return tlGitBranch(c, t)
+        }
+        if (t.toolId == "git.log") {
+            return tlGitLog(c, t)
+        }
+        if (t.toolId.startsWith("compiler.")) {
+            return toolGap("GW-EXEC", "process.run indisponivel (J2/GW001); usar ponte scripts/golden_compiler.sh")
+        }
+        if (t.toolId.startsWith("ast.")) {
+            return toolGap("GW-AST-DUMP", "compilador ainda nao expoe AST estruturada")
+        }
+        if (t.toolId.startsWith("web.") || t.toolId.startsWith("http.")) {
+            return toolGap("GW-NET", "rede chega com kof.http/kof.web na plataforma")
+        }
+        if (t.toolId.startsWith("ui.")) {
+            return toolGap("GW-UI", "ui via kof.ui/KofJS em milestone futura")
+        }
+        if (t.toolId.startsWith("system.")) {
+            return toolGap("GW-SYS", "execucao de sistema depende de process.run upstream")
+        }
+        return toolErr("TOOL-NOTFOUND", t.toolId)
+    }
+}
+tlBackup(String path): String {
+    var bak = path + ".katool-bak"
+    var src = File(path)
+    if (src.exists() && src.isFile()) {
+        var b = File(bak)
+        if (b.exists()) {
+            b.delete()
+        }
+        b.writeText(src.readText())
+        return bak
+    }
+    return ""
+}
+
+replaceAllStr(String body, String from, String to): String {
+    var out = ""
+    var rest = body
+    while (rest.length > 0) {
+        var at = rest.indexOf(from)
+        if (at < 0) {
+            out = out + rest
+            rest = ""
+        } else {
+            out = out + rest.substring(0, at) + to
+            rest = rest.substring(at + from.length, rest.length)
+        }
+    }
+    return out
+}
+
+tlFsRead(ToolCtx c, ToolCall t): ToolResult {
+    var f = File(t.a)
+    if (!f.exists() || !f.isFile()) {
+        return toolErr("FS-NOTFOUND", t.a)
+    }
+    return toolOk(f.readText())
+}
+
+tlFsExists(ToolCtx c, ToolCall t): ToolResult {
+    var f = File(t.a)
+    var d = Directory(t.a)
+    var isFile = f.exists() && f.isFile()
+    var isDir = d.exists() && d.isDirectory()
+    if (isFile) {
+        return toolOk("{\"exists\":true,\"kind\":\"file\"}")
+    }
+    if (isDir) {
+        return toolOk("{\"exists\":true,\"kind\":\"dir\"}")
+    }
+    return toolOk("{\"exists\":false}")
+}
+
+tlFsMetadata(ToolCtx c, ToolCall t): ToolResult {
+    var f = File(t.a)
+    if (!f.exists() || !f.isFile()) {
+        return toolErr("FS-NOTFOUND", t.a)
+    }
+    var txt = f.readText()
+    return toolOk("{\"size\":" + txt.length + ",\"hash\":" + wsHash(txt) + "}")
+}
+
+tlFsList(ToolCtx c, ToolCall t): ToolResult {
+    var d = Directory(t.a)
+    if (!d.exists() || !d.isDirectory()) {
+        return toolErr("FS-NOTFOUND", t.a)
+    }
+    var names = d.list()
+    var out = "["
+    var first = true
+    for (var n in names) {
+        if (!first) {
+            out = out + ","
+        }
+        first = false
+        out = out + "\"" + escapeJson(n) + "\""
+    }
+    return toolOk(out + "]")
+}
+
+tlFsAppend(ToolCtx c, ToolCall t): ToolResult {
+    var f = File(t.a)
+    if (!f.appendText(t.b)) {
+        return toolErr("FS-WRITEFAIL", t.a)
+    }
+    return toolOk("appended")
+}
+
+tlFsCopy(ToolCtx c, ToolCall t): ToolResult {
+    var s = File(t.a)
+    if (!s.exists() || !s.isFile()) {
+        return toolErr("FS-NOTFOUND", t.a)
+    }
+    var d = File(t.b)
+    if (d.exists()) {
+        d.delete()
+    }
+    if (!d.writeText(s.readText())) {
+        return toolErr("FS-WRITEFAIL", t.b)
+    }
+    return toolOk("copied")
+}
+
+tlFsMkdir(ToolCtx c, ToolCall t): ToolResult {
+    var d = Directory(t.a)
+    if (d.exists()) {
+        return toolOk("exists")
+    }
+    if (!d.createDirectories()) {
+        return toolErr("FS-MKDIRFAIL", t.a)
+    }
+    return toolOk("created")
+}
+
+tlFsWrite(ToolCtx c, ToolCall t): ToolResult {
+    var existed = File(t.a).exists()
+    var bak = tlBackup(t.a)
+    var f = File(t.a)
+    if (!f.writeText(t.b)) {
+        return toolErr("FS-WRITEFAIL", t.a)
+    }
+    var r = toolOk("{\"bytes\":" + t.b.length + "}")
+    if (existed) {
+        r.rollback = ToolRollback("restore", bak)
+    } else {
+        r.rollback = ToolRollback("delete-created", t.a)
+    }
+    c.bus.publish("patch.applied", t.a)
+    return r
+}
+
+tlFsDelete(ToolCtx c, ToolCall t): ToolResult {
+    var f = File(t.a)
+    if (!f.exists()) {
+        return toolErr("FS-NOTFOUND", t.a)
+    }
+    var bak = tlBackup(t.a)
+    if (!f.delete()) {
+        return toolErr("FS-DELETEFAIL", t.a)
+    }
+    var r = toolOk("deleted")
+    r.rollback = ToolRollback("restore", bak)
+    return r
+}
+
+tlFsRename(ToolCtx c, ToolCall t): ToolResult {
+    var s = File(t.a)
+    if (!s.exists()) {
+        return toolErr("FS-NOTFOUND", t.a)
+    }
+    var d = File(t.b)
+    if (d.exists()) {
+        return toolErr("FS-EXISTS", t.b)
+    }
+    var content = s.readText()
+    s.delete()
+    if (!d.writeText(content)) {
+        return toolErr("FS-WRITEFAIL", t.b)
+    }
+    return toolOk("renamed")
+}
+
+tlFsRestoreBackup(ToolCtx c, ToolCall t): ToolResult {
+    var bak = File(t.a)
+    if (!bak.exists()) {
+        return toolErr("FS-NOBACKUP", t.a)
+    }
+    var target = File(t.b)
+    if (target.exists()) {
+        target.delete()
+    }
+    target.writeText(bak.readText())
+    bak.delete()
+    return toolOk("restored")
+}
+tlWorkspace(ToolCtx c, ToolCall t): ToolResult {
+    var idx = c.wsi
+    if (!idx.loaded) {
+        return toolGap("WS-NOTLOADED", "host injeta WorkspaceIndex carregado")
+    }
+    if (t.toolId == "ws.snapshot") {
+        if (!idx.save()) {
+            return toolErr("WS-SAVEFAIL", idx.root)
+        }
+        return toolOk(idx.statsJson())
+    }
+    if (t.toolId == "ws.diff") {
+        var d = idx.diffVsCurrent()
+        return toolOk("{\"added\":" + d.added.size + ",\"modified\":" + d.modified.size + ",\"deleted\":" + d.deleted.size + ",\"renamed\":" + d.renamedOld.size + "}")
+    }
+    if (t.toolId == "ws.findSymbol") {
+        var hits = idx.findSymbol(t.a)
+        var out = "["
+        var first = true
+        for (var h in hits) {
+            if (!first) {
+                out = out + ","
+            }
+            first = false
+            out = out + "{\"name\":\"" + escapeJson(h.name) + "\",\"kind\":\"" + h.kind + "\",\"file\":\"" + escapeJson(h.file) + "\"}"
+        }
+        return toolOk(out + "]")
+    }
+    if (t.toolId == "ws.findFile") {
+        var out2 = "["
+        var first2 = true
+        for (var ff in idx.current.files) {
+            if (ff.path.contains(t.a)) {
+                if (!first2) {
+                    out2 = out2 + ","
+                }
+                first2 = false
+                out2 = out2 + "\"" + escapeJson(ff.path) + "\""
+            }
+        }
+        return toolOk(out2 + "]")
+    }
+    if (t.toolId == "ws.graph") {
+        var cyc = idx.cycles()
+        return toolOk("{\"edges\":" + idx.current.deps.size + ",\"cycles\":" + cyc.size + "}")
+    }
+    if (t.toolId == "ws.invalidate") {
+        var pf = File(joinPath(joinPath(idx.root, "build"), "workspace.idx"))
+        if (pf.exists()) {
+            pf.delete()
+        }
+        idx.loaded = false
+        return toolOk("invalidated")
+    }
+    if (t.toolId == "ws.open") {
+        var snap = idx.fullRescan()
+        return toolOk("{\"files\":" + snap.files.size + ",\"symbols\":" + snap.symbols.size + "}")
+    }
+    return toolErr("TOOL-NOTFOUND", t.toolId)
+}
+
+tlSearchText(ToolCtx c, ToolCall t): ToolResult {
+    var idx = c.wsi
+    if (!idx.loaded) {
+        return toolGap("WS-NOTLOADED", "search usa indice do workspace")
+    }
+    var out = "["
+    var first = true
+    for (var ff in idx.current.files) {
+        var rf = File(ff.path)
+        if (rf.exists() && rf.isFile()) {
+            var body = rf.readText()
+            var n = wsCountOccurrences(body, t.a)
+            if (n > 0) {
+                if (!first) {
+                    out = out + ","
+                }
+                first = false
+                out = out + "{\"file\":\"" + escapeJson(ff.path) + "\",\"count\":" + n + "}"
+            }
+        }
+    }
+    return toolOk(out + "]")
+}
+
+tlSearchSymbol(ToolCtx c, ToolCall t): ToolResult {
+    return tlWorkspace(c, ToolCall("ws.findSymbol", t.requestId, t.a, "", 0))
+}
+
+tlSearchPath(ToolCtx c, ToolCall t): ToolResult {
+    return tlWorkspace(c, ToolCall("ws.findFile", t.requestId, t.a, "", 0))
+}
+
+tlPatchFile(ToolCtx c, ToolCall t): ToolResult {
+    return tlFsWrite(c, t)
+}
+
+tlPatchReplace(ToolCtx c, ToolCall t): ToolResult {
+    var f = File(t.a)
+    if (!f.exists() || !f.isFile()) {
+        return toolErr("FS-NOTFOUND", t.a)
+    }
+    var sep = t.b.indexOf("|")
+    if (sep < 1) {
+        return toolErr("PATCH-ARGS", "esperado from|to")
+    }
+    var from = t.b.substring(0, sep)
+    var to = t.b.substring(sep + 1, t.b.length)
+    var body = f.readText()
+    var n = wsCountOccurrences(body, from)
+    if (n == 0) {
+        return toolErr("PATCH-TARGET-MISSING", from)
+    }
+    var bak = tlBackup(t.a)
+    var replaced = replaceAllStr(body, from, to)
+    if (!f.writeText(replaced)) {
+        return toolErr("FS-WRITEFAIL", t.a)
+    }
+    var r = toolOk("{\"replacements\":" + n + "}")
+    r.rollback = ToolRollback("restore", bak)
+    c.bus.publish("patch.applied", t.a)
+    return r
+}
+
+tlPatchAppend(ToolCtx c, ToolCall t): ToolResult {
+    var f = File(t.a)
+    var cur = ""
+    if (f.exists() && f.isFile()) {
+        cur = f.readText()
+    }
+    return tlFsWrite(c, ToolCall("fs.write", t.requestId, t.a, cur + t.b, 0))
+}
+
+tlDiffFile(ToolCtx c, ToolCall t): ToolResult {
+    var fa = File(t.a)
+    var fb = File(t.b)
+    if (!fa.exists() || !fb.exists()) {
+        return toolErr("FS-NOTFOUND", t.a + "|" + t.b)
+    }
+    var la = splitStr(fa.readText(), "\n")
+    var lb = splitStr(fb.readText(), "\n")
+    var samePrefix = 0
+    var minL = la.size
+    if (lb.size < minL) {
+        minL = lb.size
+    }
+    var i = 0
+    while (i < minL) {
+        if (la.get(i) == lb.get(i)) {
+            samePrefix = i + 1
+            i = i + 1
+        } else {
+            i = minL
+        }
+    }
+    var added = lb.size - samePrefix
+    var removed = la.size - samePrefix
+    var same = added == 0 && removed == 0
+    return toolOk("{\"same\":" + same + ",\"addedLines\":" + added + ",\"removedLines\":" + removed + ",\"firstDiffLine\":" + samePrefix + "}")
+}
+
+tlGitBranch(ToolCtx c, ToolCall t): ToolResult {
+    var gi = wsGitInfo(t.a)
+    return toolOk("{\"branch\":\"" + escapeJson(gi.branch) + "\",\"commit\":\"" + escapeJson(gi.commit) + "\"}")
+}
+
+tlGitLog(ToolCtx c, ToolCall t): ToolResult {
+    var lf = File(joinPath(joinPath(joinPath(t.a, ".git"), "logs"), "HEAD"))
+    if (!lf.exists() || !lf.isFile()) {
+        return toolGap("GIT-NOLOG", "sem reflog em " + t.a)
+    }
+    var lines = splitStr(lf.readText(), "\n")
+    var count = 0
+    for (var x in lines) {
+        if (x.trim().length > 0) {
+            count = count + 1
+        }
+    }
+    return toolOk("{\"entries\":" + count + "}")
+}
+
+regTool(ToolRegistry reg, String id, String name, String cat, String desc, String inS, String outS, String perm) {
+    reg.register(ToolSpec(id, name, cat, desc, inS, outS, perm), DispatchHandler())
+}
+
+defaultRegistry(): ToolRegistry {
+    var r = ToolRegistry()
+    var dh = DispatchHandler()
+    regTool(r, "fs.read", "readFile", "Filesystem", "le arquivo texto utf-8", "path", "content", PERM_FS_READ())
+    regTool(r, "fs.exists", "exists", "Filesystem", "existencia de arquivo ou diretorio", "path", "{exists,kind}", PERM_FS_READ())
+    regTool(r, "fs.metadata", "metadata", "Filesystem", "tamanho e hash do arquivo", "path", "{size,hash}", PERM_FS_READ())
+    regTool(r, "fs.list", "listDirectory", "Filesystem", "lista entradas do diretorio", "dir", "[names]", PERM_FS_READ())
+    regTool(r, "fs.append", "appendFile", "Filesystem", "anexa texto ao arquivo", "path,content", "ok", PERM_FS_WRITE())
+    regTool(r, "fs.copy", "copyFile", "Filesystem", "copia arquivo", "src,dst", "ok", PERM_FS_WRITE())
+    regTool(r, "fs.mkdir", "createDirectory", "Filesystem", "cria diretorios recursivamente", "dir", "ok", PERM_FS_WRITE())
+    regTool(r, "fs.readDirRaw", "readRaw", "Filesystem", "leitura bruta interna", "path", "content", PERM_FS_READ())
+    regTool(r, "fs.write", "writeFile", "Filesystem", "escreve arquivo com backup p/ rollback", "path,content", "{bytes}", PERM_FS_WRITE())
+    regTool(r, "fs.delete", "deleteFile", "Filesystem", "remove arquivo com backup", "path", "ok", PERM_FS_WRITE())
+    regTool(r, "fs.rename", "renameFile", "Filesystem", "renomeia/move arquivo", "from,to", "ok", PERM_FS_WRITE())
+    regTool(r, "fs.rollbackRestore", "restoreBackup", "Filesystem", "restaura a partir de backup .katool-bak", "backupPath,target", "ok", PERM_FS_WRITE())
+    regTool(r, "ws.open", "workspace.open", "Workspace", "reindexa o workspace", "-", "{files,symbols}", "")
+    regTool(r, "ws.snapshot", "workspace.snapshot", "Workspace", "persiste o snapshot atual", "-", "statsJson", "")
+    regTool(r, "ws.diff", "workspace.diff", "Workspace", "diff corrente vs indice", "-", "{added,modified,deleted,renamed}", "")
+    regTool(r, "ws.findSymbol", "workspace.findSymbol", "Workspace", "busca simbolo declarado", "name", "[hits]", "")
+    regTool(r, "ws.findFile", "workspace.findFile", "Workspace", "busca arquivo por substring", "substr", "[paths]", "")
+    regTool(r, "ws.graph", "workspace.graph", "Workspace", "resumo do grafo de dependencias", "-", "{edges,cycles}", "")
+    regTool(r, "ws.invalidate", "workspace.invalidate", "Workspace", "invalida cache persistido", "-", "ok", PERM_FS_WRITE())
+    regTool(r, "search.text", "search.text", "Search", "ocorrencias de texto nos arquivos do indice", "needle", "[{file,count}]", PERM_FS_READ())
+    regTool(r, "search.symbol", "search.symbol", "Search", "delega para ws.findSymbol", "name", "[hits]", PERM_FS_READ())
+    regTool(r, "search.path", "search.path", "Search", "delega para ws.findFile", "substr", "[paths]", PERM_FS_READ())
+    regTool(r, "patch.file", "patch.file", "Patch", "escreve conteudo completo com backup", "path,content", "{bytes}", PERM_FS_WRITE())
+    regTool(r, "patch.replace", "patch.replace", "Patch", "substitui todas as ocorrencias", "file,from,to(n)", "{replacements}", PERM_FS_WRITE())
+    regTool(r, "patch.append", "patch.append", "Patch", "anexa conteudo via write com backup", "path,text", "{bytes}", PERM_FS_WRITE())
+    regTool(r, "diff.file", "diff.file", "Diff", "diff posicional entre dois arquivos", "a,b", "{same,addedLines,removedLines,firstDiffLine}", PERM_FS_READ())
+    regTool(r, "git.branch", "git.branch", "Git", "branch/commit lidos de .git (somente leitura)", "root", "{branch,commit}", PERM_FS_READ())
+    regTool(r, "git.log", "git.log", "Git", "contagem de entradas do reflog local", "root", "{entries}", PERM_FS_READ())
+    var gapPerms = ""
+    regTool(r, "compiler.check", "check", "Compiler", "via Compiler Gateway", "file", "CheckResult", PERM_COMPILER_EXEC())
+    regTool(r, "compiler.build", "build", "Compiler", "via Compiler Gateway", "file,target", "CheckResult", PERM_COMPILER_EXEC())
+    regTool(r, "compiler.run", "run", "Compiler", "via Compiler Gateway", "file", "stdout", PERM_COMPILER_EXEC())
+    regTool(r, "compiler.diagnostics", "diagnostics", "Diagnostics", "via Compiler Gateway", "file", "[DiagnosticRec]", PERM_COMPILER_EXEC())
+    regTool(r, "ast.findNode", "findNode", "AST", "aguarda GW-AST-DUMP", "-", "-", gapPerms)
+    regTool(r, "web.request", "request", "Web", "aguarda GW-NET", "-", "-", PERM_WEB_NETWORK())
+    regTool(r, "http.request", "httpRequest", "HTTP", "aguarda GW-NET", "-", "-", PERM_WEB_NETWORK())
+    regTool(r, "system.exec", "exec", "System", "aguarda GW-SYS", "cmd", "Result", PERM_SYSTEM_EXEC())
+    regTool(r, "ui.preview", "preview", "UI", "agorda plataforma ui", "-", "-", "")
+    return r
+}
+
+
+
+class Metrics {
+    Long startedAt = 0
+    Int eventsPublished = 0
+    Int handlersCalled = 0
+    Int eventsFailed = 0
+    Int tasksLaunched = 0
+    Int tasksCompleted = 0
+    Int tasksFailed = 0
+    Int tasksCancelled = 0
+    Int tasksRejected = 0
+
+    constructor() {
+    }
+
+    start(TimeSource clock) {
+        startedAt = clock.nowMs()
+    }
+
+    incByName(String name) {
+        if (name == "events.published") {
+            eventsPublished = eventsPublished + 1
+        } else if (name == "events.handlers") {
+            handlersCalled = handlersCalled + 1
+        } else if (name == "events.failed") {
+            eventsFailed = eventsFailed + 1
+        } else if (name == "tasks.launched") {
+            tasksLaunched = tasksLaunched + 1
+        } else if (name == "tasks.completed") {
+            tasksCompleted = tasksCompleted + 1
+        } else if (name == "tasks.failed") {
+            tasksFailed = tasksFailed + 1
+        } else if (name == "tasks.cancelled") {
+            tasksCancelled = tasksCancelled + 1
+        } else if (name == "tasks.rejected") {
+            tasksRejected = tasksRejected + 1
+        }
+    }
+
+    uptimeMs(TimeSource clock): Long {
+        return clock.nowMs() - startedAt
+    }
+
+    snapshotJson(TimeSource clock): String {
+        var out = "{\"uptimeMs\":" + uptimeMs(clock)
+        out = out + ",\"events\":{\"published\":" + eventsPublished + ",\"handlersCalled\":" + handlersCalled + ",\"failed\":" + eventsFailed + "}"
+        out = out + ",\"tasks\":{\"launched\":" + tasksLaunched + ",\"completed\":" + tasksCompleted + ",\"failed\":" + tasksFailed + ",\"cancelled\":" + tasksCancelled + ",\"rejected\":" + tasksRejected + "}"
+        out = out + "}"
+        return out
+    }
+}
+
+record CorpMeta(String id, String title, String module, String category, String version, String languageVersion, String author, String createdAt, String updatedAt, String keywordsCsv, String symbolsCsv, String dependenciesCsv, String status, String tagsCsv, String extraKey, String extraValue)
+class CorpusDoc {
+    CorpMeta meta = CorpMeta("", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "")
+    String body = ""
+    String relPath = ""
+    Int checksum = 0
+    constructor() {
+    }
+}
+
+CORPUS_IDX_VERSION(): Int { return 1 }
+
+collectMdFiles(String dir, Int depth, List<String> out) {
+    if (depth > 5) {
+        return
+    }
+    var d = Directory(dir)
+    if (!d.exists() || !d.isDirectory()) {
+        return
+    }
+    var names = d.list()
+    for (var n in names) {
+        var skipIt = n == ".git" || n == "build"
+        if (!skipIt) {
+            var child = joinPath(dir, n)
+            var f = File(child)
+            if (f.isFile()) {
+                if (n.length >= 3) {
+                    var ext = n.substring(n.length - 3, n.length)
+                    if (ext == ".md") {
+                        out.add(child)
+                    }
+                }
+            } else {
+                if (f.isDirectory()) {
+                    collectMdFiles(child, depth + 1, out)
+                }
+            }
+        }
+    }
+}
+
+metaField(String block, String key): String {
+    var lines = splitStr(block, "\n")
+    var prefix = key + ":"
+    for (var raw in lines) {
+        var t = raw.trim()
+        if (t.startsWith(prefix)) {
+            return t.substring(prefix.length, t.length).trim()
+        }
+    }
+    return ""
+}
+
+parseCorpusDoc(String path, String root): CorpusDoc {
+    var d = CorpusDoc()
+    d.relPath = path
+    var f = File(path)
+    if (!f.exists() || !f.isFile()) {
+        return d
+    }
+    var txt = f.readText()
+    d.checksum = wsHash(txt)
+    var rest = txt
+    if (txt.startsWith("---\n")) {
+        var end = txt.indexOf("\n---\n", 4)
+        if (end > 0) {
+            var block = txt.substring(4, end)
+            rest = txt.substring(end + 5, txt.length)
+            d.meta = CorpMeta(metaField(block, "id"), metaField(block, "title"), metaField(block, "module"), metaField(block, "category"), metaField(block, "version"), metaField(block, "languageVersion"), metaField(block, "author"), metaField(block, "createdAt"), metaField(block, "updatedAt"), metaField(block, "keywords"), metaField(block, "symbols"), metaField(block, "dependencies"), metaField(block, "status"), metaField(block, "tags"), metaField(block, "example"), "")
+        }
+    }
+    if (d.meta.id == "") {
+        d.meta.id = wsSanitize(path)
+        d.meta.title = d.meta.id
+        d.meta.status = "unparsed"
+    }
+    d.body = rest
+    return d
+}
+
+record SymRef(String symbol, String docId)
+record DiagRegRec(String code, String docPath, String workaroundId)
+record RecipeRec(String name, String docPath, String examplePath, Bool exampleExists)
+
+class CorpusIndex {
+    List<CorpusDoc> docs = listOf<CorpusDoc>()
+    List<SymRef> symIndex = listOf<SymRef>()
+    List<DiagRegRec> diagRegistry = listOf<DiagRegRec>()
+    List<RecipeRec> recipeRegistry = listOf<RecipeRec>()
+    List<String> builtinSymbols = listOf<String>()
+
+    constructor() {
+        builtinSymbols.add("spawn")
+        builtinSymbols.add("record")
+        builtinSymbols.add("constructor")
+        builtinSymbols.add("Window")
+        builtinSymbols.add("Palette.red")
+        builtinSymbols.add("web.app")
+        builtinSymbols.add("json.decode")
+        builtinSymbols.add("json.encode")
+        builtinSymbols.add("passwords.hash")
+        builtinSymbols.add("db.connect")
+        builtinSymbols.add("orm.save")
+        builtinSymbols.add("log.info")
+        builtinSymbols.add("config.str")
+        builtinSymbols.add("crypto.sha256")
+        builtinSymbols.add("secrets.get")
+        builtinSymbols.add("jwt.verify")
+    }
+}
+
+wsAddDoc(CorpusIndex ix, CorpusDoc d) {
+    ix.docs.add(d)
+    var syms = d.meta.symbolsCsv
+    if (syms.length > 0) {
+        var parts = splitStr(syms, ",")
+        for (var p in parts) {
+            var name = p.trim()
+            if (name.length > 0) {
+                ix.symIndex.add(SymRef(name, d.meta.id))
+            }
+        }
+    }
+}
+
+wsBuildRegistries(CorpusIndex ix) {
+    ix.diagRegistry = listOf<DiagRegRec>()
+    ix.recipeRegistry = listOf<RecipeRec>()
+    for (var d in ix.docs) {
+        if (d.meta.category == "diagnostics") {
+            var code = d.meta.id
+            var w = ""
+            if (d.body.contains("String_kof_string_to_int")) {
+                w = "N2"
+            }
+            if (d.body.contains("CONC001")) {
+                w = "CONC001"
+            }
+            ix.diagRegistry.add(DiagRegRec(code, d.relPath, w))
+        }
+        if (d.meta.category == "recipes") {
+            var ex = d.meta.extraKey
+            var exOk = false
+            if (ex.length > 0) {
+                var ef = File(ex)
+                exOk = ef.exists() && ef.isFile()
+            }
+            ix.recipeRegistry.add(RecipeRec(d.meta.title, d.relPath, ex, exOk))
+        }
+    }
+    if (ix.diagRegistry.size > 0 || ix.recipeRegistry.size > 0) {
+    }
+}
+
+corpusLoad(EventBus bus, String root, TimeSource clock): CorpusIndex {
+    bus.publish("corpus.loading", root)
+    var ix = CorpusIndex()
+    var paths = listOf<String>()
+    collectMdFiles(root, 1, paths)
+    for (var p in paths) {
+        wsAddDoc(ix, parseCorpusDoc(p, root))
+    }
+    wsBuildRegistries(ix)
+    bus.publish("corpus.loaded", "docs=" + ix.docs.size)
+    return ix
+}
+
+record CorpIssueRec(String kind, String detail)
+
+
+corpusValidate(CorpusIndex ix, String root): List<CorpIssueRec> {
+    var issues = listOf<CorpIssueRec>()
+    var i = 0
+    while (i < ix.docs.size) {
+        var a = ix.docs.get(i)
+        if (a.meta.status == "unparsed") {
+            issues.add(CorpIssueRec("invalid-file", a.relPath))
+        }
+        var j = i + 1
+        while (j < ix.docs.size) {
+            var b = ix.docs.get(j)
+            if (b.meta.id == a.meta.id && a.meta.id != "") {
+                issues.add(CorpIssueRec("duplicate-id", a.meta.id))
+            }
+            j = j + 1
+        }
+        var recomputed = wsHash(File(a.relPath).readText())
+        if (recomputed != a.checksum) {
+            issues.add(CorpIssueRec("checksum-changed", a.relPath))
+        }
+        var links = listOf<String>()
+        for (var ln in splitStr(a.body, "\n")) {
+            if (ln.contains("](") ) {
+                var open = ln.indexOf("](")
+                var close = ln.indexOf(")", open)
+                if (close > open) {
+                    links.add(ln.substring(open + 2, close))
+                }
+            }
+        }
+        for (var l in links) {
+            if (!l.startsWith("http")) {
+                var target = joinPath(joinPath(root, ""), l)
+                var tf = File(target)
+                if (!tf.exists()) {
+                    issues.add(CorpIssueRec("broken-link", a.relPath + " -> " + l))
+                }
+            }
+        }
+        for (var sr in ix.symIndex) {
+            if (sr.docId == a.meta.id) {
+                var known = false
+                for (var b in ix.builtinSymbols) {
+                    if (b == sr.symbol) {
+                        known = true
+                    }
+                }
+                if (!known) {
+                    issues.add(CorpIssueRec("orphan-symbol", sr.symbol + "@" + a.meta.id))
+                }
+            }
+        }
+        i = i + 1
+    }
+    return issues
+}
+
+corpusById(CorpusIndex ix, String id): CorpusDoc {
+    for (var d in ix.docs) {
+        if (d.meta.id == id) {
+            return d
+        }
+    }
+    return CorpusDoc()
+}
+
+
+corpusByCategory(CorpusIndex ix, String cat): List<CorpusDoc> {
+    var out = listOf<CorpusDoc>()
+    for (var d in ix.docs) {
+        if (d.meta.category == cat) {
+            out.add(d)
+        }
+    }
+    return out
+}
+
+corpusSearchKeyword(CorpusIndex ix, String kw): List<CorpusDoc> {
+    var out = listOf<CorpusDoc>()
+    for (var d in ix.docs) {
+        if (d.meta.keywordsCsv.contains(kw) || d.meta.title.contains(kw)) {
+            out.add(d)
+        }
+    }
+    return out
+}
+
+corpusSymbolDocs(CorpusIndex ix, String symbol): List<String> {
+    var out = listOf<String>()
+    for (var sr in ix.symIndex) {
+        if (sr.symbol == symbol) {
+            out.add(sr.docId)
+        }
+    }
+    return out
+}
+
+corpusSerialize(CorpusIndex ix): String {
+    var meta = ""
+    var firstD = true
+    for (var d in ix.docs) {
+        if (!firstD) {
+            meta = meta + "\u0002"
+        }
+        firstD = false
+        meta = meta + d.relPath + "\u0003" + d.checksum + "\u0003" + d.meta.id
+    }
+    var symSec = ""
+    var firstS = true
+    for (var sr in ix.symIndex) {
+        if (!firstS) {
+            symSec = symSec + "\u0002"
+        }
+        firstS = false
+        symSec = symSec + sr.symbol + "\u0003" + sr.docId
+    }
+    return meta + "\u0001" + symSec
+}
+
+corpusSaveCache(EventBus bus, String dir, CorpusIndex ix): Bool {
+    var d = Directory(dir)
+    if (!d.exists()) {
+        d.createDirectories()
+    }
+    var body = corpusSerialize(ix)
+    var okIdx = wsWriteVersioned(joinPath(dir, "corpus.idx"), "CRPIDX", CORPUS_IDX_VERSION(), body)
+    var hashes = listOf<String>()
+    for (var doc in ix.docs) {
+        hashes.add(doc.relPath + "\u0003" + doc.checksum)
+    }
+    var okH = wsWriteVersioned(joinPath(dir, "corpus.hashes"), "CRPHSH", CORPUS_IDX_VERSION(), wsJoin(hashes, "\u0002"))
+    var info = "{\"docs\":" + ix.docs.size + ",\"symbols\":" + ix.symIndex.size + ",\"diagnostics\":" + ix.diagRegistry.size + ",\"recipes\":" + ix.recipeRegistry.size + "}"
+    var okM = wsWriteVersioned(joinPath(dir, "corpus.meta"), "CRPMET", CORPUS_IDX_VERSION(), info)
+    bus.publish("registry.updated", info)
+    return okIdx && okH && okM
+}
+
+record RetHit(String source, String id, String title, Int score, String snippet)
+record CtxItem(String source, String id, String title, String body)
+record RetOpts(String query, Int topK, Int maxChars, Bool useWorkspaceBoost)
+
+retTokenize(String s): List<String> {
+    var out = listOf<String>()
+    var clean = ""
+    var i = 0
+    while (i < s.length) {
+        var c = s.charAt(i)
+        var alpha = (c >= 65 && c <= 90) || (c >= 97 && c <= 122) || c == 46
+        if (alpha) {
+            if (c >= 65 && c <= 90) {
+                clean = clean + " "
+            }
+            clean = clean + s.substring(i, i + 1)
+        } else {
+            clean = clean + " "
+        }
+        i = i + 1
+    }
+    for (var tk in splitStr(clean, " ")) {
+        var t = tk.trim()
+        if (t.length > 1) {
+            out.add(t)
+        }
+    }
+    return out
+}
+
+retLower(String s): String {
+    return s.toLowerCase()
+}
+
+embedDocumentTokens(String title, String body): List<String> {
+    var toks = retTokenize(title)
+    for (var t in retTokenize(body)) {
+        toks.add(t)
+    }
+    return toks
+}
+
+embedQueryTokens(String q): List<String> {
+    return retTokenize(q)
+}
+
+embedWorkspaceTokens(CorpusIndex ix): List<String> {
+    var out = listOf<String>()
+    for (var d in ix.docs) {
+        for (var k in splitStr(d.meta.keywordsCsv, ",")) {
+            var kk = k.trim()
+            if (kk.length > 0) {
+                out.add(kk)
+            }
+        }
+    }
+    return out
+}
+
+embedSymbolTokens(String symbol): List<String> {
+    return retTokenize(symbol)
+}
+
+embedDiagnosticTokens(String code, String message): List<String> {
+    var out = retTokenize(code)
+    for (var t in retTokenize(message)) {
+        out.add(t)
+    }
+    return out
+}
+
+retOverlap(List<String> q, List<String> doc): Int {
+    var n = 0
+    for (var qt in q) {
+        var ql = retLower(qt)
+        for (var dt in doc) {
+            if (retLower(dt) == ql) {
+                n = n + 1
+            }
+        }
+    }
+    return n
+}
+
+retExpandSymbol(String symbol): List<String> {
+    var out = listOf<String>(symbol)
+    var s = retLower(symbol)
+    if (s.contains("spawn")) {
+        out.add("scheduler")
+        out.add("task")
+        out.add("future")
+        out.add("runtime")
+    }
+    if (s.contains("record")) {
+        out.add("dados")
+        out.add("imutavel")
+        out.add("constructor")
+    }
+    if (s.contains("json")) {
+        out.add("decode")
+        out.add("encode")
+        out.add("serializacao")
+    }
+    return out
+}
+
+retExpandRecipe(String recipe): List<String> {
+    var out = listOf<String>(recipe)
+    var s = retLower(recipe)
+    if (s.contains("crud") || s.contains("rest") || s.contains("api")) {
+        out.add("http")
+        out.add("json")
+        out.add("database")
+        out.add("validation")
+        out.add("testing")
+    }
+    return out
+}
+
+retExpandDiagnostic(String code, CorpusIndex ix): List<String> {
+    var out = listOf<String>(code)
+    for (var d in ix.diagRegistry) {
+        if (d.code.contains(code)) {
+            if (d.workaroundId != "") {
+                out.add("workaround-" + d.workaroundId)
+            }
+            out.add("exemplo-corrigido")
+            out.add("documentacao")
+        }
+    }
+    return out
+}
+
+retScoreDoc(List<String> qTokens, CorpusDoc d, List<String> recentFiles, List<SymRef> symIndex): Int {
+    var docToks = embedDocumentTokens(d.meta.title + " " + d.meta.keywordsCsv, d.body)
+    var score = retOverlap(qTokens, docToks)
+    for (var qt in qTokens) {
+        var ql = retLower(qt)
+        for (var sr in symIndex) {
+            if (retLower(sr.symbol).contains(ql)) {
+                score = score + 3
+                break
+            }
+        }
+        if (d.meta.category == "diagnostics" && d.meta.id.contains(ql.toUpperCase())) {
+            score = score + 4
+        }
+        if (d.meta.category == "recipes" && d.meta.title.contains(ql)) {
+            score = score + 2
+        }
+        for (var rf in recentFiles) {
+            if (rf == d.relPath) {
+                score = score + 2
+            }
+        }
+    }
+    return score
+}
+
+retBuildContext(CorpusIndex ix, String query, Int topK, Int maxChars, List<String> recentFiles): String {
+    var qTokens = embedQueryTokens(query)
+    var expanded = listOf<String>()
+    for (var qt in qTokens) {
+        for (var e in retExpandSymbol(retLower(qt))) {
+            expanded.add(e)
+        }
+    }
+    var scored = listOf<RetHit>()
+    for (var d in ix.docs) {
+        var base = embedDocumentTokens(d.meta.title + " " + d.meta.keywordsCsv, d.body)
+        var sc = retOverlap(expanded, base)
+        for (var qt in qTokens) {
+            var ql = retLower(qt)
+            if (d.meta.id.contains(ql) || d.meta.title.contains(ql)) {
+                sc = sc + 5
+            }
+            for (var sr in ix.symIndex) {
+                if (sr.docId == d.meta.id && retLower(sr.symbol).contains(ql)) {
+                    sc = sc + 3
+                }
+            }
+            if (d.meta.category == "diagnostics" && d.meta.id.contains(ql.toUpperCase())) {
+                sc = sc + 4
+            }
+            if (d.meta.category == "recipes") {
+                for (var re in retExpandRecipe(query)) {
+                    if (d.meta.title.contains(re) || d.body.contains(re)) {
+                        sc = sc + 2
+                    }
+                }
+            }
+            for (var rf in recentFiles) {
+                if (rf == d.relPath) {
+                    sc = sc + 2
+                }
+            }
+        }
+        scored.add(RetHit("corpus", d.meta.id, d.meta.title, sc, d.relPath))
+    }
+    var picked = listOf<RetHit>()
+    var budget = maxChars
+    var k = 0
+    while (k < topK) {
+        var bestIdx = -1
+        var bestScore = -1
+        var i = 0
+        while (i < scored.size) {
+            var already = false
+            for (var p in picked) {
+                if (p.id == scored.get(i).id && p.source == scored.get(i).source) {
+                    already = true
+                }
+            }
+            if (!already && scored.get(i).score > bestScore) {
+                bestScore = scored.get(i).score
+                bestIdx = i
+            }
+            i = i + 1
+        }
+        if (bestIdx < 0) {
+            break
+        }
+        var hit = scored.get(bestIdx)
+        var cost = hit.title.length + hit.snippet.length + 10
+        if (budget - cost < 0) {
+            break
+        }
+        budget = budget - cost
+        picked.add(hit)
+        k = k + 1
+    }
+    var out = "{\"query\":\"" + escapeJson(query) + "\",\"items\":["
+    var first = true
+    for (var p in picked) {
+        if (!first) {
+            out = out + ","
+        }
+        first = false
+        out = out + "{\"source\":\"" + p.source + "\",\"id\":\"" + escapeJson(p.id) + "\",\"title\":\"" + escapeJson(p.title) + "\",\"score\":" + p.score + "}"
+    }
+    out = out + "]}"
+    return out
+}
+
+retCachePath(String dir, String qHash): String {
+    return joinPath(dir, "q." + qHash + ".cache")
+}
+
+retCacheSave(EventBus bus, String dir, String query, String contextJson): Bool {
+    var h = wsHash(retLower(query))
+    var ok = wsWriteVersioned(retCachePath(dir, "" + h), "RETC", 1, contextJson)
+    bus.publish("cache.miss", query)
+    return ok
+}
+
+retCacheLoad(EventBus bus, String dir, String query): String {
+    var h = wsHash(retLower(query))
+    var body = wsReadVersioned(retCachePath(dir, "" + h), "RETC")
+    if (body != "") {
+        bus.publish("cache.hit", query)
+    }
+    return body
+}
+
+record GgufInfoRec(String path, Bool magicOk, Int version, Int nTensors)
+record TensorR(Int rows, Int cols, Int[] data)
+
+tkTokenize(String text): List<String> {
+    var out = listOf<String>()
+    var cur = ""
+    var i = 0
+    while (i < text.length) {
+        var c = text.charAt(i)
+        var alpha = (c >= 65 && c <= 90) || (c >= 97 && c <= 122) || (c >= 48 && c <= 57)
+        if (alpha) {
+            cur = cur + text.substring(i, i + 1)
+        } else {
+            if (cur.length > 0) {
+                out.add(cur)
+                cur = ""
+            }
+        }
+        i = i + 1
+    }
+    if (cur.length > 0) {
+        out.add(cur)
+    }
+    return out
+}
+
+class Vocab {
+    List<String> tokens = listOf<String>()
+    constructor() {
+    }
+    addToken(String t): Int {
+        var id = tkId(t)
+        tokens.add(t)
+        return id
+    }
+    size(): Int {
+        return tokens.size
+    }
+    tokenAt(Int i): String {
+        return tokens.get(i)
+    }
+}
+
+tkId(String t): Int {
+    var h = wsHash(retLower(t))
+    if (h < 0) {
+        h = 0 - h
+    }
+    return h % 50000
+}
+
+vocabBuildFromCorpus(CorpusIndex ix): Vocab {
+    var v = Vocab()
+    for (var d in ix.docs) {
+        var toks = tkTokenize(d.meta.title + " " + d.body)
+        for (var t in toks) {
+            if (v.size() < 4096) {
+                var dup = false
+                for (var e in v.tokens) {
+                    if (e == t) {
+                        dup = true
+                    }
+                }
+                if (!dup) {
+                    v.addToken(t)
+                }
+            }
+        }
+    }
+    return v
+}
+
+tkEncode(Vocab v, String text): List<Int> {
+    var ids = listOf<Int>()
+    for (var t in tkTokenize(text)) {
+        ids.add(tkId(t))
+    }
+    return ids
+}
+
+tkDecode(List<Int> ids): String {
+    var out = ""
+    for (var id in ids) {
+        out = out + "<" + id + ">"
+    }
+    return out
+}
+
+samplerLcg(Int seed): Int {
+    var x = seed * 1103515245 + 12345
+    if (x < 0) {
+        x = 0 - x
+    }
+    return x % 2147483647
+}
+
+samplerTopK(Int[] logits, Int n, Int k, Int seed): Int {
+    var best = logits[0]
+    var bi = 0
+    var s = samplerLcg(seed)
+    var i = 0
+    while (i < n) {
+        if (logits[i] > best) {
+            best = logits[i]
+            bi = i
+        }
+        i = i + 1
+    }
+    var jitter = s % (k + 1)
+    if (jitter == 0) {
+        return bi
+    }
+    var alt = (bi + jitter) % n
+    return alt
+}
+
+tensorNew(Int rows, Int cols): TensorR {
+    return TensorR(rows, cols, new Int[rows * cols])
+}
+
+tensorGet(TensorR t, Int r, Int cc): Int {
+    return t.data[r * t.cols + cc]
+}
+
+tensorSet(TensorR t, Int r, Int cc, Int v) {
+    t.data[r * t.cols + cc] = v
+}
+
+tensorTranspose(TensorR t): TensorR {
+    var o = tensorNew(t.cols, t.rows)
+    var r = 0
+    while (r < t.rows) {
+        var c2 = 0
+        while (c2 < t.cols) {
+            tensorSet(o, c2, r, tensorGet(t, r, c2))
+            c2 = c2 + 1
+        }
+        r = r + 1
+    }
+    return o
+}
+
+tensorMatMul(TensorR a, TensorR b): TensorR {
+    var o = tensorNew(a.rows, b.cols)
+    var r = 0
+    while (r < a.rows) {
+        var c2 = 0
+        while (c2 < b.cols) {
+            var acc = 0
+            var kk = 0
+            while (kk < a.cols) {
+                acc = acc + tensorGet(a, r, kk) * tensorGet(b, kk, c2)
+                kk = kk + 1
+            }
+            tensorSet(o, r, c2, acc)
+            c2 = c2 + 1
+        }
+        r = r + 1
+    }
+    return o
+}
+
+ggufParseHeader(String path): GgufInfoRec {
+    var f = File(path)
+    if (!f.exists()) {
+        return GgufInfoRec(path, false, 0, 0)
+    }
+    var txt = f.readText()
+    var magicOk = txt.startsWith("GGUF")
+    var ver = 0
+    var nt = 0
+    if (magicOk && txt.length > 9) {
+        ver = parseIntStr(txt.substring(4, 6))
+        nt = parseIntStr(txt.substring(6, 9))
+    }
+    return GgufInfoRec(path, magicOk, ver, nt)
+}
+
+record TVView(TensorR base, Int offR, Int offC, Int rows, Int cols)
+
+tvGet(TVView v, Int r, Int c): Int {
+    return tensorGet(v.base, v.offR + r, v.offC + c)
+}
+
+tvSet(TVView v, Int r, Int c2, Int newVal) {
+    tensorSet(v.base, v.offR + r, v.offC + c2, newVal)
+}
+
+tvSliceRows(TensorR t, Int offR, Int rows): TVView {
+    return TVView(t, offR, 0, rows, t.cols)
+}
+
+tvBroadcast(Int fill, Int rows, Int cols): TensorR {
+    var t = tensorNew(rows, cols)
+    var r = 0
+    while (r < rows) {
+        var c2 = 0
+        while (c2 < cols) {
+            tensorSet(t, r, c2, fill)
+            c2 = c2 + 1
+        }
+        r = r + 1
+    }
+    return t
+}
+
+tensorReshape(TensorR t, Int rows, Int cols): TensorR {
+    var o = tensorNew(rows, cols)
+    var i = 0
+    while (i < rows * cols && i < t.data.length) {
+        o.data[i] = t.data[i]
+        i = i + 1
+    }
+    return o
+}
+
+tensorConcatRows(TensorR a, TensorR b): TensorR {
+    var o = tensorNew(a.rows + b.rows, a.cols)
+    var r = 0
+    while (r < a.rows) {
+        var c2 = 0
+        while (c2 < a.cols) {
+            tensorSet(o, r, c2, tensorGet(a, r, c2))
+            c2 = c2 + 1
+        }
+        r = r + 1
+    }
+    r = 0
+    while (r < b.rows) {
+        var c3 = 0
+        while (c3 < b.cols) {
+            tensorSet(o, a.rows + r, c3, tensorGet(b, r, c3))
+            c3 = c3 + 1
+        }
+        r = r + 1
+    }
+    return o
+}
+
+class Arena {
+    Int[] buf = new Int[1024]
+    Int used = 0
+    constructor() {
+    }
+    alloc(Int n): Int {
+        var at = used
+        if (used + n > buf.length) {
+            return -1
+        }
+        used = used + n
+        return at
+    }
+    reset() {
+        used = 0
+    }
+    capacity(): Int {
+        return buf.length
+    }
+    utilization(): Int {
+        return used
+    }
+}
+
+Q8_BLOCK(): Int { return 32 }
+
+quantizeQ8Block(Int[] src, Int off): Int[] {
+    var out = new Int[Q8_BLOCK() + 1]
+    var maxAbs = 0
+    var i = 0
+    while (i < Q8_BLOCK()) {
+        var v = src[off + i]
+        if (v < 0) {
+            if ((0 - v) > maxAbs) {
+                maxAbs = 0 - v
+            }
+        } else {
+            if (v > maxAbs) {
+                maxAbs = v
+            }
+        }
+        i = i + 1
+    }
+    out[0] = maxAbs
+    i = 0
+    while (i < Q8_BLOCK()) {
+        var v = src[off + i]
+        var q = 0
+        if (maxAbs > 0) {
+            q = v * 127 / maxAbs
+        }
+        out[i + 1] = q
+        i = i + 1
+    }
+    return out
+}
+
+dequantizeQ8Block(Int[] blk): Int[] {
+    var o = new Int[Q8_BLOCK()]
+    var scale = blk[0]
+    var i = 0
+    while (i < Q8_BLOCK()) {
+        var v = blk[i + 1]
+        if (scale > 0) {
+            v = v * scale / 127
+        }
+        o[i] = v
+        i = i + 1
+    }
+    return o
+}
+
+class KVCache {
+    List<Int[]> keys = listOf<Int[]>()
+    List<Int[]> vals = listOf<Int[]>()
+    Int window = 64
+    Int evictions = 0
+    constructor() {
+    }
+    append(Int[] k, Int[] v) {
+        keys.add(k)
+        vals.add(v)
+        if (keys.size > window) {
+            keys.remove(0)
+            vals.remove(0)
+            evictions = evictions + 1
+        }
+    }
+    size(): Int {
+        return keys.size
+    }
+    compact() {
+        keys = keys
+        vals = vals
+    }
+}
+
+record DeviceRec(String name, String kind, Int priority, Bool available)
+
+HAL_CPU(): DeviceRec {
+    return DeviceRec("cpu-simd", "CPU", 99, true)
+}
+
+halDetect(): List<DeviceRec> {
+    var out = listOf<DeviceRec>()
+    out.add(HAL_CPU())
+    return out
+}
+
+halSelect(String overrideKind): DeviceRec {
+    var devs = halDetect()
+    if (overrideKind != "") {
+        for (var d in devs) {
+            if (d.kind == overrideKind) {
+                return d
+            }
+        }
+    }
+    var best = HAL_CPU()
+    for (var d in devs) {
+        if (d.available && d.priority < best.priority) {
+            best = d
+        }
+    }
+    return best
+}
+
+halCopy(Int[] src): Int[] {
+    var o = new Int[src.length]
+    var i = 0
+    while (i < src.length) {
+        o[i] = src[i]
+        i = i + 1
+    }
+    return o
+}
+
+halScale(Int[] src, Int k): Int[] {
+    var o = new Int[src.length]
+    var i = 0
+    while (i < src.length) {
+        o[i] = src[i] * k
+        i = i + 1
+    }
+    return o
+}
+
+halDot(Int[] a, Int[] b): Int {
+    var acc = 0
+    var n = a.length
+    if (b.length < n) {
+        n = b.length
+    }
+    var i = 0
+    while (i < n) {
+        acc = acc + a[i] * b[i]
+        i = i + 1
+    }
+    return acc
+}
+
+record HostInfoRec(Int cpuCores, Int memKb)
+
+halHostInfo(): HostInfoRec {
+    var cores = 0
+    var ci = File("/proc/cpuinfo")
+    if (ci.exists() && ci.isFile()) {
+        var txt = ci.readText()
+        cores = wsCountOccurrences(txt, "processor")
+    }
+    var memKb = 0
+    var mi = File("/proc/meminfo")
+    if (mi.exists() && mi.isFile()) {
+        var t = mi.readText()
+        var idx = t.indexOf("MemTotal:")
+        if (idx >= 0) {
+            var rest = t.substring(idx + 9, t.length).trim()
+            var num = ""
+            var k = 0
+            while (k < rest.length) {
+                var ch = rest.charAt(k)
+                if (ch >= 48 && ch <= 57) {
+                    num = num + rest.substring(k, k + 1)
+                } else {
+                    if (num.length > 0) {
+                        k = rest.length
+                    }
+                }
+                k = k + 1
+            }
+            if (num.length > 0) {
+                memKb = parseIntStr(num)
+            }
+        }
+    }
+    return HostInfoRec(cores, memKb)
+}
+
+record NNLimitsRec(Int ropeDims, Int heads, Int kvLayers)
+
+nnRMSNormApprox(Int[] x): Int[] {
+    var acc = 0
+    var i = 0
+    while (i < x.length) {
+        acc = acc + x[i] * x[i]
+        i = i + 1
+    }
+    var mean = 0
+    if (x.length > 0) {
+        mean = acc / x.length
+    }
+    var scale = mean / 4 + 1
+    var out = new Int[x.length]
+    i = 0
+    while (i < x.length) {
+        out[i] = x[i] * 1000 / scale
+        i = i + 1
+    }
+    return out
+}
+
+nnLayerNormApprox(Int[] x): Int[] {
+    return nnRMSNormApprox(x)
+}
+
+nnRopeRotatePairs(Int[] q): Int[] {
+    var out = new Int[q.length]
+    var i = 0
+    while (i + 1 < q.length) {
+        out[i] = q[i + 1]
+        out[i + 1] = 0 - q[i]
+        i = i + 2
+    }
+    if (q.length % 2 == 1) {
+        out[q.length - 1] = q[q.length - 1]
+    }
+    return out
+}
+
+nnFeedForwardInt(Int[] x, Int mult): Int[] {
+    var o = new Int[x.length]
+    var i = 0
+    while (i < x.length) {
+        o[i] = x[i] * mult
+        i = i + 1
+    }
+    return o
+}
+
+nnResidual(Int[] a, Int[] b): Int[] {
+    var o = new Int[a.length]
+    var i = 0
+    while (i < a.length && i < b.length) {
+        o[i] = a[i] + b[i]
+        i = i + 1
+    }
+    return o
+}
+
+nnAttentionScoresInt(Int[] q, List<Int[]> ks): List<Int> {
+    var scores = listOf<Int>()
+    for (var k in ks) {
+        scores.add(halDot(q, k))
+    }
+    return scores
+}
+
+samplerRepeatPenalty(Int[] logits, List<Int> recent, Int penaltyNum, Int penaltyDen): Int[] {
+    var out = new Int[logits.length]
+    var i = 0
+    while (i < logits.length) {
+        out[i] = logits[i]
+        var seen = false
+        for (var r in recent) {
+            if (r == i) {
+                seen = true
+            }
+        }
+        if (seen && out[i] > 0) {
+            out[i] = out[i] * penaltyDen / penaltyNum
+        }
+        i = i + 1
+    }
+    return out
+}
+
+samplerTopPApprox(Int[] logits, Int n, Int topPPermille, Int seed): Int {
+    var total = 0
+    var i = 0
+    while (i < n) {
+        if (logits[i] > 0) {
+            total = total + logits[i]
+        }
+        i = i + 1
+    }
+    if (total == 0) {
+        return samplerTopK(logits, n, 1, seed)
+    }
+    var threshold = total * topPPermille / 1000
+    var cum = 0
+    var pick = 0
+    i = 0
+    while (i < n) {
+        if (logits[i] > 0) {
+            cum = cum + logits[i]
+            if (cum >= threshold) {
+                pick = i
+                i = n
+            }
+        }
+        i = i + 1
+    }
+    return pick
+}
+
+ggufMeta(String path, String key): String {
+    return metaField(wsReadVersioned(path, "GGUFT"), key)
+}
+
+record BrainPlan(String intent, String entitiesJson, String contextJson, Int confidence, String ambiguitiesJson, String candidateToolsCsv, String candidateRecipesCsv, String candidateSymbolsCsv)
+
+B_INTENT_UNKNOWN(): String { return "Unknown" }
+
+brainSynonymIntent(String token): String {
+    var s = retLower(token)
+    if (s == "crie" || s == "cria" || s == "criar" || s == "faz" || s == "fazer" || s == "gera" || s == "gere" || s == "gerar") {
+        return "create"
+    }
+    if (s == "edite" || s == "edita" || s == "editar" || s == "mude" || s == "mudar" || s == "altere") {
+        return "edit"
+    }
+    if (s == "arruma" || s == "arrumar" || s == "corrija" || s == "corrigir" || s == "conserta") {
+        return "repair"
+    }
+    if (s == "explique" || s == "explicar" || s == "o-que-e") {
+        return "explain"
+    }
+    if (s == "refatore" || s == "refatorar") {
+        return "refactor"
+    }
+    if (s == "busque" || s == "buscar" || s == "procure" || s == "procurar") {
+        return "search"
+    }
+    if (s == "rode" || s == "rodar" || s == "teste" || s == "testar" || s == "execute") {
+        return "runtests"
+    }
+    return ""
+}
+
+brainResolveIntent(List<String> tokens): String {
+    var verb = ""
+    var obj = ""
+    for (var t in tokens) {
+        var iv = brainSynonymIntent(t)
+        if (iv != "" && verb == "") {
+            verb = iv
+        }
+    }
+    var joined = ""
+    for (var t in tokens) {
+        joined = joined + retLower(t) + " "
+    }
+    if (joined.contains(" site ") || joined.contains("website")) {
+        obj = "Website"
+    } else if (joined.contains("crud")) {
+        obj = "CRUD"
+    } else if (joined.contains(" api ")) {
+        obj = "API"
+    } else if (joined.contains("rpa")) {
+        obj = "RPA"
+    } else if (joined.contains(" ui ") || joined.contains("tela")) {
+        obj = "UI"
+    } else if (joined.contains("docs") || joined.contains("documentacao")) {
+        obj = "Docs"
+    } else if (joined.contains("teste")) {
+        obj = "Tests"
+    } else if (joined.contains("erro") || joined.contains("diagnostico")) {
+        obj = "Diagnostic"
+    } else if (joined.contains("simbolo") || joined.contains("funcao") || joined.contains("classe")) {
+        obj = "Symbol"
+    }
+    if (verb == "") {
+        return B_INTENT_UNKNOWN()
+    }
+    if (obj == "Website" && verb == "create") {
+        return "CreateWebsite"
+    }
+    if (obj == "Website" && verb == "edit") {
+        return "EditWebsite"
+    }
+    if (obj == "API" && (verb == "create" || verb == "edit")) {
+        return "CreateAPI"
+    }
+    if (obj == "CRUD") {
+        return "GenerateCRUD"
+    }
+    if (obj == "Diagnostic" && verb == "repair") {
+        return "RepairDiagnostic"
+    }
+    if ((obj == "Diagnostic" && verb == "explain") || (verb == "explain" && obj == "")) {
+        return "ExplainDiagnostic"
+    }
+    if (verb == "refactor") {
+        return "Refactor"
+    }
+    if (obj == "Symbol" && verb == "search") {
+        return "SearchSymbol"
+    }
+    if (obj == "RPA") {
+        return "CreateRPA"
+    }
+    if ((obj == "Tests" && verb == "runtests") || verb == "runtests") {
+        return "RunTests"
+    }
+    if (obj == "UI") {
+        return "CreateUI"
+    }
+    if (obj == "Docs") {
+        return "GenerateDocs"
+    }
+    if (verb == "create") {
+        return "CreateFeature"
+    }
+    if (verb == "edit") {
+        return "EditFeature"
+    }
+    if (verb == "repair") {
+        return "RepairGeneric"
+    }
+    if (verb == "search") {
+        return "SearchGeneric"
+    }
+    return B_INTENT_UNKNOWN()
+}
+
+brainExtractEntities(String text): String {
+    var quoted = ""
+    var q1 = text.indexOf("\"")
+    if (q1 >= 0) {
+        var q2 = text.indexOf("\"", q1 + 1)
+        if (q2 > q1) {
+            quoted = text.substring(q1 + 1, q2)
+        }
+    }
+    var codes = ""
+    for (var code in listOf<String>("ARITH001", "SEM011", "SEM015", "SEM010", "CONC001", "E999")) {
+        if (text.contains(code)) {
+            codes = code
+        }
+    }
+    var paths = ""
+    for (var t in splitStr(text, " ")) {
+        if (t.endsWith(".kf") || t.startsWith("build/") || t.contains("/")) {
+            paths = t
+        }
+    }
+    return "{\"quoted\":\"" + escapeJson(quoted) + "\",\"diagCode\":\"" + codes + "\",\"path\":\"" + escapeJson(paths) + "\"}"
+}
+
+brainRequiredEntity(String intent): String {
+    if (intent == "RepairDiagnostic") {
+        return "diagCode"
+    }
+    if (intent == "EditWebsite" || intent == "EditFeature" || intent == "Refactor") {
+        return "path"
+    }
+    return ""
+}
+
+brainConfidence(String intent, Bool hasVerb, Bool hasObj, Int ctxItems): Int {
+    var score = 20
+    if (hasVerb) {
+        score = score + 30
+    }
+    if (intent != B_INTENT_UNKNOWN() && intent.contains("Create") || intent.contains("Edit") || intent.contains("Repair") || intent.contains("Search") || intent.contains("Run")) {
+        score = score + 25
+    }
+    if (ctxItems > 0) {
+        score = score + 15
+    }
+    if (score > 95) {
+        score = 95
+    }
+    return score
+}
+
+brainCandidateTools(String intent): String {
+    if (intent == "RepairDiagnostic") {
+        return "compiler.check,search.text,patch.replace"
+    }
+    if (intent.startsWith("Create") || intent == "GenerateCRUD") {
+        return "fs.write,ws.open,search.text"
+    }
+    if (intent == "RunTests") {
+        return "compiler.run"
+    }
+    if (intent == "SearchSymbol") {
+        return "search.symbol"
+    }
+    return ""
+}
+
+brainAmbiguitiesJson(String required, String entitiesJson, List<String> historyPaths): String {
+    if (required == "") {
+        return "[]"
+    }
+    var has = entitiesJson.contains("\"" + required + "\":\"")
+    var filled = false
+    if (entitiesJson.contains(required)) {
+        var keyPart = "\"" + required + "\":\""
+        var at = entitiesJson.indexOf(keyPart)
+        if (at >= 0) {
+            var vstart = at + keyPart.length
+            var vend = entitiesJson.indexOf("\"", vstart)
+            if (vend > vstart) {
+                filled = true
+            }
+        }
+    }
+    if (!filled && historyPaths.size > 0) {
+        filled = true
+    }
+    if (!filled) {
+        return "[{\"missing\":\"" + required + "\",\"question\":\"Qual " + required + "?\"}]"
+    }
+    return "[]"
+}
+
+brainProcess(EventBus bus, CorpusIndex ix, String text, List<String> recentFiles, List<String> historyPaths): BrainPlan {
+    bus.publish("brain.started", text)
+    var tokens = retTokenize(text)
+    var intent = brainResolveIntent(tokens)
+    var entities = brainExtractEntities(text)
+    var context = retBuildContext(ix, text, 5, 2000, recentFiles)
+    var required = brainRequiredEntity(intent)
+    var amb = brainAmbiguitiesJson(required, entities, historyPaths)
+    var conf = brainConfidence(intent, tokens.size > 0, intent != B_INTENT_UNKNOWN(), 1)
+    if (amb != "[]") {
+        bus.publish("brain.ambiguity", amb)
+        conf = 40
+    }
+    bus.publish("brain.intent", intent)
+    bus.publish("brain.completed", intent + " conf=" + conf)
+    var tools = brainCandidateTools(intent)
+    var recipes = ""
+    if (intent.contains("Website") || intent == "CreateAPI") {
+        recipes = "recipe-rest-api"
+    }
+    var syms = ""
+    return BrainPlan(intent, entities, context, conf, amb, tools, recipes, syms)
+}
+
+brainPlanJson(BrainPlan p): String {
+    var out = "{\"intent\":\"" + p.intent + "\",\"confidence\":" + p.confidence
+    out = out + ",\"entities\":" + p.entitiesJson
+    out = out + ",\"context\":" + p.contextJson
+    out = out + ",\"ambiguities\":" + p.ambiguitiesJson
+    out = out + ",\"tools\":\"" + p.candidateToolsCsv + "\""
+    out = out + ",\"recipes\":\"" + p.candidateRecipesCsv + "\""
+    out = out + "}"
+    return out
+}
+
+record PlanTaskRec(String id, String kind, String toolId, String argA, String argB, String depsCsv, String validation, String rollback)
+record PlanValidationRec(String taskId, String kind, String detail)
+
+PLANNER_VERSION(): Int { return 1 }
+
+plStrategyFor(String intent): String {
+    if (intent == "CreateWebsite" || intent == "CreateUI") {
+        return "Web"
+    }
+    if (intent == "CreateAPI" || intent == "GenerateCRUD") {
+        return "CRUD"
+    }
+    if (intent == "RepairDiagnostic") {
+        return "Repair"
+    }
+    if (intent == "RunTests") {
+        return "Compiler"
+    }
+    if (intent == "GenerateDocs") {
+        return "Docs"
+    }
+    if (intent == "CreateRPA") {
+        return "RPA"
+    }
+    return "Generic"
+}
+
+plEmit(EventBus bus, List<PlanTaskRec> tasks, String planId) {
+    bus.publish("plan.created", planId + " tasks=" + tasks.size)
+}
+
+plTask(List<PlanTaskRec> out, String planId, Int seq, String kind, String toolId, String a, String b, String deps, String validation) {
+    out.add(PlanTaskRec(planId + "-t" + seq, kind, toolId, a, b, deps, validation, ""))
+}
+
+plTasksFor(EventBus bus, BrainPlan plan, String targetFile): List<PlanTaskRec> {
+    var out = listOf<PlanTaskRec>()
+    var pid = "plan-" + plStrategyFor(plan.intent) + "-" + plan.confidence
+    var seq = 0
+    var last = ""
+    if (plan.intent.startsWith("Create") || plan.intent == "GenerateCRUD") {
+        seq = seq + 1
+        plTask(out, pid, seq, "CreateDir", "fs.mkdir", joinPath("src", ""), "", "", "dir-exists")
+        last = out.get(out.size - 1).id
+        seq = seq + 1
+        plTask(out, pid, seq, "CreateFile", "patch.file", joinPath("src", "main.kf"), "main() {\n}\n", last, "file-exists")
+        last = out.get(out.size - 1).id
+    }
+    if (plan.intent == "RepairDiagnostic") {
+        seq = seq + 1
+        plTask(out, pid, seq, "CompileCheck", "compiler.check", targetFile, "", "", "compiles")
+        last = out.get(out.size - 1).id
+        seq = seq + 1
+        plTask(out, pid, seq, "SearchText", "search.text", plan.entitiesJson, "", last, "results-found")
+        last = out.get(out.size - 1).id
+    }
+    if (plan.intent == "RunTests") {
+        seq = seq + 1
+        plTask(out, pid, seq, "RunTests", "compiler.run", targetFile, "", "", "tests-pass")
+        last = out.get(out.size - 1).id
+    }
+    if (out.size == 0) {
+        seq = seq + 1
+        plTask(out, pid, seq, "IndexWorkspace", "ws.open", "", "", "", "indexed")
+        last = out.get(out.size - 1).id
+    }
+    plEmit(bus, out, pid)
+    return out
+}
+
+plDepsSatisfiable(List<PlanTaskRec> tasks): Bool {
+    var ids = listOf<String>()
+    for (var t in tasks) {
+        ids.add(t.id)
+    }
+    var ok = true
+    for (var t in tasks) {
+        if (t.depsCsv != "") {
+            if (!wsInList(ids, t.depsCsv)) {
+                ok = false
+            }
+        }
+    }
+    return ok
+}
+
+plHasCycle(List<PlanTaskRec> tasks): Bool {
+    var edges = listOf<WsEdgeRec>()
+    for (var t in tasks) {
+        if (t.depsCsv != "") {
+            edges.add(WsEdgeRec(t.id, t.depsCsv))
+        }
+    }
+    return wsDetectCycle(edges).size > 0
+}
+
+plMergeDuplicates(List<PlanTaskRec> tasks): List<PlanTaskRec> {
+    var out = listOf<PlanTaskRec>()
+    for (var t in tasks) {
+        var dup = false
+        for (var o in out) {
+            if (o.toolId == t.toolId && o.argA == t.argA && o.argB == t.argB) {
+                dup = true
+            }
+        }
+        if (!dup) {
+            out.add(t)
+        }
+    }
+    return out
+}
+
+class ExecutionPlan {
+    String id = ""
+    String intent = ""
+    String strategy = ""
+    List<PlanTaskRec> tasks = listOf<PlanTaskRec>()
+    Bool acyclic = true
+    Int version = PLANNER_VERSION()
+
+    toJson(): String {
+        var out = "{\"id\":\"" + id + "\",\"intent\":\"" + intent + "\",\"strategy\":\"" + strategy + "\""
+        out = out + ",\"acyclic\":" + acyclic + ",\"tasks\":["
+        var first = true
+        for (var t in tasks) {
+            if (!first) {
+                out = out + ","
+            }
+            first = false
+            out = out + "{\"id\":\"" + t.id + "\",\"kind\":\"" + t.kind + "\",\"tool\":\"" + t.toolId + "\""
+            if (t.depsCsv != "") {
+                out = out + ",\"deps\":\"" + t.depsCsv + "\""
+            }
+            if (t.validation != "") {
+                out = out + ",\"validate\":\"" + t.validation + "\""
+            }
+            out = out + "}"
+        }
+        out = out + "]}"
+        return out
+    }
+}
+
+plannerBuild(EventBus bus, BrainPlan plan, String targetFile): ExecutionPlan {
+    var rawTasks = plTasksFor(bus, plan, targetFile)
+    var merged = plMergeDuplicates(rawTasks)
+    var plan0 = ExecutionPlan()
+    plan0.intent = plan.intent
+    plan0.strategy = plStrategyFor(plan.intent)
+    plan0.tasks = merged
+    plan0.acyclic = !plHasCycle(merged)
+    bus.publish("plan.optimized", "tasks=" + merged.size)
+    bus.publish("rollback.generated", "backups-via-katool-bak")
+    return plan0
+}
+
+plValidateTask(ToolRegistry reg, ToolCtx ctx, PlanTaskRec t): PlanValidationRec {
+    var kind = t.validation
+    var ok = true
+    var detail = kind
+    if (kind == "file-exists") {
+        var f = File(t.argA)
+        ok = f.exists() && f.isFile()
+    } else if (kind == "compiles") {
+        ok = false
+        detail = "GW-EXEC: compiler.check via ponte"
+    } else if (kind == "tests-pass") {
+        ok = false
+        detail = "GW-EXEC: compiler.run via ponte"
+    }
+    if (ok) {
+        ctx.bus.publish("task.validated", t.id)
+    }
+    return PlanValidationRec(t.id, kind, detail)
+}
+
+record ExecTaskState(String taskId, String state)
+record RepairAttemptRec(Int attempt, String diagCode)
+
+EXEC_READY(): String { return "READY" }
+EXEC_RUNNING(): String { return "RUNNING" }
+EXEC_SUCCESS(): String { return "SUCCESS" }
+EXEC_FAILED(): String { return "FAILED" }
+EXEC_SKIPPED(): String { return "SKIPPED" }
+EXEC_ROLLED_BACK(): String { return "ROLLED_BACK" }
+
+class ExecResult {
+    Bool ok = true
+    Int executed = 0
+    Int failed = 0
+    Int rolledBack = 0
+    Int repairs = 0
+    String lastError = ""
+    constructor() {
+    }
+}
+
+exRollback(ToolCtx c, ToolResult r): Bool {
+    if (r.rollback.kind == "restore") {
+        var rr = toolExec(defaultRegistry(), c, ToolCall("fs.rollbackRestore", c.requestId, r.rollback.backupPath, "", 0))
+        return rr.status == "ok"
+    }
+    if (r.rollback.kind == "delete-created") {
+        var f = File(r.rollback.backupPath)
+        if (f.exists()) {
+            f.delete()
+        }
+        return true
+    }
+    return false
+}
+
+exValidate(ToolCtx c, PlanTaskRec t): PlanValidationRec {
+    return plValidateTask(defaultRegistry(), c, t)
+}
+
+exRepairAttempt(ToolCtx c, PlanTaskRec t, Int attempt): ToolResult {
+    c.bus.publish("repair.started", t.id + " attempt=" + attempt)
+    var diagCode = ""
+    if (t.argA != "") {
+        for (var code in listOf<String>("ARITH001", "SEM011", "SEM015", "SEM010")) {
+            if (c.requestId.contains(code)) {
+                diagCode = code
+            }
+        }
+    }
+    var r = toolErr("REPAIR-NOPATCH", "nenhum patch deterministico disponivel para " + diagCode)
+    c.bus.publish("repair.finished", t.id)
+    return r
+}
+
+exExecutePlan(ToolRegistry reg, ToolCtx ctx, ExecutionPlan plan, Int maxRepairs): ExecResult {
+    ctx.bus.publish("plan.started", plan.id + " tasks=" + plan.tasks.size)
+    var res = ExecResult()
+    var states = listOf<ExecTaskState>()
+    var i = 0
+    while (i < plan.tasks.size) {
+        states.add(ExecTaskState(plan.tasks.get(i).id, EXEC_READY()))
+        i = i + 1
+    }
+    i = 0
+    while (i < plan.tasks.size) {
+        var t = plan.tasks.get(i)
+        var depsOk = true
+        if (t.depsCsv != "") {
+            var j = 0
+            while (j < i) {
+                if (plan.tasks.get(j).id == t.depsCsv && states.get(j).state != EXEC_SUCCESS()) {
+                    depsOk = false
+                }
+                j = j + 1
+            }
+        }
+        var skipIt = false
+        if (!depsOk) {
+            skipIt = true
+        }
+        if (!skipIt) {
+            states.get(i).state = EXEC_RUNNING()
+            ctx.bus.publish("task.started", t.id)
+            var r = toolExec(reg, ctx, ToolCall(t.toolId, ctx.requestId, t.argA, t.argB, 0))
+            if (r.status != "ok") {
+                states.get(i).state = EXEC_FAILED()
+                res.failed = res.failed + 1
+                res.lastError = r.data
+                ctx.bus.publish("task.failed", t.id + ":" + r.data)
+                var attempt = 1
+                var repaired = false
+                while (attempt <= maxRepairs) {
+                    res.repairs = res.repairs + 1
+                    var pr = exRepairAttempt(ctx, t, attempt)
+                    if (pr.status == "ok") {
+                        r = pr
+                        repaired = true
+                        attempt = maxRepairs + 1
+                    }
+                    attempt = attempt + 1
+                }
+                if (!repaired && r.rollback.kind != "") {
+                    ctx.bus.publish("rollback.started", t.id)
+                    if (exRollback(ctx, r)) {
+                        states.get(i).state = EXEC_ROLLED_BACK()
+                        res.rolledBack = res.rolledBack + 1
+                    }
+                    ctx.bus.publish("rollback.finished", t.id)
+                }
+            } else {
+                states.get(i).state = EXEC_SUCCESS()
+                res.executed = res.executed + 1
+                ctx.bus.publish("task.completed", t.id)
+            }
+            if (!skipIt) {
+            }
+        }
+        states.get(i).state = EXEC_RUNNING()
+        ctx.bus.publish("task.started", t.id)
+        var r = toolExec(reg, ctx, ToolCall(t.toolId, ctx.requestId, t.argA, t.argB, 0))
+        if (r.status != "ok") {
+            states.get(i).state = EXEC_FAILED()
+            res.failed = res.failed + 1
+            res.lastError = r.data
+            ctx.bus.publish("task.failed", t.id + ":" + r.data)
+            var attempt = 1
+            while (attempt <= maxRepairs) {
+                res.repairs = res.repairs + 1
+                var pr = exRepairAttempt(ctx, t, attempt)
+                if (pr.status == "ok") {
+                    r = pr
+                    break
+                }
+                attempt = attempt + 1
+            }
+            if (r.status != "ok" && r.rollback.kind != "") {
+                ctx.bus.publish("rollback.started", t.id)
+                if (exRollback(ctx, r)) {
+                    states.get(i).state = EXEC_ROLLED_BACK()
+                    res.rolledBack = res.rolledBack + 1
+                }
+                ctx.bus.publish("rollback.finished", t.id)
+            }
+        } else {
+            states.get(i).state = EXEC_SUCCESS()
+            res.executed = res.executed + 1
+            ctx.bus.publish("task.completed", t.id)
+        }
+        i = i + 1
+    }
+    if (res.failed > 0) {
+        res.ok = false
+    }
+    ctx.met.incByName("tasks.completed")
+    ctx.bus.publish("plan.finished", plan.id + " ok=" + res.ok)
+    return res
+}
+
+class RuntimeContext implements ContextView {
+    Config cfg
+    Logger logger
+    EventBus bus = EventBus()
+    Scheduler sched
+    WorkerPool pool
+    Lifecycle life = Lifecycle()
+    Metrics met = Metrics()
+    TimeSource clock
+
+    constructor(Config c, TimeSource ts) {
+        cfg = c
+        clock = ts
+        logger = Logger(ts)
+        var lvlName = c.getStr("log.level", "INFO")
+        var lvl = logLevelFromName(lvlName)
+        if (lvl < 0) {
+            lvl = LOG_INFO()
+        }
+        var col = false
+        try {
+            col = c.getBool("log.color", false)
+        } catch (String e) {
+            col = false
+        }
+        var js = false
+        try {
+            js = c.getBool("log.json", false)
+        } catch (String e) {
+            js = false
+        }
+        logger.configure(lvl, col, js)
+        met.start(ts)
+    }
+
+    incMetric(String name) {
+        met.incByName(name)
+    }
+
+    wire() {
+        sched = Scheduler(this)
+        pool = WorkerPool(sched, 1)
+    }
+
+    finishBoot(): Bool {
+        life.transition(LC_READY())
+        return true
+    }
+
+    shutdownGraceful() {
+        if (life.state() == LC_READY()) {
+            life.transition(LC_STOPPING())
+        }
+        sched.gracefulShutdown()
+        life.transition(LC_STOPPED())
+    }
+}
+
+runtimeStatusJson(RuntimeContext ctx): String {
+    var out = "{\"state\":\"" + ctx.life.stateName() + "\""
+    out = out + ",\"scheduler\":" + ctx.sched.statsJson()
+    out = out + ",\"bus\":" + ctx.bus.statsJson()
+    out = out + ",\"metrics\":" + ctx.met.snapshotJson(ctx.clock)
+    out = out + "}"
+    return out
+}
+
+class RealTimeClock implements TimeSource {
+    constructor() {
+    }
+    nowMs(): Long {
+        return now()
+    }
+}
+
+mkCtx(): ToolCtx {
+    return ToolCtx(freshBus(), FixedClock(10))
+}
+
+test "granted fs.write executes" {
+    var c = mkCtx()
+    c.grant(PERM_FS_WRITE())
+    var res = toolExec(defaultRegistry(), c, ToolCall("fs.write", "r2", "build/tt/w.kf", "data", 0))
+    assert(res.status == "ok")
+}
+main() {
+}

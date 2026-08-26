@@ -1,0 +1,8 @@
+test "lazy tensor hex decoded" {
+    var h = openGGUF("fixtures/tiny.gguf")
+    var b = getTensorLazy(h, "tok_embd")
+    var len = b.length
+    var last = b[31]
+    assert(len == 32)
+    assert(last == 31)
+}

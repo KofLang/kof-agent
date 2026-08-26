@@ -1,0 +1,5 @@
+test "explain wraps target" {
+    var e = AiEngine()
+    var s = e.explain("N17")
+    assert(s == "explain:N17")
+}

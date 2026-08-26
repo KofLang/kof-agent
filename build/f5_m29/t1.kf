@@ -1,0 +1,6 @@
+test "search similar returns valid index" {
+    var w = WorkspaceMemory()
+    w.indexText("b.kf", "abcdef")
+    var best = w.searchSimilar(chunkHash("abcdef", 0, 6))
+    assert(best == 0)
+}

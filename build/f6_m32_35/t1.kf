@@ -1,0 +1,7 @@
+test "training config defaults qlora r32" {
+    var c = defaultTrainCfg()
+    assert(c.rank == 32)
+    assert(c.alpha == 64)
+    var j = trainingConfigJson(c)
+    assert(j.contains("TinyLlama"))
+}

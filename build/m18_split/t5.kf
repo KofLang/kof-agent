@@ -1,0 +1,10 @@
+test "kv grows during generation" {
+    var h = openGGUF("fixtures/tiny.gguf")
+    var r = ModelRunner()
+    r.loadModel(h)
+    var before = r.kvDepth()
+    var cfg = RunnerConfig(3, 0, 100, 5)
+    r.generate(1, cfg)
+    var after = r.kvDepth()
+    assert(after > before)
+}

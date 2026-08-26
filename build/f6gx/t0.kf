@@ -1,0 +1,5 @@
+test "graph plan builds N layers" {
+    var g = GraphExecutor()
+    g.buildPlan(22, 2048)
+    assert(g.layerCount() == 22)
+}

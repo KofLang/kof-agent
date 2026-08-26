@@ -1,0 +1,7 @@
+test "budget blocks overspend" {
+    var b = EventBus()
+    var o = ToolOrchestrator(b, RealTimeClock())
+    o.budget.limit = 5
+    var r = o.executeTool("heavy", OrchTool(1, 100, 100, 0))
+    assert(r.state == 4)
+}

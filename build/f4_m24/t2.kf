@@ -1,0 +1,8 @@
+test "repair memory learn and lookup" {
+    var m = RepairMemory()
+    m.learn("sig1", "fix=clamp")
+    var p = m.lookup("sig1")
+    assert(p == "fix=clamp")
+    var miss = m.lookup("none")
+    assert(miss == "")
+}

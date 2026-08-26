@@ -1,0 +1,789 @@
+record CheckRec(String id, Bool ok, String detail)
+
+interface TimeSource {
+    nowMs(): Long
+}
+
+class FixedClock implements TimeSource {
+    Long value = 0
+    constructor(Long v) {
+        value = v
+    }
+    nowMs(): Long {
+        return value
+    }
+    advance(Long ms) {
+        value = value + ms
+    }
+}
+
+parseIntStr(String s): Int {
+    var n = 0
+    var i = 0
+    if (s.length == 0) {
+        throw "parse: empty integer"
+    }
+    var start = 0
+    if (s.charAt(0) == 45) {
+        start = 1
+        if (s.length == 1) {
+            throw "parse: invalid integer '" + s + "'"
+        }
+    }
+    i = start
+    while (i < s.length) {
+        var c = s.charAt(i)
+        if (c < 48 || c > 57) {
+            throw "parse: invalid integer '" + s + "'"
+        }
+        n = n * 10 + (c - 48)
+        i = i + 1
+    }
+    if (start == 1) {
+        n = 0 - n
+    }
+    return n
+}
+
+parseBoolStr(String s): Bool {
+    var v = s.toLowerCase()
+    if (v == "true" || v == "1" || v == "yes" || v == "on") {
+        return true
+    }
+    if (v == "false" || v == "0" || v == "no" || v == "off" || v == "") {
+        return false
+    }
+    throw "parse: invalid boolean '" + s + "'"
+}
+
+escapeJson(String s): String {
+    var out = ""
+    var i = 0
+    while (i < s.length) {
+        var c = s.charAt(i)
+        if (c == 34) {
+            out = out + "\\\""
+        } else if (c == 92) {
+            out = out + "\\\\"
+        } else if (c == 10) {
+            out = out + "\\n"
+        } else if (c == 13) {
+            out = out + "\\r"
+        } else if (c == 9) {
+            out = out + "\\t"
+        } else {
+            out = out + s.substring(i, i + 1)
+        }
+        i = i + 1
+    }
+    return out
+}
+
+joinPath(String a, String b): String {
+    if (a == "") {
+        return b
+    }
+    if (a.substring(a.length - 1, a.length) == "/") {
+        return a + b
+    }
+    return a + "/" + b
+}
+
+splitStr(String s, String sep): List<String> {
+    var out = listOf<String>()
+    if (s.length == 0) {
+        return out
+    }
+    var sc = sep.charAt(0)
+    var start = 0
+    var i = 0
+    while (i < s.length) {
+        if (s.charAt(i) == sc) {
+            out.add(s.substring(start, i))
+            start = i + 1
+        }
+        i = i + 1
+    }
+    out.add(s.substring(start, s.length))
+    return out
+}
+
+loadArgsFile(String path): List<String> {
+    var argv = listOf<String>()
+    var f = File(path)
+    if (!f.exists()) {
+        return argv
+    }
+    var txt = f.readText()
+    var lines = splitStr(txt, "\n")
+    for (var line in lines) {
+        var t = line.trim()
+        if (t.length > 0) {
+            argv.add(t)
+        }
+    }
+    return argv
+}
+
+sortInts(Int[] a, Int n) {
+    var i = 1
+    while (i < n) {
+        var key = a[i]
+        var j = i - 1
+        var placed = false
+        while (!placed) {
+            if (j < 0) {
+                placed = true
+            } else {
+                if (a[j] > key) {
+                    a[j + 1] = a[j]
+                    j = j - 1
+                } else {
+                    placed = true
+                }
+            }
+        }
+        a[j + 1] = key
+        i = i + 1
+    }
+}
+
+mkFile(String path, String content): Bool {
+    var parent = ""
+    var parts = splitStr(path, "/")
+    if (parts.size > 1) {
+        var i = 0
+        while (i < parts.size - 1) {
+            if (parent == "") {
+                parent = parts.get(i)
+            } else {
+                parent = joinPath(parent, parts.get(i))
+            }
+            i = i + 1
+        }
+        var d = Directory(parent)
+        if (!d.exists()) {
+            d.createDirectories()
+        }
+    }
+    var f = File(path)
+    if (f.exists()) {
+        f.delete()
+    }
+    return f.writeText(content)
+}
+
+class EventCounter implements EventHandler {
+    Int count = 0
+    constructor() {
+    }
+    onEvent(EventEnvelope e): Bool {
+        count = count + 1
+        return true
+    }
+}
+
+class RecordingHandler implements EventHandler {
+    List<String> seen = listOf<String>()
+    constructor() {
+    }
+    onEvent(EventEnvelope e): Bool {
+        seen.add(e.topic + "=" + e.payload)
+        return true
+    }
+}
+
+freshBus(): EventBus {
+    return EventBus()
+}
+
+record CfgEntry(String key, String value)
+
+class Config {
+    List<CfgEntry> entries = listOf<CfgEntry>()
+    String sourcePath = ""
+    Bool loaded = false
+
+    loadFile(String path): Bool {
+        entries = listOf<CfgEntry>()
+        sourcePath = path
+        var f = File(path)
+        if (!f.exists()) {
+            loaded = false
+            return false
+        }
+        if (!f.isFile()) {
+            loaded = false
+            return false
+        }
+        var text = f.readText()
+        parseInto(text)
+        loaded = true
+        return true
+    }
+
+    reload(): Bool {
+        return loadFile(sourcePath)
+    }
+
+    parseInto(String text) {
+        var lines = splitStr(text, "\n")
+        for (var raw in lines) {
+            var line = raw.trim()
+            if (line.length > 0) {
+                if (!line.startsWith("#")) {
+                    var kv = splitStr(line, "=")
+                    if (kv.size == 2) {
+                        var k = kv.get(0).trim()
+                        var v = kv.get(1).trim()
+                        entries.add(CfgEntry(k, v))
+                    }
+                }
+            }
+        }
+    }
+
+    has(String key): Bool {
+        for (var e in entries) {
+            if (e.key == key) {
+                return true
+            }
+        }
+        return false
+    }
+
+    getRaw(String key): String {
+        for (var e in entries) {
+            if (e.key == key) {
+                return e.value
+            }
+        }
+        throw "config: missing key '" + key + "'"
+    }
+
+    getStr(String key, String def): String {
+        if (!has(key)) {
+            return def
+        }
+        return getRaw(key)
+    }
+
+    getInt(String key, Int def): Int {
+        if (!has(key)) {
+            return def
+        }
+        var v = getRaw(key)
+        try {
+            return parseIntStr(v)
+        } catch (String e) {
+            throw "config: invalid integer for '" + key + "': '" + v + "'"
+        }
+    }
+
+    getBool(String key, Bool def): Bool {
+        if (!has(key)) {
+            return def
+        }
+        var v = getRaw(key)
+        try {
+            return parseBoolStr(v)
+        } catch (String e) {
+            throw "config: invalid boolean for '" + key + "': '" + v + "'"
+        }
+    }
+
+    snapshotJson(): String {
+        var out = "{\"source\":\"" + escapeJson(sourcePath) + "\",\"loaded\":"
+        if (loaded) {
+            out = out + "true"
+        } else {
+            out = out + "false"
+        }
+        out = out + ",\"entries\":["
+        var first = true
+        for (var e in entries) {
+            if (!first) {
+                out = out + ","
+            }
+            first = false
+            out = out + "{\"key\":\"" + escapeJson(e.key) + "\",\"value\":\"" + escapeJson(e.value) + "\"}"
+        }
+        out = out + "]}"
+        return out
+    }
+}
+
+TASK_CREATED(): Int { return 0 }
+TASK_QUEUED(): Int { return 1 }
+TASK_RUNNING(): Int { return 2 }
+TASK_WAITING(): Int { return 3 }
+TASK_COMPLETED(): Int { return 4 }
+TASK_CANCELLED(): Int { return 5 }
+TASK_FAILED(): Int { return 6 }
+
+taskStateName(Int st): String {
+    if (st == TASK_CREATED()) { return "CREATED" }
+    if (st == TASK_QUEUED()) { return "QUEUED" }
+    if (st == TASK_RUNNING()) { return "RUNNING" }
+    if (st == TASK_WAITING()) { return "WAITING" }
+    if (st == TASK_COMPLETED()) { return "COMPLETED" }
+    if (st == TASK_CANCELLED()) { return "CANCELLED" }
+    return "FAILED"
+}
+
+interface ContextView {
+    incMetric(String name)
+}
+
+interface TaskBody {
+    run(ContextView v)
+}
+
+class Future {
+    Bool done = false
+    Bool ok = false
+    Int result = 0
+    String error = ""
+    constructor() {
+    }
+}
+
+class TaskNode {
+    Int id
+    Int priority
+    Int seq
+    String name
+    Int st = TASK_CREATED()
+    Bool cancelled = false
+    TaskBody body
+    constructor(Int tid, Int prio, Int sq, String nm, TaskBody b) {
+        id = tid
+        priority = prio
+        seq = sq
+        name = nm
+        body = b
+    }
+}
+
+class FutureJob implements TaskBody {
+    TaskBody inner
+    Future future
+    constructor(TaskBody i, Future f) {
+        inner = i
+        future = f
+    }
+    run(ContextView v) {
+        try {
+            inner.run(v)
+            future.ok = true
+        } catch (String e) {
+            future.error = e
+            throw e
+        } finally {
+            future.done = true
+        }
+    }
+}
+
+class Scheduler {
+    List<TaskNode> tasks = listOf<TaskNode>()
+    Int[] heapPrio = new Int[64]
+    Int[] heapSeq = new Int[64]
+    Int[] heapIdx = new Int[64]
+    Int heapSize = 0
+    Int heapCap = 64
+    Int nextId = 1
+    Int nextSeq = 1
+    Int maxPending = 0
+    Bool accepting = true
+    Int launchedCount = 0
+    Int completedCount = 0
+    Int failedCount = 0
+    Int cancelledCount = 0
+    Int rejectedCount = 0
+    String lastError = ""
+    ContextView view
+
+    constructor(ContextView v) {
+        view = v
+    }
+
+    ensureCap(Int need) {
+        if (need <= heapCap) {
+            return
+        }
+        var nc = heapCap * 2
+        while (nc < need) {
+            nc = nc * 2
+        }
+        var np = new Int[nc]
+        var ns = new Int[nc]
+        var ni = new Int[nc]
+        var i = 0
+        while (i < heapSize) {
+            np[i] = heapPrio[i]
+            ns[i] = heapSeq[i]
+            ni[i] = heapIdx[i]
+            i = i + 1
+        }
+        heapPrio = np
+        heapSeq = ns
+        heapIdx = ni
+        heapCap = nc
+    }
+
+    lessThan(Int a, Int b): Bool {
+        if (heapPrio[a] > heapPrio[b]) {
+            return true
+        }
+        if (heapPrio[a] < heapPrio[b]) {
+            return false
+        }
+        return heapSeq[a] < heapSeq[b]
+    }
+
+    swapAt(Int a, Int b) {
+        var tp = heapPrio[a]
+        heapPrio[a] = heapPrio[b]
+        heapPrio[b] = tp
+        var ts = heapSeq[a]
+        heapSeq[a] = heapSeq[b]
+        heapSeq[b] = ts
+        var ti = heapIdx[a]
+        heapIdx[a] = heapIdx[b]
+        heapIdx[b] = ti
+    }
+
+    heapPush(Int taskIndex) {
+        ensureCap(heapSize + 1)
+        var i = heapSize
+        heapPrio[i] = tasks.get(taskIndex).priority
+        heapSeq[i] = tasks.get(taskIndex).seq
+        heapIdx[i] = taskIndex
+        heapSize = heapSize + 1
+        while (i > 0) {
+            var parent = (i - 1) / 2
+            if (lessThan(i, parent)) {
+                swapAt(i, parent)
+                i = parent
+            } else {
+                break
+            }
+        }
+    }
+
+    heapPop(): Int {
+        var top = heapIdx[0]
+        heapSize = heapSize - 1
+        if (heapSize > 0) {
+            heapPrio[0] = heapPrio[heapSize]
+            heapSeq[0] = heapSeq[heapSize]
+            heapIdx[0] = heapIdx[heapSize]
+            var i = 0
+            while (true) {
+                var l = i * 2 + 1
+                var r = l + 1
+                var m = i
+                if (l < heapSize) {
+                    if (lessThan(l, m)) {
+                        m = l
+                    }
+                }
+                if (r < heapSize) {
+                    if (lessThan(r, m)) {
+                        m = r
+                    }
+                }
+                if (m == i) {
+                    break
+                }
+                swapAt(i, m)
+                i = m
+            }
+        }
+        return top
+    }
+
+    launch(TaskBody body, String name, Int priority): Int {
+        if (!accepting) {
+            rejectedCount = rejectedCount + 1
+            throw "scheduler: rejecting launch after shutdown"
+        }
+        if (maxPending > 0 && heapSize >= maxPending) {
+            rejectedCount = rejectedCount + 1
+            throw "scheduler: backpressure (pending=" + heapSize + ", max=" + maxPending + ")"
+        }
+        var node = TaskNode(nextId, priority, nextSeq, name, body)
+        nextId = nextId + 1
+        nextSeq = nextSeq + 1
+        node.st = TASK_QUEUED()
+        tasks.add(node)
+        heapPush(tasks.size - 1)
+        launchedCount = launchedCount + 1
+        return node.id
+    }
+
+    launchFuture(TaskBody body, String name, Int priority): Future {
+        var f = Future()
+        var wrapped = FutureJob(body, f)
+        launch(wrapped, name, priority)
+        return f
+    }
+
+    cancel(Int taskId): Bool {
+        var idx = taskId - 1
+        if (idx < 0 || idx >= tasks.size) {
+            return false
+        }
+        var node = tasks.get(idx)
+        if (node.st == TASK_QUEUED() && !node.cancelled) {
+            node.cancelled = true
+            node.st = TASK_CANCELLED()
+            cancelledCount = cancelledCount + 1
+            return true
+        }
+        return false
+    }
+
+    executeOne(): Bool {
+        if (heapSize == 0) {
+            return false
+        }
+        var idx = heapPop()
+        var node = tasks.get(idx)
+        if (node.cancelled || node.st == TASK_CANCELLED()) {
+            return true
+        }
+        node.st = TASK_RUNNING()
+        try {
+            node.body.run(view)
+            node.st = TASK_COMPLETED()
+            completedCount = completedCount + 1
+        } catch (String e) {
+            node.st = TASK_FAILED()
+            failedCount = failedCount + 1
+            lastError = e
+        }
+        return true
+    }
+
+    run(Int maxTasks): Int {
+        var n = 0
+        while (n < maxTasks) {
+            if (!executeOne()) {
+                break
+            }
+            n = n + 1
+        }
+        return n
+    }
+
+    drain() {
+        while (executeOne()) {
+        }
+    }
+
+    await(Future f) {
+        while (!f.done) {
+            if (heapSize == 0) {
+                throw "scheduler: deadlock in await (future unresolved, queue empty)"
+            }
+            executeOne()
+        }
+    }
+
+    pending(): Int {
+        return heapSize
+    }
+
+    gracefulShutdown() {
+        accepting = false
+        drain()
+    }
+
+    statsJson(): String {
+        return "{\"pending\":" + heapSize + ",\"launched\":" + launchedCount + ",\"completed\":" + completedCount + ",\"failed\":" + failedCount + ",\"cancelled\":" + cancelledCount + ",\"rejected\":" + rejectedCount + ",\"accepting\":" + accepting + "}"
+    }
+}
+
+class WorkerPool {
+    Int size = 1
+    Scheduler sched
+    String affinityHint = ""
+
+    constructor(Scheduler s, Int n) {
+        sched = s
+        if (n != 1) {
+            throw "TP001: worker pool size " + n + " unsupported on this target (upstream CONC001); use 1"
+        }
+        size = n
+    }
+
+    launch(TaskBody body, String name): Int {
+        return sched.launch(body, name, 5)
+    }
+
+    dynamicResize(Int n) {
+        throw "TP001: dynamic pool resize unsupported on this target (upstream CONC001)"
+    }
+
+    setAffinity(String hint) {
+        throw "TP002: affinity unsupported on this target"
+    }
+}
+
+record EventEnvelope(String topic, String payload, Int seq)
+
+interface EventHandler {
+    onEvent(EventEnvelope e): Bool
+}
+
+class Subscription {
+    Int id
+    String topic
+    EventHandler h
+    Bool once = false
+    constructor(Int sid, String t, EventHandler handler, Bool onceFlag) {
+        id = sid
+        topic = t
+        h = handler
+        once = onceFlag
+    }
+}
+
+class EventBus {
+    List<Subscription> subs = listOf<Subscription>()
+    Int nextId = 1
+    Int seq = 1
+
+    subscribe(String topic, EventHandler h): Int {
+        var s = Subscription(nextId, topic, h, false)
+        nextId = nextId + 1
+        subs.add(s)
+        return s.id
+    }
+
+    once(String topic, EventHandler h): Int {
+        var s = Subscription(nextId, topic, h, true)
+        nextId = nextId + 1
+        subs.add(s)
+        return s.id
+    }
+
+    unsubscribe(Int id): Bool {
+        var i = 0
+        while (i < subs.size) {
+            if (subs.get(i).id == id) {
+                subs.remove(i)
+                return true
+            }
+            i = i + 1
+        }
+        return false
+    }
+
+    publishEnvelope(EventEnvelope e): Int {
+        var matched = listOf<Int>()
+        var i = 0
+        while (i < subs.size) {
+            var s = subs.get(i)
+            if (s.topic == e.topic || s.topic == "*") {
+                matched.add(i)
+            }
+            i = i + 1
+        }
+        var called = 0
+        for (var m in matched) {
+            var sub = subs.get(m)
+            if (sub.once) {
+                unsubscribe(sub.id)
+            }
+            called = called + 1
+            var cont = sub.h.onEvent(e)
+            if (!cont) {
+                break
+            }
+        }
+        return called
+    }
+
+    publish(String topic, String payload): Int {
+        var env = EventEnvelope(topic, payload, seq)
+        seq = seq + 1
+        return publishEnvelope(env)
+    }
+
+    broadcast(String payload): Int {
+        return publish("*", payload)
+    }
+
+    publishAsync(Scheduler sched, ContextView view, String topic, String payload): Int {
+        var job = PublishJob(this, topic, payload)
+        return sched.launch(job, "event.publish", 5)
+    }
+
+    statsJson(): String {
+        return "{\"subscribers\":" + subs.size + ",\"published\":" + (seq - 1) + "}"
+    }
+}
+
+class PublishJob implements TaskBody {
+    EventBus bus
+    String topic
+    String payload
+    constructor(EventBus b, String t, String p) {
+        bus = b
+        topic = t
+        payload = p
+    }
+    run(ContextView v) {
+        bus.publish(topic, payload)
+    }
+}
+
+// M32: Corpus Intelligence — exemplos supervisionados de bugs upstream
+
+record BugExample(String bugId, String question, String answer)
+
+corpusBugExamples(): List<BugExample> {
+    var l = listOf<BugExample>()
+    l.add(BugExample("N10", "Por que artefatos grandes segfaultam?", "N10-progressivo: TU >800KB asm crasha no native; workaround: particionar em PARTS pequenas com --only."))
+    l.add(BugExample("N11", "lastIndexOf nao funciona no native?", "N11: funcao ausente no backend nativo; workaround: implementar busca manual reversa."))
+    l.add(BugExample("N18", "Record com listas quebra?", "N18: record c/ multiplos List fields corrompe memoria no native; workaround: campos planos + acessores."))
+    l.add(BugExample("J4", "Erro COMP002 em purgeExpired?", "J4-residual: Frame.merge ASM crasha no JVM; repro em regressions/J4/."))
+    return l
+}
+
+// M33: Training Pipeline — configs TinyLlama QLoRA
+
+record TrainCfg(Int rank, Int alpha, Int ctx, Int epochs)
+
+defaultTrainCfg(): TrainCfg {
+    return TrainCfg(32, 64, 2048, 3)
+}
+
+trainingConfigJson(TrainCfg c): String {
+    return "{\"base\":\"TinyLlama-1.1B-Chat\",\"qlora\":true,\"bits\":4,\"rank\":" + c.rank + ",\"alpha\":" + c.alpha + ",\"context\":" + c.ctx + ",\"epochs\":" + c.epochs + ",\"lr\":2e-4,\"scheduler\":\"cosine\",\"seed\":42}"
+}
+
+// M34: GGUF Builder — manifesto + quants oficiais
+
+record QuantEntry(String name, Int bits)
+
+ggufQuants(): List<QuantEntry> {
+    var l = listOf<QuantEntry>()
+    l.add(QuantEntry("Q4_K_M", 4))
+    l.add(QuantEntry("Q5_K_M", 5))
+    l.add(QuantEntry("Q6_K", 6))
+    l.add(QuantEntry("Q8_0", 8))
+    return l
+}
+
+modelManifestJson(String dsVersion, Int dsHash): String {
+    return "{\"model\":\"KofLM-v1\",\"base\":\"TinyLlama-1.1B-Chat\",\"lang\":\"PT-BR\",\"dataset_version\":\"" + dsVersion + "\",\"dataset_hash\":" + dsHash + ",\"compiler_head\":\"416ff4b\",\"ctx\":2048}"
+}
+
+test "koflm register official" {
+    var k = KoflmRuntime()
+    assert(k.registerOfficialModel())
+}

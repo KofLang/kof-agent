@@ -1,0 +1,4 @@
+record L34(Int v)
+mainX34() {
+    var l = L34(1)
+}

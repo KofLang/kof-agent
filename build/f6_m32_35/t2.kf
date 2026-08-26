@@ -1,0 +1,5 @@
+test "gguf quants four entries" {
+    var q = ggufQuants()
+    var n = q.size()
+    assert(n == 4)
+}

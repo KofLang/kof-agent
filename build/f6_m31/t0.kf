@@ -1,0 +1,7 @@
+test "dataset dedup same input" {
+    var d = DatasetBuilder()
+    d.add("docs/x.md", "o que e kof", "linguagem")
+    d.add("docs/y.md", "o que e kof", "outra")
+    var n = d.count()
+    assert(n == 1)
+}

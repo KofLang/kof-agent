@@ -1,0 +1,3 @@
+test "tokenizer roundtrip length preserved" {
+    assert(tokVerifyRoundtrip("koflm"))
+}

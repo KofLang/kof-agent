@@ -1,0 +1,4 @@
+record L3(Int v)
+mainX3() {
+    var l = L3(1)
+}

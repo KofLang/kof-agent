@@ -1,0 +1,9 @@
+test "audit records scopes" {
+    var b = EventBus()
+    var o = ToolOrchestrator(b, RealTimeClock())
+    o.audit.allow("filesystem")
+    o.audit.allow("network")
+    o.audit.deny("secrets")
+    assert(o.audit.countFor("filesystem") == 1)
+    assert(o.audit.countFor("network") == 1)
+}

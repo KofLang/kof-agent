@@ -1,4 +1,6 @@
+# checkpoint base p/ download (origem); produto oficial = KofLM
 model: TinyLlama/TinyLlama-1.1B-Chat-v1.0
+official_name: KofLM
 language: pt-BR
 dataset: datasets/jsonl/koflm-v3.jsonl
 output_dir: models/kof-LM/lora

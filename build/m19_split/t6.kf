@@ -1,0 +1,7 @@
+test "cancel stops execution" {
+    var b = EventBus()
+    var o = ToolOrchestrator(b, RealTimeClock())
+    o.cancelExecution()
+    var r = o.executeTool("after", OrchTool(1, 1, 100, 0))
+    assert(r.state == 4)
+}

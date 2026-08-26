@@ -1,0 +1,5 @@
+test "health check healthy degraded critical" {
+    assert(healthCheck(100, 0, 0) == 0)
+    assert(healthCheck(100, 5, 0) == 1)
+    assert(healthCheck(5000, 0, 0) == 2)
+}

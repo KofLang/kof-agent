@@ -1,0 +1,9 @@
+test "greedy step deterministic" {
+    var h = openGGUF("fixtures/tiny.gguf")
+    var r = ModelRunner()
+    r.loadModel(h)
+    var a = r.generateStep(1, 42)
+    r.resetContext()
+    var b = r.generateStep(1, 42)
+    assert(a == b)
+}

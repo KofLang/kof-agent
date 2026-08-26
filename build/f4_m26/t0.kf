@@ -1,0 +1,6 @@
+test "metrics gauge set and get" {
+    var m = MetricsRegistry()
+    m.setGauge("tok_s", 9000)
+    var v = m.getGauge("tok_s")
+    assert(v == 9000)
+}

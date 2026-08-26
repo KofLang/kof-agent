@@ -1,0 +1,4 @@
+test "mcp handshake payload" {
+    var h = mcpHandshake("zed")
+    assert(h.contains("kof-agent"))
+}

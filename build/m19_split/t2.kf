@@ -1,0 +1,6 @@
+test "retry counts increments" {
+    var b = EventBus()
+    var o = ToolOrchestrator(b, RealTimeClock())
+    o.retryOnce("x", OrchTool(1, 1, 100, 2))
+    assert(o.retriesDone >= 1)
+}

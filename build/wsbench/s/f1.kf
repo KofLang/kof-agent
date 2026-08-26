@@ -1,0 +1,4 @@
+record R1(Int v)
+
+main() {
+}

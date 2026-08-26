@@ -1,0 +1,6 @@
+test "execute single completes" {
+    var b = EventBus()
+    var o = ToolOrchestrator(b, RealTimeClock())
+    var r = o.executeTool("fs.read", OrchTool(1, 10, 1000, 0))
+    assert(r.state == 6)
+}
