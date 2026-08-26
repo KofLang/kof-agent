@@ -1,0 +1,51 @@
+// KofTrainer: máquina de estados de coordenação do treino QLoRA
+
+record TrainerState(Int phase, Int datasetSize)
+
+class KofTrainer {
+    Int phase = 0
+    Int dsSize = 0
+    Int seed = 42
+
+    prepareDataset(): Bool {
+        if (phase != 0) { return false }
+        var f = File("datasets/jsonl/koflm-v2.jsonl")
+        if (!f.exists()) { return false }
+        var lines = splitStr(f.readText(), "\n")
+        var n = 0
+        var i = 0
+        while (i < lines.size()) {
+            if (lines.get(i).length > 10) { n = n + 1 }
+            i = i + 1
+        }
+        dsSize = n
+        phase = 1
+        return true
+    }
+
+    verifyDataset(): Bool {
+        return phase == 1 && dsSize > 400
+    }
+
+    trainLora(): Bool {
+        if (!verifyDataset()) { return false }
+        phase = 2
+        return true
+    }
+
+    mergeLora(): Bool {
+        if (phase != 2) { return false }
+        phase = 3
+        return true
+    }
+
+    exportGGUF(): Bool {
+        if (phase != 3) { return false }
+        phase = 4
+        return true
+    }
+
+    currentPhase(): Int { return phase }
+
+    sizeSeen(): Int { return dsSize }
+}

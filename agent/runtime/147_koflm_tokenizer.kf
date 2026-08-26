@@ -1,0 +1,30 @@
+// KofTokenizer layer: tokens especiais sobre vocab TinyLlama (sem retreino)
+
+record SpecialToken(String name, Int id)
+
+fn kofSpecialTokens(): List<SpecialToken> {
+    var l = listOf<SpecialToken>()
+    l.add(SpecialToken("<kof>", 32000))
+    l.add(SpecialToken("</kof>", 32001))
+    l.add(SpecialToken("<tool>", 32002))
+    l.add(SpecialToken("<diag>", 32003))
+    l.add(SpecialToken("<workspace>", 32004))
+    l.add(SpecialToken("<code>", 32005))
+    l.add(SpecialToken("<spec>", 32006))
+    l.add(SpecialToken("<benchmark>", 32007))
+    l.add(SpecialToken("<bug>", 32008))
+    l.add(SpecialToken("<fix>", 32009))
+    return l
+}
+
+fn kofTokenLookup(String name): Int {
+    var toks = kofSpecialTokens()
+    var i = 0
+    while (i < toks.size()) {
+        if (toks.get(i).name == name) {
+            return toks.get(i).id
+        }
+        i = i + 1
+    }
+    return 0 - 1
+}
