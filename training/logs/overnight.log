@@ -1,0 +1,32 @@
+++ date
++ echo '[KofLM] qua 26 ago 2026 00:36:06 -03 instalando stack ML...'
+[KofLM] qua 26 ago 2026 00:36:06 -03 instalando stack ML...
++ pip install -q -r requirements-ml.txt
+training/RUN_OVERNIGHT.sh: linha 8: pip: comando não encontrado
+++ date
++ echo '[KofLM] qua 26 ago 2026 00:36:06 -03 iniciando QLoRA...'
+[KofLM] qua 26 ago 2026 00:36:06 -03 iniciando QLoRA...
++ python3 training/scripts/train_koflm.py
+Traceback (most recent call last):
+  File "/home/luna/kof-agent/training/scripts/train_koflm.py", line 4, in <module>
+    import torch
+ModuleNotFoundError: No module named 'torch'
+++ date
++ echo '[KofLM] qua 26 ago 2026 00:36:06 -03 FIM'
+[KofLM] qua 26 ago 2026 00:36:06 -03 FIM
+++ date
++ echo '[KofLM] qua 26 ago 2026 00:36:28 -03 instalando stack ML...'
+[KofLM] qua 26 ago 2026 00:36:28 -03 instalando stack ML...
++ pip install -q -r requirements-ml.txt
+training/RUN_OVERNIGHT.sh: linha 8: pip: comando não encontrado
+++ date
++ echo '[KofLM] qua 26 ago 2026 00:36:28 -03 iniciando QLoRA...'
+[KofLM] qua 26 ago 2026 00:36:28 -03 iniciando QLoRA...
++ python3 training/scripts/train_koflm.py
+Traceback (most recent call last):
+  File "/home/luna/kof-agent/training/scripts/train_koflm.py", line 4, in <module>
+    import torch
+ModuleNotFoundError: No module named 'torch'
+++ date
++ echo '[KofLM] qua 26 ago 2026 00:36:28 -03 FIM'
+[KofLM] qua 26 ago 2026 00:36:28 -03 FIM

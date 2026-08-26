@@ -1,0 +1,6 @@
+test "embedding lookup returns row" {
+    var t = tensorNew(4, 2)
+    tensorSet(t, 2, 0, 77)
+    var e = embeddingLookup(t, 2)
+    assert(tensorGet(e, 0, 0) == 77)
+}

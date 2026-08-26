@@ -1,0 +1,23 @@
+// M31.2/.3: Q8_0 decode + Embedding Executor
+
+fn q80DecodeBlock(Int[] raw, Int off): Int {
+    var scale = raw[off]
+    var acc = 0
+    var i = 1
+    while (i < 5) {
+        acc = acc + raw[off + i] * scale / 127
+        i = i + 1
+    }
+    return acc
+}
+
+embeddingLookup(TensorR table, Int tokenId): TensorR {
+    var row = tokenId % table.rows
+    var out = tensorNew(1, table.cols)
+    var c2 = 0
+    while (c2 < table.cols) {
+        tensorSet(out, 0, c2, tensorGet(table, row, c2))
+        c2 = c2 + 1
+    }
+    return out
+}

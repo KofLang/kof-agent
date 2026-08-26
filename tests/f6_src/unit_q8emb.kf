@@ -1,0 +1,14 @@
+test "q8_0 decode scales weights" {
+    var raw = new Int[5]
+    raw[0] = 254
+    raw[1] = 100
+    var v = q80DecodeBlock(raw, 0)
+    assert(v == 200)
+}
+
+test "embedding lookup returns row" {
+    var t = tensorNew(4, 2)
+    tensorSet(t, 2, 0, 77)
+    var e = embeddingLookup(t, 2)
+    assert(tensorGet(e, 0, 0) == 77)
+}
