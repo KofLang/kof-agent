@@ -21,6 +21,7 @@
 | KofLM inferência real | ✅ **KofLM** Q4 local: 37 tok/s decode (CPU) · llama.cpp CPU+Vulkan buildado · RX 6600 aguarda ICD RADV |
 | N19-SUSPECT | 🔴 novo: crash combinando 152+144 (~1MB asm); engine aguarda workaround |
 | GraphExecutor | ✅ decoder plan N-layers/forward-all/steps (2/2) |
+| M31 kernels | ✅ AttentionExecutor causal + SwiGLU real (2/2) — faltam: tokenizer engine, QuantDecoder F16/K, GL/VK compute shaders |
 | Backend abstraction | ✅ CPUBackend real + auto-select vulkan→opengl→cpu + koflm.toml parser (3/3) |
 | Rebranding | ✅ models/KofLM/{metadata.json,config.toml} — origem checkpoint só em metadata |
 | Distribuição modelo | ✅ HF Hub primário + GH Releases mirror (scripts/model_{publish,download}.sh) |
