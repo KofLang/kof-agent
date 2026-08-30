@@ -21,7 +21,8 @@
 | KofLM inferência real | ✅ **KofLM** Q4 local: 37 tok/s decode (CPU) · llama.cpp CPU+Vulkan buildado · RX 6600 aguarda ICD RADV |
 | N19-SUSPECT | 🔴 novo: crash combinando 152+144 (~1MB asm); engine aguarda workaround |
 | GraphExecutor | ✅ decoder plan N-layers/forward-all/steps (2/2) |
-| M31 kernels | ✅ Attention+SwiGLU+LMHead+QuantDecoder Q4_0/Q8_0/F16 (12/12) · TokenizerEngine (3/3, N20 contornado) · GraphExecutor execução real (attention+residual+SwiGLU+rmsnorm, tensorAdd) · **GL/VK compute shaders ✅ 7 módulos SPIR-V** (matmul/softmax_causal/rmsnorm/rope/embedding/swiglu/attention_scores em gpu/shaders/, compilados glslangValidator, validados via 159_shader_hal.kf 6/6 jvm+native + gpu/harness.py) — falta: FFI Vulkan no runtime (M32) |
+| M31 kernels | ✅ Attention+SwiGLU+LMHead+QuantDecoder Q4_0/Q8_0/F16 (12/12) · TokenizerEngine (3/3, N20 contornado) · GraphExecutor execução real (attention+residual+SwiGLU+rmsnorm, tensorAdd) · **GL/VK compute shaders ✅ 7 módulos SPIR-V** (matmul/softmax_causal/rmsnorm/rope/embedding/swiglu/attention_scores em gpu/shaders/, compilados glslangValidator, validados via 159_shader_hal.kf 6/6 jvm+native + gpu/harness.py) |
+| M32 FFI Vulkan | ✅ M32.1: JvmVkRuntime (FFM, JDK 21+) no compilador `b657dd8` — cadeia instance→device→pipeline validada end-to-end (RADV RX550 + llvmpipe, rc=0), structs Vulkan conferidos via C puro dlsym (stage inline no ComputePipelineCreateInfo = causa do segfault inicial); dispatch degradado p/ CPU por bug do ambiente Mesa 25.2.8 (RADV crasha no vkCmdDispatch / lvp ignora escrita — reproduzido em C puro, não é o FFI). fila: M32.2 dispatch real (ambiente RADV estável) |
 | Backend abstraction | ✅ CPUBackend real + auto-select vulkan→opengl→cpu + koflm.toml parser (3/3) |
 | Rebranding | ✅ models/KofLM/{metadata.json,config.toml} — origem checkpoint só em metadata |
 | Distribuição modelo | ✅ HF Hub primário + GH Releases mirror (scripts/model_{publish,download}.sh) |
