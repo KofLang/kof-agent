@@ -2,7 +2,7 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-KOF="${KOF:-${KOF_BIN:-/home/luna/kof/Kof4j/bin/kof}}"
+. "$(dirname "$0")/kof-env.sh"
 [ -x "$KOF" ] || KOF="$(command -v kof)"
 
 PARTS=(

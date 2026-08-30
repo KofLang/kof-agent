@@ -3,7 +3,7 @@
 # CheckResult.toJson() do CompilerGateway). Uso: golden_compiler.sh [--bless]
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-KOF="${KOF:-/home/luna/kof/Kof4j/bin/kof}"
+. "$(dirname "$0")/kof-env.sh"
 DIR="$ROOT/tests/golden/compiler"
 MANIFEST="$DIR/MANIFEST"
 BLESS=0

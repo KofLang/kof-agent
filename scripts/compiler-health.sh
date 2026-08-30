@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -uo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-export KOF="${KOF:-/home/luna/kof/Kof4j/bin/kof}"
+. "$(dirname "$0")/kof-env.sh"
 TS=$(date -u +%Y%m%d-%H%M%S)
 OUT="$ROOT/docs/compiler/health-$TS.md"
 run() {
@@ -13,7 +13,7 @@ run() {
 {
   echo "# Compiler Health — $TS"
   echo ""
-  echo "Compiler: $($KOF version 2>/dev/null || echo '?') · HEAD: $(cd /home/luna/kof/Kof4j && git rev-parse --short HEAD 2>/dev/null)"
+  echo "Compiler: $($KOF version 2>/dev/null || echo '?') · HEAD: $(cd "$KOF4J_ROOT" && git rev-parse --short HEAD 2>/dev/null)"
   echo ""
   echo "| Runner | Resultado |"
   echo "|--------|-----------|"

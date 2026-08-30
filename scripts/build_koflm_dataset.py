@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
-"""KofLM v1 dataset builder — corpus real PT-BR de /home/luna/kof/Kof4j/training + specs/docs do agent."""
-import json, hashlib, pathlib, sys
+"""KofLM v1 dataset builder — corpus real PT-BR do checkout Kof4j (KOF4J_ROOT) + specs/docs do agent."""
+import json, hashlib, os, pathlib, sys
 
-ROOT = pathlib.Path("/home/luna/kof-agent")
+ROOT = pathlib.Path(os.environ.get("KOF_AGENT_ROOT", pathlib.Path(__file__).resolve().parents[1]))
+KOF4J = pathlib.Path(os.environ.get("KOF4J_ROOT", "/home/luna/kof/Kof4j"))
 SOURCES = [
-    pathlib.Path("/home/luna/kof/Kof4j/training"),
+    KOF4J / "training",
     ROOT / "specs",
     ROOT / "docs",
     ROOT / "tests",

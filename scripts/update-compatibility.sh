@@ -2,7 +2,7 @@
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
-HEAD=$(cd /home/luna/kof/Kof4j && git rev-parse --short HEAD 2>/dev/null || echo "unknown")
+HEAD=$(cd "$KOF4J_ROOT" && git rev-parse --short HEAD 2>/dev/null || echo "unknown")
 TS=$(date -u +%Y-%m-%dT%H:%M:%SZ)
 python3 - "$HEAD" "$TS" <<'PY'
 import sys, pathlib

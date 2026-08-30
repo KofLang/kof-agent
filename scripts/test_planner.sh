@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -uo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-export KOF="${KOF:-/home/luna/kof/Kof4j/bin/kof}"
+. "$(dirname "$0")/kof-env.sh"
 pass=0; fail=0
 while IFS= read -r u; do
   [ -z "$u" ] && continue

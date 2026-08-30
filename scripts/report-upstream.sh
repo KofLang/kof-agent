@@ -2,7 +2,8 @@
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 python3 - "$ROOT" <<'PY'
-import sys, pathlib, re
+import sys, os, re, subprocess
+import pathlib
 root = pathlib.Path(sys.argv[1])
 rep = root/"docs/compiler/reproductions"
 fixed, open_, inv = [], [], []
@@ -19,8 +20,9 @@ for f in sorted(rep.glob("*.md")):
     if st == "Fixed": fixed.append(row)
     elif st in ("Open","Partial","Regression"): open_.append(row+(st,))
     else: inv.append(row)
-out = root/f"docs/compiler/upstream-report-{pathlib.Path('/home/luna/kof/Kof4j').git_rev_parse if False else 'HEAD'}.md"
-head = "4954622"
+k4j = os.environ.get("KOF4J_ROOT", "/home/luna/kof/Kof4j")
+out = root/"docs/compiler/upstream-report-HEAD.md"
+head = subprocess.run(["git", "-C", k4j, "rev-parse", "--short", "HEAD"], capture_output=True, text=True).stdout.strip() or "unknown"
 lines = [f"# Relatório upstream — kof-agent → KofLang/compiler ({head})","",
          "Bugs descobertos pelo kof-agent durante M1–M12, com repros mínimos.",""]
 def table(rows):

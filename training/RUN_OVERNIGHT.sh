@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Treino overnight KofLM — log em training/logs/overnight.log
 set -x
-cd /home/luna/kof-agent
+cd "$(dirname "$0")/.."
 mkdir -p training/logs
 {
   echo "[KofLM] $(date) instalando stack ML..."

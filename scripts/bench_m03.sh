@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-export KOF="${KOF:-/home/luna/kof/Kof4j/bin/kof}"
+. "$(dirname "$0")/kof-env.sh"
 mkdir -p "$ROOT/benchmarks/results/native-M03" "$ROOT/benchmarks/baselines"
 for b in bench_ws_s bench_ws_m bench_ws_l; do
   "$ROOT/scripts/build.sh" "benchmarks/$b.kf" "build/bench/$b.kf" >/dev/null

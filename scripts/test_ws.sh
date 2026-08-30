@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -uo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-export KOF="${KOF:-/home/luna/kof/Kof4j/bin/kof}"
+. "$(dirname "$0")/kof-env.sh"
 TARGET="${WS_TARGET:-native}"
 mkdir -p "$ROOT/build/tests_ws"
 pass=0; fail=0; failed=""

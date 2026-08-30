@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-KOF="${KOF:-/home/luna/kof/Kof4j/bin/kof}"
+. "$(dirname "$0")/kof-env.sh"
 WORK="$ROOT/build/spike-q1"
 N_A="${N_A:-250}"
 rm -rf "$WORK"; mkdir -p "$WORK/single" "$WORK/medium" "$WORK/large"

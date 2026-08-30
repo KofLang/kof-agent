@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -uo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-export KOF="${KOF:-/home/luna/kof/Kof4j/bin/kof}"
+. "$(dirname "$0")/kof-env.sh"
 F="$1"; [ -f "$F" ] || { echo "{\"error\":\"arquivo ausente\"}"; exit 2; }
 N_OUT=$("$KOF" run "$F" --target native 2>/dev/null); N_RC=$?
 J_OUT=$("$KOF" run "$F" --target jvm 2>/dev/null); J_RC=$?
