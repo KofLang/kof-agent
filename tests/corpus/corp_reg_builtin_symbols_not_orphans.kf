@@ -1,3 +1,5 @@
+CROOT(): String { return "corpus" }
+
 test "symbol registry built from frontmatter" {
     var ix = corpusLoad(freshBus(), CROOT(), FixedClock(1))
     var docs = corpusSymbolDocs(ix, "spawn")

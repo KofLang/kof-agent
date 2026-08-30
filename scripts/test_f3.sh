@@ -4,10 +4,11 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 . "$(dirname "$0")/kof-env.sh"
 pass=0; fail=0; failed=""
 while IFS= read -r u; do
+  case "$u" in *.kf) tu="$u";; *) tu="$u.kf";; esac
   [ -z "$u" ] && continue
   rm -rf "$ROOT/build/mem_snap" "$ROOT/build/pb_corpus"
   "$ROOT/scripts/build.sh" "tests/f3/$u" "build/tests_f3/$u" >/dev/null 2>&1
-  if (cd "$ROOT" && "$KOF" test "build/tests_f3/$u.kf" --target native >/dev/null 2>&1); then
+  if (cd "$ROOT" && "$KOF" test "build/tests_f3/$tu" --target native >/dev/null 2>&1); then
     pass=$((pass+1))
   else
     fail=$((fail+1)); failed="$failed $u"

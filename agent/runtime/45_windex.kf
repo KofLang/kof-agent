@@ -509,16 +509,13 @@ wsReadVersioned(String path, String wantMagic): String {
     if (nl < 0) {
         return ""
     }
-    var head = txt.substring(0, nl).trim()
+    var head = txt.substring(0, nl)
     var payload = txt.substring(nl + 1, txt.length)
     var hp = splitStr(head, "|")
     if (hp.size != 3) {
         return ""
     }
     if (hp.get(0) != wantMagic) {
-        return ""
-    }
-    if (parseIntStr(hp.get(1)) != WS_IDX_VERSION()) {
         return ""
     }
     var crc = parseIntStr(hp.get(2))

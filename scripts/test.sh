@@ -2,6 +2,7 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+. "$(dirname "$0")/kof-env.sh"
 TARGET="${TARGET:-native}"
 
 mkdir -p "$ROOT/build/tests"
@@ -54,7 +55,13 @@ TARGET="$SAVED_TARGET"
 
 STRESS=(stress_events_10k stress_tasks_100k)
 for s in "${STRESS[@]}"; do
-  run_unit "$s" "run"
+  "$ROOT/scripts/build.sh" "tests/$s.kf" "build/tests_iso/$s/main.kf" --native-clock >/dev/null 2>&1
+  echo "== test $s (run)"
+  if "$KOF_TEST_BIN" run "build/tests_iso/$s/main.kf" --target "$TARGET"; then
+    PASS=$((PASS+1))
+  else
+    FAIL=$((FAIL+1)); FAILED_NAMES+=("$s")
+  fi
 done
 
 echo ""

@@ -148,6 +148,10 @@ sortInts(Int[] a, Int n) {
     }
 }
 
+retLower(String s): String {
+    return s.toLowerCase()
+}
+
 mkFile(String path, String content): Bool {
     var parent = ""
     var parts = splitStr(path, "/")

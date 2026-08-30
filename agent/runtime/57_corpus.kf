@@ -248,8 +248,9 @@ corpusByCategory(CorpusIndex ix, String cat): List<CorpusDoc> {
 
 corpusSearchKeyword(CorpusIndex ix, String kw): List<CorpusDoc> {
     var out = listOf<CorpusDoc>()
+    var kwl = retLower(kw)
     for (var d in ix.docs) {
-        if (d.meta.keywordsCsv.contains(kw) || d.meta.title.contains(kw)) {
+        if (retLower(d.meta.keywordsCsv).contains(kwl) || retLower(d.meta.title).contains(kwl)) {
             out.add(d)
         }
     }

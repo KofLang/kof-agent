@@ -5,10 +5,11 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 mkdir -p "$ROOT/build/tests_ret"
 pass=0; fail=0; failed=""
 while IFS= read -r u; do
+  case "$u" in *.kf) tu="$u";; *) tu="$u.kf";; esac
   [ -z "$u" ] && continue
   rm -rf "$ROOT/build/ret_corpus" "$ROOT/build/ret_cache"
   "$ROOT/scripts/build.sh" "tests/ret/$u" "build/tests_ret/$u" >/dev/null 2>&1
-  if (cd "$ROOT" && "$KOF" test "build/tests_ret/$u.kf" --target native >/dev/null 2>&1); then
+  if (cd "$ROOT" && "$KOF" test "build/tests_ret/$tu" --target native >/dev/null 2>&1); then
     pass=$((pass+1))
   else
     fail=$((fail+1)); failed="$failed $u"

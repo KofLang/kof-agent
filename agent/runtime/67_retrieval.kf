@@ -28,10 +28,6 @@ retTokenize(String s): List<String> {
     return out
 }
 
-retLower(String s): String {
-    return s.toLowerCase()
-}
-
 embedDocumentTokens(String title, String body): List<String> {
     var toks = retTokenize(title)
     for (var t in retTokenize(body)) {
