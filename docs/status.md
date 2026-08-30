@@ -8,7 +8,7 @@
 
 | Item | Estado |
 |------|--------|
-| Compilador | **HEAD origin/main @ cb4aede (v0.1.1-alpha — Map/Set nativo COL001 fechado, switch-enum, spawn/await fixes)** · sweep: N16✅ N17✅ N13✅ fixed; N11/N12/J4/N10 abertos · kof 0.1.0-alpha-report |
+| Compilador | **baseline bdebf75 (kof 0.2.3-beta — fix N21 aritmética Int 32-bit)** · sweeps: 25d017a/9462a48/8dc4644/bdebf75 em docs/compiler/reports/ · N16/N17/N13/N12/N3/N6/N7/N8/N1/J4 ✅ fixed · N9 residual (abbcc) · N11/N18/N19/N10 abertos · N22-SUSPECT novo (SIGSEGV TU c/ event+scheduler) |
 | FASE 1 (M0–M9) | ✅ código completo · verificação parcial (N10-residual) |
 | FASE 2 (M10–M12) | 🟡 M10 native **9/9** ✅ (Q8 destravado c/ fix N17) · JVM segue J4-residual |
 | FASE 3 (M13–M15) | 🟡 código pronto · N10-progressivo persiste (1.5MB asm → 139) |
@@ -28,20 +28,22 @@
 | Treino QLoRA | ✅ pipeline pronta (training/scripts/train_koflm.py, resume-safe) — aguarda execução longa |
 
 **Próxima fila:**
-1. Rodar `train_koflm.py` (dias) → merge → KofLM-Q4.gguf oficial
-2. M31 continuação: AttentionExecutor/SwiGLU reais no GraphExecutor + TokenizerEngine + QuantDecoder
-3. Reportar **N18 CONFIRMED + N19-SUSPECT** upstream (repros em regressions/)
-4. Instalar mesa-vulkan-drivers → benchmark RX 6600
+1. Investigar/limpar **N22-SUSPECT** (SIGSEGV TU 484KB c/ PARTs event; repro em regressions/N22-SUSPECT) — stress 10k/100k dependem disso
+2. Reportar **N21 (fixed em bdebf75) + N22-SUSPECT + N18/N19** upstream (repros em regressions/)
+3. Rodar `train_koflm.py` (dias) → merge → KofLM-Q4.gguf oficial
+4. M31 continuação: kernels completos no GraphExecutor + QuantDecoder F16/K
+5. Instalar mesa-vulkan-drivers → benchmark RX 6600
 | Bugs p/ upstream | **N18 CONFIRMED** (repro_minimal) + J4-residual + N10/N11/N12/N4/SC3/SC4 | (fechar 9 testes, bench real) (RoPE/KV Cache/Quantização/Sampler V3) · reportar J4+repro upstream |
 
 ## Bloqueios ativos
 
 | ID | Impacto |
 |----|---------|
-| **N10-progressivo** | TU > ~800KB asm → SIGSEGV; bloqueia FASE 3 (unit_f3, 9 testes) e suítes grandes |
-| ~~N17~~ | ✅ FIXED (416ff4b) — era cmp signed nativo c/ negativos de Int[]; Q8/M10 destravados. Kernels podem re-adotar negativos |
-| **J4-residual** | COMP002 ASM Frame.merge em purgeExpired; fix 416ff4b não cobriu nosso repro — REABRIR upstream |
-| ~~N16~~ | ✅ FIXED (416ff4b) — era SEM025 fwd-ref; workaround topológico dos PARTS agora é opcional (manter por higiene) |
+| **N22-SUSPECT** | novo (0.2.3-beta): TU c/ PARTs core+log+sched+event → SIGSEGV nativo consistente mesmo com main() trivial (484KB); stress events/tasks 139/136; repro em regressions/N22-SUSPECT |
+| **J4-residual** | COMP002 ASM Frame.merge — repro_full exit 0 no sweep bdebf75, mas fix upstream 416ff4b não cobriu o caso original; manter monitoramento |
+| ~~N10-progressivo~~ | limiar empurrado pelo 0.2.3: f3 9/9 (1.5MB) passa; **N22 aparenta ser o mesmo fenômeno com gatilho por conteúdo, não tamanho** |
+| ~~N21~~ | ✅ FIXED upstream (bdebf75) — aritmética Int trunca 32 bits; wsHash/roundtrip windex validados |
+| ~~N16/N17~~ | ✅ FIXED |
 
 Histórico: **N10-progressivo**: translation units > ~800KB asm crasham (segfault/bounds
 espúrio). Cada parte nova empurra módulos antes verdes para o limite.
