@@ -1,0 +1,25 @@
+#version 450
+// M31 compute HAL — Embedding lookup: copia a linha tokenId da tabela p/ out.
+// Uma invocation por coluna (local_size 64).
+
+layout(local_size_x = 64, local_size_y = 1, local_size_z = 1) in;
+
+layout(set = 0, binding = 0) readonly buffer BufTable { int tbl[]; }; // V×C
+layout(set = 0, binding = 1) writeonly buffer BufOut   { int emb[]; }; // 1×C
+
+layout(push_constant) uniform Push {
+    int V;        // linhas da tabela (vocab)
+    int C;        // colunas
+    int tokenId;  // linha a copiar
+    int pad;
+} pc;
+
+void main() {
+    uint j = gl_GlobalInvocationID.x;
+    if (int(j) >= pc.C) {
+        return;
+    }
+    int row = pc.tokenId % max(pc.V, 1);
+    if (row < 0) { row += pc.V; }
+    emb[int(j)] = tbl[row * pc.C + int(j)];
+}

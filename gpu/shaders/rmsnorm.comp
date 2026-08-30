@@ -1,0 +1,45 @@
+#version 450
+// M31 compute HAL — RMSNorm por linha: y[i] = x[i] * gamma[i] / rms
+// Ponto fixo de milésimos (int). Uma invocation por linha (local_size 64).
+// |x| ≤ 1e5 milésimos garantido pelo runtime → v²/1000 ≤ 1e7, soma cabe em int32
+// para C ≤ ~200 colunas (configuração atual dos kernels).
+
+layout(local_size_x = 64, local_size_y = 1, local_size_z = 1) in;
+
+layout(set = 0, binding = 0) readonly  buffer BufIn  { int x[]; };  // S×C
+layout(set = 0, binding = 1) readonly  buffer BufG   { int g[]; };  // C (gamma, milésimos)
+layout(set = 0, binding = 2) writeonly buffer BufOut { int y[]; };  // S×C
+
+layout(push_constant) uniform Push {
+    int S;        // linhas
+    int C;        // colunas
+    int row;      // linha a processar
+    int epsMilli; // epsilon em milésimos (ex.: 1)
+} pc;
+
+void main() {
+    uint rr = gl_GlobalInvocationID.x;
+    if (int(rr) != pc.row || int(rr) >= uint(pc.S)) {
+        return;
+    }
+    int ss = 0;
+    for (int j = 0; j < pc.C; j++) {
+        int v = x[pc.row * pc.C + j];
+        ss += (v * v) / 1000; // unidade 1e-6
+    }
+    int meanSq = ss / max(pc.C, 1);
+    // rms (milésimos) = sqrt(meanSq * 1000): Newton em inteiros
+    int target = meanSq * 1000;
+    int guess = max(target / 2, 1);
+    for (int it = 0; it < 24; it++) {
+        int next = (target / max(guess, 1) + guess) / 2;
+        if (next >= guess) { break; }
+        guess = next;
+    }
+    int rms = max(guess, pc.epsMilli);
+    for (int j = 0; j < pc.C; j++) {
+        int v = x[pc.row * pc.C + j];
+        int gamma = g[j];
+        y[pc.row * pc.C + j] = (v * 1000 / rms) * gamma / 1000;
+    }
+}

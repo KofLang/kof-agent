@@ -1,0 +1,65 @@
+#version 450
+// M31 compute HAL — RoPE (rotary position embedding) para Q/K.
+// Pares (2i, 2i+1) rotacionados por θ = pos * freq[i/2].
+// Ângulo em milésimos de radiano; cos/sin por série de Taylor.
+// Estratégia de precisão: t = θ/1000 (radianos, inteiro truncado) e
+// potências via divisões sucessivas — erro < 1% para |θ| ≤ π*1000.
+// Uma invocation por linha (local_size 64).
+
+layout(local_size_x = 64, local_size_y = 1, local_size_z = 1) in;
+
+layout(set = 0, binding = 0) buffer BufQK { int qk[]; };              // S×C (in-place)
+layout(set = 0, binding = 1) readonly buffer BufFreq { int freq[]; }; // C/2 (mils de rad/pos)
+
+layout(push_constant) uniform Push {
+    int S;        // linhas (posições)
+    int C;        // colunas (par)
+    int row;      // posição a rotacionar
+    int maxAngle; // clamp do ângulo (3141 = π em milésimos)
+} pc;
+
+// x^n / 1000^(n-1) — potência em "escala milésimos" com redução por divisão
+int powScaled(int x, int n) {
+    int r = 1000; // 1.0 em milésimos
+    for (int k = 0; k < n; k++) {
+        r = (r * x) / 1000;
+    }
+    return r;
+}
+
+int sinMilli(int th) {
+    // sin(t) ≈ t - t³/3! + t⁵/5! - t⁷/7! (t em milésimos de rad)
+    int t = th;
+    int t3 = powScaled(t, 3) / 6;
+    int t5 = powScaled(t, 5) / 120;
+    int t7 = powScaled(t, 7) / 5040;
+    return t - t3 + t5 - t7;
+}
+
+int cosMilli(int th) {
+    // cos(t) ≈ 1 - t²/2! + t⁴/4! - t⁶/6!
+    int t = th;
+    int t2 = powScaled(t, 2) / 2;
+    int t4 = powScaled(t, 4) / 24;
+    int t6 = powScaled(t, 6) / 720;
+    return 1000 - t2 + t4 - t6;
+}
+
+void main() {
+    uint rr = gl_GlobalInvocationID.x;
+    if (int(rr) != pc.row || int(rr) >= uint(pc.S)) {
+        return;
+    }
+    int hh = pc.C / 2;
+    for (int i = 0; i < hh; i++) {
+        int th = pc.row * freq[i];
+        if (th > pc.maxAngle) { th = pc.maxAngle; }
+        if (th < -pc.maxAngle) { th = -pc.maxAngle; }
+        int cs = cosMilli(th);
+        int sn = sinMilli(th);
+        int a = qk[pc.row * pc.C + 2 * i];
+        int b = qk[pc.row * pc.C + 2 * i + 1];
+        qk[pc.row * pc.C + 2 * i]     = (a * cs - b * sn) / 1000;
+        qk[pc.row * pc.C + 2 * i + 1] = (a * sn + b * cs) / 1000;
+    }
+}

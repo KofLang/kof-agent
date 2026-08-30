@@ -1,0 +1,50 @@
+#version 450
+// M31 compute HAL — SwiGLU FFN: y[i] = silu(gate[i]) * up[i]
+// silu(x) = x * sigmoid(x); sigmoid por série/exponencial aproximada.
+// Uma invocation por coluna (local_size 64).
+
+layout(local_size_x = 64, local_size_y = 1, local_size_z = 1) in;
+
+layout(set = 0, binding = 0) readonly buffer BufGate { int gate[]; }; // C
+layout(set = 0, binding = 1) readonly buffer BufUp   { int up[]; };   // C
+layout(set = 0, binding = 2) writeonly buffer BufY   { int y[]; };    // C
+
+layout(push_constant) uniform Push {
+    int C;
+    int pad0;
+    int pad1;
+    int pad2;
+} pc;
+
+// sigmoid(x) = 1/(1+e^-x), x em milésimos; saída em milésimos.
+// exp(-|z|) via série — apenas precisa ser razoável para |x| ≤ 7000
+int expApprox(int zm) {
+    // exp(zm/1000) ≈ 1 + zm/1000 + (zm/1000)²/2 ... com redução a cada termo
+    if (zm > 7000) { zm = 7000; }
+    if (zm < -7000) { zm = -7000; }
+    int term = 1000;
+    int sum = 1000;
+    for (int n = 1; n <= 8; n++) {
+        term = (term * zm) / (1000 * n);
+        sum += term;
+        if (term == 0) { break; }
+    }
+    return sum;
+}
+
+int sigmoidMilli(int x) {
+    int e = expApprox(-x);
+    // 1000 * 1000 / (1000 + e)
+    return (1000000) / (1000 + max(e, 1));
+}
+
+void main() {
+    uint j = gl_GlobalInvocationID.x;
+    if (int(j) >= pc.C) {
+        return;
+    }
+    int gv = gate[int(j)];
+    int uv = up[int(j)];
+    int sig = sigmoidMilli(gv);
+    y[int(j)] = (gv * sig / 1000) * uv / 1000;
+}

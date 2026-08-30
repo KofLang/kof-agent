@@ -1,0 +1,82 @@
+#version 450
+// M31 compute HAL — softmax por linha com máscara causal embutida:
+// posições j > i recebem -INF (máscara causal do decoder).
+// Ponto fixo: entrada em milésimos; softmax exp aproximado por série.
+// Dispatch: local_size 64×1, uma invocation por linha.
+
+layout(local_size_x = 64, local_size_y = 1, local_size_z = 1) in;
+
+layout(set = 0, binding = 0) readonly buffer BufIn { int x[]; };   // S×S
+layout(set = 0, binding = 1) writeonly buffer BufOut { int y[]; }; // S×S
+
+layout(push_constant) uniform Push {
+    int S;      // lado da matriz quadrada
+    int row;    // linha a processar
+    int scale;  // divisor pré-softmax (ex.: d_k)
+} pc;
+
+int termMul(int prev, int zm, int n) {
+    // prev * (zm/1000) / n — tudo em milésimos de saída
+    int q = (prev * zm) / 1000;
+    return q / n;
+}
+
+// exp aproximado para |z| <= ~10 em milésimos de entrada:
+// exp(z/1000) ≈ soma z^n/(n! 1000^n); saída em milésimos de e^z.
+int expApprox(int zm) {
+    // z em milésimos; clamp para evitar overflow
+    if (zm > 7000) { zm = 7000; }
+    if (zm < -7000) { zm = -7000; }
+    // e^z com z=z/1000 via 2^k * série: usa 8 termos
+    int term = 1000; // 1.0 em milésimos
+    int sum = 1000;
+    for (int n = 1; n <= 8; n++) {
+        // term_n = term_{n-1} * z / (n * 1000)
+        int t = termMul(term, zm, n);
+        if (t == 0 && zm != 0) { break; }
+        sum += t;
+    }
+    return sum;
+}
+
+void main() {
+    uint r = gl_GlobalInvocationID.x;
+    if (int(r) != pc.row || int(r) >= pc.S) {
+        return;
+    }
+    // max com máscara causal
+    int maxv = -2147483647;
+    for (int j = 0; j < pc.S; j++) {
+        int v;
+        if (j > pc.row) {
+            v = -2147483647; // -inf
+        } else {
+            v = x[pc.row * pc.S + j];
+        }
+        if (v > maxv) { maxv = v; }
+    }
+    int denom = 0;
+    for (int j = 0; j < pc.S; j++) {
+        int v;
+        if (j > pc.row) {
+            v = -2147483647;
+        } else {
+            v = x[pc.row * pc.S + j];
+        }
+        int e = expApprox(v - maxv);
+        denom += e;
+    }
+    if (denom <= 0) { denom = 1; }
+    for (int j = 0; j < pc.S; j++) {
+        int v;
+        if (j > pc.row) {
+            v = -2147483647;
+        } else {
+            v = x[pc.row * pc.S + j];
+        }
+        int e = expApprox(v - maxv);
+        // saída normalizada em milésimos: e / denom * 1000
+        // (evita estourar: divide primeiro, mantém precisão razoável)
+        y[pc.row * pc.S + j] = (e / denom) * 1000 + (e % denom) * 1000 / denom;
+    }
+}

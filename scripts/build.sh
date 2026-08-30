@@ -35,6 +35,7 @@ PARTS=(
   agent/runtime/90_runtime.kf
   agent/runtime/153_graph_executor.kf
   agent/runtime/158_f16_decoder.kf
+  agent/runtime/159_shader_hal.kf
   agent/runtime/154_attention_swiglu.kf
   agent/runtime/156_lmhead_quant.kf
   agent/runtime/157_quant8_embed.kf

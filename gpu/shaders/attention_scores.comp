@@ -1,0 +1,35 @@
+#version 450
+// M31 compute HAL — Attention: scores QK^T escalado + máscara causal.
+// s[i][j] = Σ_d q[i][d]*k[j][d] * scale, com -INF p/ j > i (causal).
+// scale em 1/1000 (runtime passa scale=1000/sqrt(d) aproximado).
+// Dispatch 2D: x→j (coluna de S), y→i (linha).
+
+layout(local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
+
+layout(set = 0, binding = 0) readonly buffer BufQ { int q[]; }; // S×D
+layout(set = 0, binding = 1) readonly buffer BufK { int k[]; }; // S×D
+layout(set = 0, binding = 2) writeonly buffer BufS { int s[]; }; // S×S
+
+layout(push_constant) uniform Push {
+    int S;     // seq len
+    int D;     // head dim
+    int scale; // numerador: s = dot * scale / 1000
+    int causal; // 1 = aplicar máscara causal
+} pc;
+
+void main() {
+    uint j = gl_GlobalInvocationID.x;
+    uint i2 = gl_GlobalInvocationID.y;
+    if (int(i2) >= pc.S || int(j) >= pc.S) {
+        return;
+    }
+    if (pc.causal == 1 && int(j) > int(i2)) {
+        s[int(i2) * pc.S + int(j)] = -2147483647;
+        return;
+    }
+    int acc = 0;
+    for (int d = 0; d < pc.D; d++) {
+        acc += q[int(i2) * pc.D + d] * k[int(j) * pc.D + d];
+    }
+    s[int(i2) * pc.S + int(j)] = acc * pc.scale / 1000;
+}

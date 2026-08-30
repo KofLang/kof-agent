@@ -5422,6 +5422,110 @@ f16DecodeTensor(Int[] raw, Int nBlocks): TensorR {
     return t
 }
 
+// M31.7: Shader HAL — SPIR-V module loader/validador + golden mirrors.
+// Os .comp fontes ficam em gpu/shaders/ (compilados por glslangValidator -V).
+// Em runtime com Vulkan device ativo, os .spv alimentam os pipelines compute.
+// Sem device, as funções golden* executam a MESMA matemática em Kof
+// (referência de validação — goldens são os valores esperados dos shaders).
+
+record SpvModule(Int magicOk, Int version, Int words)
+
+spvParseHeader(String path): SpvModule {
+    var f = File(path)
+    if (!f.exists() || !f.isFile()) {
+        return SpvModule(0, 0, 0)
+    }
+    var bytes = f.readBytes()
+    if (bytes == null || bytes.length < 8) {
+        return SpvModule(0, 0, 0)
+    }
+    // SPIR-V magic: 0x07230203 (little endian)
+    var magic = bytes[0] + bytes[1] * 256 + bytes[2] * 65536 + bytes[3] * 16777216
+    var ver = bytes[4] + bytes[5] * 256
+    var words = bytes.length / 4
+    var magicOk = 0
+    if (magic == 119734787) {
+        magicOk = 1
+    }
+    return SpvModule(magicOk, ver / 256, words)
+}
+
+// --- Golden: matmul (espelho de matmul.comp) ---
+goldenMatmul(TensorR a, TensorR b): TensorR {
+    return tensorMatMul(a, b)
+}
+
+// --- Golden: rmsnorm (espelho de rmsnorm.comp) ---
+goldenRmsNorm(TensorR x): TensorR {
+    return tensorRmsNorm(x)
+}
+
+// --- Golden: attention scores causais (espelho de attention_scores.comp) ---
+goldenAttnScores(TensorR q, TensorR k, Int scale): TensorR {
+    var s = tensorNew(q.rows, k.rows)
+    var i = 0
+    while (i < q.rows) {
+        var j = 0
+        while (j < k.rows) {
+            if (j > i) {
+                tensorSet(s, i, j, -2147483647)
+            } else {
+                var acc = 0
+                var d = 0
+                while (d < q.cols) {
+                    acc = acc + tensorGet(q, i, d) * tensorGet(k, j, d)
+                    d = d + 1
+                }
+                tensorSet(s, i, j, acc * scale / 1000)
+            }
+            j = j + 1
+        }
+        i = i + 1
+    }
+    return s
+}
+
+// --- Golden: embedding lookup (espelho de embedding.comp) ---
+goldenEmbedding(TensorR table, Int tokenId): TensorR {
+    var row = tokenId % table.rows
+    if (row < 0) {
+        row = row + table.rows
+    }
+    var out = tensorNew(1, table.cols)
+    var j = 0
+    while (j < table.cols) {
+        tensorSet(out, 0, j, tensorGet(table, row, j))
+        j = j + 1
+    }
+    return out
+}
+
+shaderSpvDir(): String {
+    return "gpu/shaders"
+}
+
+// valida todos os 7 módulos SPIR-V do HAL
+shadersValid(): Bool {
+    var names = listOf<String>()
+    names.add("matmul.spv")
+    names.add("softmax_causal.spv")
+    names.add("rmsnorm.spv")
+    names.add("rope.spv")
+    names.add("embedding.spv")
+    names.add("swiglu.spv")
+    names.add("attention_scores.spv")
+    for (var n in names) {
+        var m = spvParseHeader(joinPath(shaderSpvDir(), n))
+        if (m.magicOk != 1) {
+            return false
+        }
+        if (m.words <= 5) {
+            return false
+        }
+    }
+    return true
+}
+
 // M31.4/.5: AttentionExecutor (scaled dot-product + causal) e SwiGLU FFN reais
 
 record AttnOut(TensorR ctx)

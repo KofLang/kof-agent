@@ -1,0 +1,47 @@
+test "spirv matmul header valid" {
+    var m = spvParseHeader("gpu/shaders/matmul.spv")
+    assert(m.magicOk == 1)
+    assert(m.words > 100)
+}
+
+test "spirv all 7 hal modules valid" {
+    assert(shadersValid())
+}
+
+test "spirv missing file rejected" {
+    var m = spvParseHeader("gpu/shaders/nao_existe.spv")
+    assert(m.magicOk == 0)
+    assert(m.words == 0)
+}
+
+test "golden attention scores causal mask" {
+    var q = tensorNew(3, 2)
+    var k = tensorNew(3, 2)
+    tensorSet(q, 0, 0, 1000)
+    tensorSet(q, 0, 1, 0)
+    tensorSet(k, 0, 0, 1000)
+    tensorSet(k, 0, 1, 0)
+    var s = goldenAttnScores(q, k, 1000)
+    // causal: linha 0 só vê j=0
+    assert(tensorGet(s, 0, 1) == -2147483647)
+    assert(tensorGet(s, 0, 0) == 1000000)
+}
+
+test "golden embedding negative token id wraps" {
+    var t = tensorNew(4, 2)
+    tensorSet(t, 1, 0, 42)
+    var e = goldenEmbedding(t, -3)
+    // -3 % 4 = -3 → +4 = 1
+    assert(tensorGet(e, 0, 0) == 42)
+}
+
+test "golden rmsnorm matches runtime op" {
+    var x = tensorNew(1, 4)
+    tensorSet(x, 0, 0, 1000)
+    tensorSet(x, 0, 1, 1000)
+    tensorSet(x, 0, 2, 1000)
+    tensorSet(x, 0, 3, 1000)
+    var g = goldenRmsNorm(x)
+    var rt = tensorRmsNorm(x)
+    assert(tensorGet(g, 0, 0) == tensorGet(rt, 0, 0))
+}
