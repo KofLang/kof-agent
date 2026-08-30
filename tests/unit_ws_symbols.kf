@@ -1,6 +1,11 @@
 WS_ROOT_B(): String { return "build/ws_b" }
 
 test "ws record symbol detected" {
+    // hermético: remove o ws_b inteiro (resíduo de outras suites)
+    var wsDel = Directory("build/ws_b")
+    if (wsDel.exists()) {
+        wsDel.delete()
+    }
     mkFile("build/ws_b/rec.kf", "record Point(Int x, Int y)\n")
     var idx = WorkspaceIndex(WS_ROOT_B(), freshBus(), FixedClock(77))
     var snap = idx.fullRescan()
@@ -10,6 +15,11 @@ test "ws record symbol detected" {
 }
 
 test "ws class and abstract class" {
+    // hermético
+    var wsDel2 = Directory("build/ws_b")
+    if (wsDel2.exists()) {
+        wsDel2.delete()
+    }
     mkFile("build/ws_b/cls.kf", "class Car {\n}\n\nabstract class Shape {\n}\n")
     var idx = WorkspaceIndex(WS_ROOT_B(), freshBus(), FixedClock(77))
     var snap = idx.fullRescan()

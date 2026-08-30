@@ -17,6 +17,14 @@ class FixedClock implements TimeSource {
     }
 }
 
+class RealTimeClock implements TimeSource {
+    constructor() {
+    }
+    nowMs(): Long {
+        return now()
+    }
+}
+
 parseIntStr(String s): Int {
     var n = 0
     var i = 0

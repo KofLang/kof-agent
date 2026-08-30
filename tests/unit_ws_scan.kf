@@ -12,6 +12,11 @@ test "ws empty workspace scans zero files" {
 }
 
 test "ws single file discovered with stable hash" {
+    // hermético: remove o ws_a inteiro (resíduo de outras suites)
+    var wsDel = Directory("build/ws_a")
+    if (wsDel.exists()) {
+        wsDel.delete()
+    }
     mkFile("build/ws_a/one.kf", "main() {\n}\n")
     var idx = WorkspaceIndex("build/ws_a", freshBus())
     var s1 = idx.fullRescan()

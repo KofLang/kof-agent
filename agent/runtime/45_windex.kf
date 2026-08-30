@@ -420,7 +420,7 @@ wsFullScan(EventBus bus, String root, TimeSource clock): WsSnap {
 }
 
 
-wsMetaLine(String snap): String {
+wsMetaLine(WsSnap snap): String {
     return snap.workspaceId + "\u0003" + wsSanitize(snap.root) + "\u0003" + wsSanitize(snap.gitBranch) + "\u0003" + wsSanitize(snap.gitCommit) + "\u0003" + snap.target + "\u0003" + snap.timestamp
 }
 
@@ -518,7 +518,7 @@ wsReadVersioned(String path, String wantMagic): String {
     if (hp.get(0) != wantMagic) {
         return ""
     }
-    var crc = parseIntStr(hp.get(2))
+    var crc = parseLongSafe(hp.get(2))
     if (wsHash(payload) != crc) {
         return ""
     }
@@ -677,7 +677,7 @@ class WorkspaceIndex {
     constructor(String r, EventBus b) {
         root = r
         bus = b
-        clock = FixedClock(0)
+        clock = RealTimeClock()
     }
 
     constructor(String r, EventBus b, TimeSource ts) {

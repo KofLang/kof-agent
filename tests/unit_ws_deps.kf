@@ -8,6 +8,10 @@ setupC(): WorkspaceIndex {
 }
 
 test "dep edge from import to declaring file" {
+    var wsDel1 = Directory("build/ws_c")
+    if (wsDel1.exists()) {
+        wsDel1.delete()
+    }
     mkFile("build/ws_c/app.kf", "import Shared\n\nmain() {\n}\n")
     var idx = setupC()
     assert(idx.depsFrom(joinPath(WS_ROOT_C(), "app.kf")).size == 1)
@@ -31,6 +35,15 @@ test "cycle detected between two files" {
 }
 
 test "acyclic graph has no cycle" {
+    // hermético: remove o par cíclico criado pelo teste anterior
+    var caDel = File(joinPath(WS_ROOT_C(), "ca.kf"))
+    if (caDel.exists()) {
+        caDel.delete()
+    }
+    var cbDel = File(joinPath(WS_ROOT_C(), "cb.kf"))
+    if (cbDel.exists()) {
+        cbDel.delete()
+    }
     var idx = setupC()
     assert(idx.cycles().size == 0)
 }

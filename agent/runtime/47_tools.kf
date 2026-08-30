@@ -101,7 +101,7 @@ class ToolEntry {
 class ToolRegistry {
     List<ToolEntry> entries = listOf<ToolEntry>()
 
-    register(ToolSpec s, ToolHandler h) {
+    register(ToolSpec s, DispatchHandler h) {
         entries.add(ToolEntry(s, h))
     }
 

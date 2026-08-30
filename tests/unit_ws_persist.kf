@@ -1,6 +1,10 @@
 WS_ROOT_D(): String { return "build/ws_d" }
 
 setupD(): WorkspaceIndex {
+    var wsDel = Directory("build/ws_d")
+    if (wsDel.exists()) {
+        wsDel.delete()
+    }
     mkFile("build/ws_d/base.kf", "record Base(Int v)\n\nmain() {\n}\n")
     var idx = WorkspaceIndex(WS_ROOT_D(), freshBus(), FixedClock(77))
     idx.fullRescan()

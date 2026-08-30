@@ -1,7 +1,2 @@
-class RealTimeClock implements TimeSource {
-    constructor() {
-    }
-    nowMs(): Long {
-        return now()
-    }
-}
+// RealTimeClock vive em 00_core.kf (disponível em todos os builds).
+// Este part existe só para o flag --native-clock não quebrar o build.sh.
