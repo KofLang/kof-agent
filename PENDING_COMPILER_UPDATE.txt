@@ -1,1 +1,3 @@
-7afdbb5 feat(security): AES-GCM nativo em asm — fecha SECN002 (G10 completo)
+Baseline atualizado: bdebf75 (kof 0.2.3-beta) — fix N21 aritmetica Int 32-bit.
+Sweep completo em docs/compiler/reports/sweep-bdebf75.md.
+Proximo upstream head a validar: ver scripts/sweep.sh.
