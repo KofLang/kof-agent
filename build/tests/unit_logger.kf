@@ -148,6 +148,10 @@ sortInts(Int[] a, Int n) {
     }
 }
 
+retLower(String s): String {
+    return s.toLowerCase()
+}
+
 mkFile(String path, String content): Bool {
     var parent = ""
     var parts = splitStr(path, "/")
@@ -197,90 +201,6 @@ freshBus(): EventBus {
     return EventBus()
 }
 
-record ToolRollback(String kind, String backupPath)
-
-
-class ToolResult {
-    String status = "ok"
-    String data = ""
-    Long durationMs = 0
-    ToolRollback rollback = ToolRollback("", "")
-    constructor() {
-    }
-}
-
-toolOk(String data): ToolResult {
-    var r = ToolResult()
-    r.status = "ok"
-    r.data = data
-    return r
-}
-
-toolErr(String code, String detail): ToolResult {
-    var r = ToolResult()
-    r.status = "error"
-    r.data = code + "|" + detail
-    return r
-}
-
-toolGap(String gapCode, String detail): ToolResult {
-    var r = ToolResult()
-    r.status = "gap"
-    r.data = gapCode + "|" + detail
-    return r
-}
-
-toolDenied(String perm): ToolResult {
-    var r = ToolResult()
-    r.status = "denied"
-    r.data = perm
-    return r
-}
-
-toolCancelled(): ToolResult {
-    var r = ToolResult()
-    r.status = "cancelled"
-    r.data = ""
-    return r
-}
-
-
-toolExec(ToolRegistry reg, ToolCtx ctx, ToolCall call): ToolResult {
-    if (ctx.cancelled) {
-        var cr = ToolResult()
-        cr.status = "cancelled"
-        return cr
-    }
-    var e = reg.findById(call.toolId)
-    if (e.spec.id == "") {
-        ctx.bus.publish("tool.failed", call.toolId)
-        var nf = ToolResult()
-        nf.status = "error"
-        nf.data = "TOOL-NOTFOUND|" + call.toolId
-        return nf
-    }
-    var miss = reg.entryMissingPerm(ctx, e)
-    if (miss != "") {
-        ctx.bus.publish("tool.denied", call.toolId + ":" + miss)
-        var dn = ToolResult()
-        dn.status = "denied"
-        dn.data = miss
-        return dn
-    }
-    ctx.bus.publish("tool.started", call.toolId + ":" + ctx.requestId)
-    ctx.met.incByName("tasks.launched")
-    var t0 = ctx.clock.nowMs()
-    var r = e.handler.call(ctx, call)
-    r.durationMs = ctx.clock.nowMs() - t0
-    if (r.status == "ok") {
-        ctx.met.incByName("tasks.completed")
-        ctx.bus.publish("tool.finished", call.toolId)
-    } else {
-        ctx.met.incByName("tasks.failed")
-        ctx.bus.publish("tool.failed", call.toolId)
-    }
-    return r
-}
 record LogLine(Long ts, String level, String req, String msg)
 
 LOG_TRACE(): Int { return 0 }
@@ -494,6 +414,57 @@ class Config {
             out = out + "{\"key\":\"" + escapeJson(e.key) + "\",\"value\":\"" + escapeJson(e.value) + "\"}"
         }
         out = out + "]}"
+        return out
+    }
+}
+
+class Metrics {
+    Long startedAt = 0
+    Int eventsPublished = 0
+    Int handlersCalled = 0
+    Int eventsFailed = 0
+    Int tasksLaunched = 0
+    Int tasksCompleted = 0
+    Int tasksFailed = 0
+    Int tasksCancelled = 0
+    Int tasksRejected = 0
+
+    constructor() {
+    }
+
+    start(TimeSource clock) {
+        startedAt = clock.nowMs()
+    }
+
+    incByName(String name) {
+        if (name == "events.published") {
+            eventsPublished = eventsPublished + 1
+        } else if (name == "events.handlers") {
+            handlersCalled = handlersCalled + 1
+        } else if (name == "events.failed") {
+            eventsFailed = eventsFailed + 1
+        } else if (name == "tasks.launched") {
+            tasksLaunched = tasksLaunched + 1
+        } else if (name == "tasks.completed") {
+            tasksCompleted = tasksCompleted + 1
+        } else if (name == "tasks.failed") {
+            tasksFailed = tasksFailed + 1
+        } else if (name == "tasks.cancelled") {
+            tasksCancelled = tasksCancelled + 1
+        } else if (name == "tasks.rejected") {
+            tasksRejected = tasksRejected + 1
+        }
+    }
+
+    uptimeMs(TimeSource clock): Long {
+        return clock.nowMs() - startedAt
+    }
+
+    snapshotJson(TimeSource clock): String {
+        var out = "{\"uptimeMs\":" + uptimeMs(clock)
+        out = out + ",\"events\":{\"published\":" + eventsPublished + ",\"handlersCalled\":" + handlersCalled + ",\"failed\":" + eventsFailed + "}"
+        out = out + ",\"tasks\":{\"launched\":" + tasksLaunched + ",\"completed\":" + tasksCompleted + ",\"failed\":" + tasksFailed + ",\"cancelled\":" + tasksCancelled + ",\"rejected\":" + tasksRejected + "}"
+        out = out + "}"
         return out
     }
 }
@@ -1669,16 +1640,13 @@ wsReadVersioned(String path, String wantMagic): String {
     if (nl < 0) {
         return ""
     }
-    var head = txt.substring(0, nl).trim()
+    var head = txt.substring(0, nl)
     var payload = txt.substring(nl + 1, txt.length)
     var hp = splitStr(head, "|")
     if (hp.size != 3) {
         return ""
     }
     if (hp.get(0) != wantMagic) {
-        return ""
-    }
-    if (parseIntStr(hp.get(1)) != WS_IDX_VERSION()) {
         return ""
     }
     var crc = parseIntStr(hp.get(2))
@@ -1999,6 +1967,41 @@ class WorkspaceIndex {
         out = out + "}"
         return out
     }
+}
+
+toolGap(String gapCode, String detail): ToolResult {
+    var r = ToolResult()
+    r.status = "gap"
+    r.data = gapCode + "|" + detail
+    return r
+}
+
+toolDenied(String perm): ToolResult {
+    var r = ToolResult()
+    r.status = "denied"
+    r.data = perm
+    return r
+}
+
+toolCancelled(): ToolResult {
+    var r = ToolResult()
+    r.status = "cancelled"
+    r.data = ""
+    return r
+}
+
+toolOk(String data): ToolResult {
+    var r = ToolResult()
+    r.status = "ok"
+    r.data = data
+    return r
+}
+
+toolErr(String code, String detail): ToolResult {
+    var r = ToolResult()
+    r.status = "error"
+    r.data = code + "|" + detail
+    return r
 }
 
 record ToolSpec(String id, String name, String category, String description, String inputSchema, String outputSchema, String permission)
@@ -2612,57 +2615,55 @@ defaultRegistry(): ToolRegistry {
 
 
 
-class Metrics {
-    Long startedAt = 0
-    Int eventsPublished = 0
-    Int handlersCalled = 0
-    Int eventsFailed = 0
-    Int tasksLaunched = 0
-    Int tasksCompleted = 0
-    Int tasksFailed = 0
-    Int tasksCancelled = 0
-    Int tasksRejected = 0
+record ToolRollback(String kind, String backupPath)
 
+
+class ToolResult {
+    String status = "ok"
+    String data = ""
+    Long durationMs = 0
+    ToolRollback rollback = ToolRollback("", "")
     constructor() {
-    }
-
-    start(TimeSource clock) {
-        startedAt = clock.nowMs()
-    }
-
-    incByName(String name) {
-        if (name == "events.published") {
-            eventsPublished = eventsPublished + 1
-        } else if (name == "events.handlers") {
-            handlersCalled = handlersCalled + 1
-        } else if (name == "events.failed") {
-            eventsFailed = eventsFailed + 1
-        } else if (name == "tasks.launched") {
-            tasksLaunched = tasksLaunched + 1
-        } else if (name == "tasks.completed") {
-            tasksCompleted = tasksCompleted + 1
-        } else if (name == "tasks.failed") {
-            tasksFailed = tasksFailed + 1
-        } else if (name == "tasks.cancelled") {
-            tasksCancelled = tasksCancelled + 1
-        } else if (name == "tasks.rejected") {
-            tasksRejected = tasksRejected + 1
-        }
-    }
-
-    uptimeMs(TimeSource clock): Long {
-        return clock.nowMs() - startedAt
-    }
-
-    snapshotJson(TimeSource clock): String {
-        var out = "{\"uptimeMs\":" + uptimeMs(clock)
-        out = out + ",\"events\":{\"published\":" + eventsPublished + ",\"handlersCalled\":" + handlersCalled + ",\"failed\":" + eventsFailed + "}"
-        out = out + ",\"tasks\":{\"launched\":" + tasksLaunched + ",\"completed\":" + tasksCompleted + ",\"failed\":" + tasksFailed + ",\"cancelled\":" + tasksCancelled + ",\"rejected\":" + tasksRejected + "}"
-        out = out + "}"
-        return out
     }
 }
 
+
+toolExec(ToolRegistry reg, ToolCtx ctx, ToolCall call): ToolResult {
+    if (ctx.cancelled) {
+        var cr = ToolResult()
+        cr.status = "cancelled"
+        return cr
+    }
+    var e = reg.findById(call.toolId)
+    if (e.spec.id == "") {
+        ctx.bus.publish("tool.failed", call.toolId)
+        var nf = ToolResult()
+        nf.status = "error"
+        nf.data = "TOOL-NOTFOUND|" + call.toolId
+        return nf
+    }
+    var miss = reg.entryMissingPerm(ctx, e)
+    if (miss != "") {
+        ctx.bus.publish("tool.denied", call.toolId + ":" + miss)
+        var dn = ToolResult()
+        dn.status = "denied"
+        dn.data = miss
+        return dn
+    }
+    ctx.bus.publish("tool.started", call.toolId + ":" + ctx.requestId)
+    ctx.met.incByName("tasks.launched")
+    var t0 = ctx.clock.nowMs()
+    var r = e.handler.call(ctx, call)
+    r.durationMs = ctx.clock.nowMs() - t0
+    if (r.status == "ok") {
+        ctx.met.incByName("tasks.completed")
+        ctx.bus.publish("tool.finished", call.toolId)
+    } else {
+        ctx.met.incByName("tasks.failed")
+        ctx.bus.publish("tool.failed", call.toolId)
+    }
+    return r
+}
 record CorpMeta(String id, String title, String module, String category, String version, String languageVersion, String author, String createdAt, String updatedAt, String keywordsCsv, String symbolsCsv, String dependenciesCsv, String status, String tagsCsv, String extraKey, String extraValue)
 class CorpusDoc {
     CorpMeta meta = CorpMeta("", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "")
@@ -2913,8 +2914,9 @@ corpusByCategory(CorpusIndex ix, String cat): List<CorpusDoc> {
 
 corpusSearchKeyword(CorpusIndex ix, String kw): List<CorpusDoc> {
     var out = listOf<CorpusDoc>()
+    var kwl = retLower(kw)
     for (var d in ix.docs) {
-        if (d.meta.keywordsCsv.contains(kw) || d.meta.title.contains(kw)) {
+        if (retLower(d.meta.keywordsCsv).contains(kwl) || retLower(d.meta.title).contains(kwl)) {
             out.add(d)
         }
     }
@@ -2999,10 +3001,6 @@ retTokenize(String s): List<String> {
         }
     }
     return out
-}
-
-retLower(String s): String {
-    return s.toLowerCase()
 }
 
 embedDocumentTokens(String title, String body): List<String> {
@@ -3233,6 +3231,315 @@ retCacheLoad(EventBus bus, String dir, String query): String {
         bus.publish("cache.hit", query)
     }
     return body
+}
+
+class MemEntry {
+    String key = ""
+    String kind = ""
+    String value = ""
+    Int checksum = 0
+    Long createdAt = 0
+    Long expiresAt = 0
+    constructor(String k, String kd, String v, Int ck, Long ca, Long ea) {
+        key = k
+        kind = kd
+        value = v
+        checksum = ck
+        createdAt = ca
+        expiresAt = ea
+    }
+}
+
+class MemoryLayer {
+    List<MemEntry> entries = listOf<MemEntry>()
+    TimeSource clock
+    String storeDir = "build/memory"
+    constructor(TimeSource ts) {
+        clock = ts
+    }
+
+    put(String key, String kind, String value, Long ttlMs) {
+        remove(key)
+        var exp: Long = 0
+        if (ttlMs > 0) {
+            exp = clock.nowMs() + ttlMs
+        }
+        entries.add(MemEntry(key, kind, value, wsHash(value), clock.nowMs(), exp))
+    }
+
+    get(String key): String {
+        var now = clock.nowMs()
+        var i = 0
+        while (i < entries.size) {
+            var e = entries.get(i)
+            if (e.key == key) {
+                if (e.expiresAt > 0 && e.expiresAt < now) {
+                    entries.remove(i)
+                    return ""
+                }
+                return e.value
+            }
+            i = i + 1
+        }
+        return ""
+    }
+
+    remove(String key): Bool {
+        var i = 0
+        while (i < entries.size) {
+            if (entries.get(i).key == key) {
+                entries.remove(i)
+                return true
+            }
+            i = i + 1
+        }
+        return false
+    }
+
+    purgeExpired(): Int {
+        var now = clock.nowMs()
+        var removed = 0
+        var i = 0
+        while (i < entries.size) {
+            var e = entries.get(i)
+            var expired = e.expiresAt > 0 && e.expiresAt < now
+            if (expired) {
+                entries.remove(i)
+                removed = removed + 1
+            } else {
+                i = i + 1
+            }
+        }
+        return removed
+    }
+
+    byKind(String kind): List<MemEntry> {
+        var out = listOf<MemEntry>()
+        for (var e in entries) {
+            if (e.kind == kind) {
+                out.add(e)
+            }
+        }
+        return out
+    }
+
+    snapshotTo(String dirPath): Bool {
+        var d = Directory(dirPath)
+        if (!d.exists()) {
+            d.createDirectories()
+        }
+        var secs = listOf<String>()
+        for (var e in entries) {
+            secs.add(e.key + "\u0003" + e.kind + "\u0003" + escapeJson(e.value) + "\u0003" + e.createdAt + "\u0003" + e.expiresAt)
+        }
+        return wsWriteVersioned(joinPath(dirPath, "memory.snap"), "MEMSNP", 1, wsJoin(secs, "\u0002"))
+    }
+
+    restoreFrom(String dirPath): Bool {
+        var body = wsReadVersioned(joinPath(dirPath, "memory.snap"), "MEMSNP")
+        if (body == "") {
+            return false
+        }
+        entries = listOf<MemEntry>()
+        for (var entry in splitStr(body, "\u0002")) {
+            var f = splitStr(entry, "\u0003")
+            if (f.size == 5) {
+                entries.add(MemEntry(f.get(0), f.get(1), f.get(2), wsHash(f.get(2)), parseLongSafe(f.get(3)), parseLongSafe(f.get(4))))
+            }
+        }
+        return true
+    }
+
+    statsJson(): String {
+        var ep = 0
+        var sem = 0
+        var ses = 0
+        for (var e in entries) {
+            if (e.kind == "episodic") {
+                ep = ep + 1
+            } else if (e.kind == "semantic") {
+                sem = sem + 1
+            } else {
+                ses = ses + 1
+            }
+        }
+        return "{\"episodic\":" + ep + ",\"semantic\":" + sem + ",\"session\":" + ses + ",\"total\":" + entries.size + "}"
+    }
+}
+
+memSearch(MemoryLayer m, String needle): List<MemEntry> {
+    var out = listOf<MemEntry>()
+    for (var e in m.entries) {
+        if (e.value.contains(needle) || e.key.contains(needle)) {
+            out.add(e)
+        }
+    }
+    return out
+}
+
+interface EmbeddingsProvider {
+    embed(text: String): List<Int>
+}
+
+record TurnRec(Int seq, String role, String content, Long ts)
+
+class ConversationEngine {
+    List<TurnRec> turns = listOf<TurnRec>()
+    Int nextSeq = 1
+    TimeSource clock
+    Int windowSize = 20
+    constructor(TimeSource ts) {
+        clock = ts
+    }
+
+    add(String role, String content) {
+        turns.add(TurnRec(nextSeq, role, content, clock.nowMs()))
+        nextSeq = nextSeq + 1
+        compact()
+    }
+
+    compact() {
+        while (turns.size > windowSize) {
+            turns.remove(0)
+        }
+    }
+
+    summarizeOlder(Int keepRecent): String {
+        var out = ""
+        var start = 0
+        var cut = turns.size - keepRecent
+        while (start < cut) {
+            out = out + "[" + turns.get(start).role + "] " + turns.get(start).content + "\n"
+            start = start + 1
+        }
+        return out
+    }
+
+    lastUser(): String {
+        var i = turns.size - 1
+        while (i >= 0) {
+            if (turns.get(i).role == "user") {
+                return turns.get(i).content
+            }
+            i = i - 1
+        }
+        return ""
+    }
+
+    contextWindow(Int n): List<TurnRec> {
+        var out = listOf<TurnRec>()
+        var start = turns.size - n
+        if (start < 0) {
+            start = 0
+        }
+        var i = start
+        while (i < turns.size) {
+            out.add(turns.get(i))
+            i = i + 1
+        }
+        return out
+    }
+
+    cite(Int seq): String {
+        for (var t in turns) {
+            if (t.seq == seq) {
+                return t.role + ": " + t.content
+            }
+        }
+        return ""
+    }
+
+    statsJson(): String {
+        return "{\"turns\":" + turns.size + ",\"window\":" + windowSize + "}"
+    }
+}
+
+class PromptBuilder {
+    List<String> parts = listOf<String>()
+    constructor() {
+    }
+    addSection(String title, String body) {
+        parts.add("## " + title + "\n" + body)
+    }
+    build(): String {
+        return wsJoin(parts, "\n\n")
+    }
+}
+
+promptBuild(CorpusIndex ix, ConversationEngine conv, String query): String {
+    var pb = PromptBuilder()
+    pb.addSection("Query", query)
+    pb.addSection("Historico", conv.summarizeOlder(10))
+    var hits = corpusSearchKeyword(ix, retLower(query))
+    for (var h in hits) {
+        pb.addSection(h.meta.id, h.body)
+    }
+    return pb.build()
+}
+
+record CtxChunk(String source, String id, String title, String body, Int score)
+
+orchFuse(CorpusIndex ix, MemoryLayer mem, String query, Int topK, Int maxChars): String {
+    var ctxJson = retBuildContext(ix, query, topK, maxChars, listOf<String>())
+    var chunks = listOf<CtxChunk>()
+    var parts = splitStr(ctxJson, "{\"id\":\"")
+    var i = 1
+    while (i < parts.size) {
+        var seg = parts.get(i)
+        var q1 = seg.indexOf("\"")
+        var id = seg.substring(0, q1)
+        var seen = false
+        for (var ch in chunks) {
+            if (ch.id == id) {
+                seen = true
+            }
+        }
+        if (!seen && id != "") {
+            chunks.add(CtxChunk("corpus", id, id, "", 10))
+        }
+        i = i + 1
+    }
+    var memHits = mem.byKind("semantic")
+    for (var m in memHits) {
+        if (m.value.contains(query)) {
+            chunks.add(CtxChunk("memory", m.key, m.key, m.value, 8))
+        }
+    }
+    var out = "{\"query\":\"" + escapeJson(query) + "\",\"chunks\":["
+    var first = true
+    var budget = maxChars
+    for (var ch2 in chunks) {
+        var cost = ch2.title.length + 6
+        if (budget - cost >= 0) {
+            if (!first) {
+                out = out + ","
+            }
+            first = false
+            out = out + "{\"source\":\"" + ch2.source + "\",\"id\":\"" + escapeJson(ch2.id) + "\"}"
+            budget = budget - cost
+        }
+    }
+    out = out + "]}"
+    return out
+}
+
+orchExplain(String ctxJson): String {
+    return "Contexto montado por fusao corpus+memory com dedup por id e orcamento de caracteres. Fontes em ordem de score."
+}
+
+orchProvenance(String ctxJson): List<String> {
+    var prov = listOf<String>()
+    var parts = splitStr(ctxJson, "{\"source\":\"")
+    var i = 1
+    while (i < parts.size) {
+        var seg = parts.get(i)
+        var q1 = seg.indexOf("\"")
+        if (q1 > 0) {
+            prov.add(seg.substring(0, q1))
+        }
+        i = i + 1
+    }
+    return prov
 }
 
 record GgufInfoRec(String path, Bool magicOk, Int version, Int nTensors)
@@ -3571,6 +3878,126 @@ class KVCache {
     }
 }
 
+// M16 part 82: Tensor ops V2 — arena, stable softmax, rmsnorm, gelu/silu, causal mask
+
+record ArenaStats(Int allocs, Int reuses, Int peakBytes)
+record ArenaSlot(Int key, TensorR tensor)
+
+class TensorArena {
+    List<ArenaSlot> free = listOf<ArenaSlot>()
+    ArenaStats stats = ArenaStats(0, 0, 0)
+
+    acquire(Int rows, Int cols): TensorR {
+        var key = rows * 100000 + cols
+        var i = 0
+        while (i < free.size()) {
+            var s = free.get(i)
+            if (s.key == key) {
+                var out2 = s.tensor
+                var j = i
+                while (j < free.size() - 1) {
+                    free.set(j, free.get(j + 1))
+                    j = j + 1
+                }
+                stats = ArenaStats(stats.allocs + 1, stats.reuses + 1, stats.peakBytes)
+                return out2
+            }
+            i = i + 1
+        }
+        stats = ArenaStats(stats.allocs + 1, stats.reuses, stats.peakBytes)
+        return tensorNew(rows, cols)
+    }
+
+    release(TensorR t) {
+        free.add(ArenaSlot(t.rows * 100000 + t.cols, t))
+        var bytes = t.rows * t.cols * 4
+        if (bytes > stats.peakBytes) {
+            stats = ArenaStats(stats.allocs, stats.reuses, bytes)
+        }
+    }
+}
+
+tensorSoftmaxRow(TensorR t, Int row): TensorR {
+    var out = tensorNew(1, t.cols)
+    var maxv = tensorGet(t, row, 0)
+    var c2 = 1
+    while (c2 < t.cols) {
+        if (tensorGet(t, row, c2) > maxv) {
+            maxv = tensorGet(t, row, c2)
+        }
+        c2 = c2 + 1
+    }
+    var sum = 0
+    c2 = 0
+    while (c2 < t.cols) {
+        var d = maxv - tensorGet(t, row, c2)
+        var e = 10000000 / (10 + d)
+        tensorSet(out, 0, c2, e)
+        sum = sum + e
+        c2 = c2 + 1
+    }
+    if (sum == 0) { sum = 1 }
+    c2 = 0
+    while (c2 < t.cols) {
+        tensorSet(out, 0, c2, tensorGet(out, 0, c2) * 10000 / sum)
+        c2 = c2 + 1
+    }
+    return out
+}
+
+tensorRmsNorm(TensorR t): TensorR {
+    var out = tensorNew(t.rows, t.cols)
+    var r = 0
+    while (r < t.rows) {
+        var ss = 0
+        var c2 = 0
+        while (c2 < t.cols) {
+            var v = tensorGet(t, r, c2)
+            ss = ss + v * v / 1000
+            c2 = c2 + 1
+        }
+        var inv = 31623 * 1000 / (100 + ss)
+        c2 = 0
+        while (c2 < t.cols) {
+            tensorSet(out, r, c2, tensorGet(t, r, c2) * inv / 100000)
+            c2 = c2 + 1
+        }
+        r = r + 1
+    }
+    return out
+}
+
+gelu(x: Int): Int {
+    var x3 = x * x * x / 1000000
+    return (x + x3 / 6) / 2
+}
+
+silu(x: Int): Int {
+    if (x <= 0) { return x / 4 }
+    return x
+}
+
+record CausalMask(Int penalty)
+
+tensorCausalMask(Int seqLen): TensorR {
+    var m = tensorNew(seqLen, seqLen)
+    var cm = CausalMask(1000000)
+    var i = 0
+    while (i < seqLen) {
+        var j = 0
+        while (j < seqLen) {
+            if (j > i) {
+                tensorSet(m, i, j, cm.penalty)
+            } else {
+                tensorSet(m, i, j, 0)
+            }
+            j = j + 1
+        }
+        i = i + 1
+    }
+    return m
+}
+
 record DeviceRec(String name, String kind, Int priority, Bool available)
 
 HAL_CPU(): DeviceRec {
@@ -3670,6 +4097,179 @@ halHostInfo(): HostInfoRec {
         }
     }
     return HostInfoRec(cores, memKb)
+}
+
+// M16.2: RoPE V2, KV Cache V2, Quantizacao Q4-Q8, Sampler V3, Arena checkpoints
+
+record RopeFreqs(Int[] cosT, Int[] sinT, Int dims, Int scalePct)
+
+ropeBuild(Int maxPos, Int dims): RopeFreqs {
+    var cosT = new Int[maxPos * dims]
+    var sinT = new Int[maxPos * dims]
+    var p = 0
+    while (p < maxPos) {
+        var i = 0
+        while (i < dims) {
+            var freqNum = p * (i + 2)
+            var freqDen = dims * 2
+            var ang = (freqNum * 3141 / freqDen) % 6283
+            var deg = ang * 360 / 6283
+            var rad = deg
+            var c = 10000
+            if (deg <= 90) { c = 10000 - deg * deg * 121 / 10000 / 10 }
+            else { c = (180 - deg) * (180 - deg) * 121 / 100000 }
+            var s = deg * 1745 / 10000
+            if (s > 10000) { s = 10000 }
+            cosT[p * dims + i] = c
+            sinT[p * dims + i] = s
+            i = i + 1
+        }
+        p = p + 1
+    }
+    return RopeFreqs(cosT, sinT, dims, 100)
+}
+
+applyRope(TensorR q, TensorR k, RopeFreqs rf, Int posOffset) {
+    var half = rf.dims / 2
+    var r = 0
+    while (r < q.rows) {
+        var pos = posOffset + r
+        var i = 0
+        while (i < half) {
+            var j = i + half
+            var qc = tensorGet(q, r, i)
+            var qj = tensorGet(q, r, j)
+            var cs = rf.cosT[pos * rf.dims + i]
+            var sn = rf.sinT[pos * rf.dims + i]
+            tensorSet(q, r, i, (qc * cs - qj * sn) / 10000)
+            tensorSet(q, r, j, (qj * cs + qc * sn) / 10000)
+            var kc = tensorGet(k, r, i)
+            var kj = tensorGet(k, r, j)
+            tensorSet(k, r, i, (kc * cs - kj * sn) / 10000)
+            tensorSet(k, r, j, (kj * cs + kc * sn) / 10000)
+            i = i + 1
+        }
+        r = r + 1
+    }
+}
+
+record KVEntry(Int token, Int layer)
+record KVSnapshot(Int size, Int cap)
+
+class KVCacheV2 {
+    List<Int[]> keys = listOf<Int[]>()
+    List<Int[]> values = listOf<Int[]>()
+    Int size = 0
+    Int window = 0
+
+    initKv(Int win) {
+        window = win
+        size = 0
+    }
+
+    append(Int[] key, Int[] vals) {
+        keys.add(key)
+        values.add(vals)
+        size = size + 1
+        if (window > 0 && size > window) {
+            keys.remove(0)
+            values.remove(0)
+            size = size - 1
+        }
+    }
+
+    keyAt(Int i): Int[] {
+        return keys.get(i)
+    }
+
+    reset() {
+        while (keys.size() > 0) {
+            keys.remove(0)
+            values.remove(0)
+        }
+        size = 0
+    }
+
+    snapshot(): KVSnapshot {
+        return KVSnapshot(size, keys.size())
+    }
+}
+
+fn quantizeQ4(Int[] src, Int off): Int[] {
+    var out = new Int[Q8_BLOCK() / 2 + 1]
+    var maxAbs = 0
+    var i = 0
+    while (i < Q8_BLOCK()) {
+        var v = src[off + i]
+        var mag = v
+        if (mag > maxAbs) { maxAbs = mag }
+        var nv = 0 - v
+        if (nv > maxAbs) { maxAbs = nv }
+        i = i + 1
+    }
+    out[0] = maxAbs
+    i = 0
+    while (i < Q8_BLOCK()) {
+        var v = src[off + i]
+        var q = 0
+        if (maxAbs > 0) { q = v * 7 / maxAbs }
+        if (q < 0) { q = q + 15 }
+        else { q = q }
+        var nib = q
+        if (nib > 15) { nib = 15 }
+        var packed = out[i / 2 + 1]
+        if (i % 2 == 0) {
+            out[i / 2 + 1] = nib * 16 + packed % 16
+        } else {
+            out[(i - 1) / 2 + 1] = (packed / 16) * 16 + nib
+        }
+        i = i + 1
+    }
+    return out
+}
+
+fn dequantizeQ4(Int[] blk): Int[] {
+    var o = new Int[Q8_BLOCK()]
+    var scale = blk[0]
+    var i = 0
+    while (i < Q8_BLOCK()) {
+        var packed = blk[i / 2 + 1]
+        var nib = packed / 16
+        if (i % 2 == 1) { nib = packed % 16 }
+        var v = nib * scale / 7
+        o[i] = v
+        i = i + 1
+    }
+    return o
+}
+
+record SamplerConfig(Int temperature, Int topK, Int topP, Int minP, Int repPenalty, Int seed)
+
+fn samplerGreedy(Int[] logits, Int n): Int {
+    var best = 0
+    var bv = logits[0]
+    var i = 1
+    while (i < n) {
+        var v = logits[i]
+        if (v > bv) { bv = v; best = i }
+        i = i + 1
+    }
+    return best
+}
+
+record LcgState(Int v)
+
+fn lcgNext(LcgState st): Int {
+    var nv = st.v * 1103515245 + 12345
+    if (nv < 0) { nv = 0 - nv }
+    return nv % 2147483647
+}
+
+fn samplerTopKV3(Int[] logits, Int n, Int k, Int seed): Int {
+    var chosen = samplerGreedy(logits, n)
+    if (k >= n || k <= 0) { return chosen }
+    var idx = lcgNext(LcgState(seed)) % n
+    return idx
 }
 
 record NNLimitsRec(Int ropeDims, Int heads, Int kvLayers)
@@ -3791,6 +4391,238 @@ samplerTopPApprox(Int[] logits, Int n, Int topPPermille, Int seed): Int {
 
 ggufMeta(String path, String key): String {
     return metaField(wsReadVersioned(path, "GGUFT"), key)
+}
+
+// M17: GGUF loader V2/V3 — parser tipado sobre bytes (IO binario pende RTL002)
+
+record TokenizerMetadata(Int vocabSize, Int bosId, Int eosId, Int padId, Int unkId)
+record RopeMetadataRec(Int dims, Int freqBase, String scaling, Int ctxLen)
+record GgufHeader(Int version, Int tensorCount, Int metaCount, Int align)
+record MetaValue(Int kind, Int intVal, String strVal)
+record TensorEntry(String name, Int nDims, Int d0, Int d1, Int dtype, Int offset, Int size)
+record GgufHandle(GgufHeader header, List<MetaValue> metaKeys, List<String> metaNames, List<TensorEntry> tensors, List<Int[]> blobs, Int errorCount, String errorCode)
+
+fn ggufHexVal(Char c): Int {
+    if (c >= '0' && c <= '9') { return c - '0' }
+    return (c - 'a') + 10
+}
+
+fn ggufDecodeHex(String hex, Int byteOff): Int {
+    var i = byteOff * 2
+    if (i + 1 >= hex.length) { return 0 }
+    var hi = ggufHexVal(hex.charAt(i))
+    var lo = ggufHexVal(hex.charAt(i + 1))
+    return hi * 16 + lo
+}
+
+ggufParseMeta(String metaLine): List<String> {
+    var out = listOf<String>()
+    var parts = splitStr(metaLine, "|")
+    var i = 1
+    while (i < parts.size()) {
+        out.add(parts.get(i))
+        i = i + 1
+    }
+    return out
+}
+
+record MetaPair(String key, Int kind, Int intVal)
+
+ggufParsePairs(String metaLine): List<MetaPair> {
+    var out = listOf<MetaPair>()
+    var raw = ggufParseMeta(metaLine)
+    var i = 0
+    while (i < raw.size()) {
+        var kv = splitStr(raw.get(i), "=")
+        if (kv.size() == 2 && i + 1 < raw.size()) {
+            out.add(MetaPair(kv.get(0), parseIntStr(kv.get(1)), parseIntStr(raw.get(i + 1))))
+            i = i + 2
+        } else {
+            i = i + 1
+        }
+    }
+    return out
+}
+
+record TensorSpec(String name, Int d0, Int d1, Int dtype, Int size, Int offset)
+
+ggufParseTensors(String dirLine): List<TensorSpec> {
+    var out = listOf<TensorSpec>()
+    var dparts = splitStr(dirLine, "|")
+    var align = 32
+    var nSpecs = dparts.size()
+    if (nSpecs > 0) {
+        align = parseIntStr(dparts.get(nSpecs - 1))
+        nSpecs = nSpecs - 1
+    }
+    var i = 0
+    while (i < nSpecs) {
+        var tp = splitStr(dparts.get(i), ",")
+        if (tp.size() == 6) {
+            var off = parseIntStr(tp.get(5))
+            var sz = parseIntStr(tp.get(4))
+            out.add(TensorSpec(tp.get(0), parseIntStr(tp.get(2)), parseIntStr(tp.get(3)), sz, sz, off))
+        }
+        i = i + 1
+    }
+    return out
+}
+
+ggufParse(String magicLine, String metaLine, String dirLine, String blobLine): GgufHandle {
+    var errs = listOf<String>()
+    if (!magicLine.startsWith("GGUF")) {
+        errs.add("E_MAGIC")
+    }
+    var ver = parseIntStr(magicLine.substring(4))
+    if (ver != 2 && ver != 3) {
+        errs.add("E_VERSION")
+    }
+    var pairs = ggufParsePairs(metaLine)
+    var names = listOf<String>()
+    var vals = listOf<MetaValue>()
+    var i = 0
+    while (i < pairs.size()) {
+        var pr = pairs.get(i)
+        names.add(pr.key)
+        vals.add(MetaValue(pr.kind, pr.intVal, ""))
+        i = i + 1
+    }
+    var tensors = listOf<TensorEntry>()
+    var specs = ggufParseTensors(dirLine)
+    i = 0
+    while (i < specs.size()) {
+        var sp = specs.get(i)
+        tensors.add(TensorEntry(sp.name, 2, sp.d0, sp.d1, sp.dtype, sp.offset, sp.size))
+        i = i + 1
+    }
+    var blobs = listOf<Int[]>()
+    var bparts = splitStr(blobLine, ":")
+    if (bparts.size() == 2 && bparts.get(0) == "HEX") {
+        var hexs = bparts.get(1)
+        var total = hexs.length / 2
+        var arr = new Int[total]
+        var b = 0
+        while (b < total) {
+            arr[b] = ggufDecodeHex(hexs, b)
+            b = b + 1
+        }
+        blobs.add(arr)
+    }
+    var align = 32
+    var ec = errs.size()
+    var code = ""
+    if (ec > 0) {
+        code = errs.get(0)
+    }
+    return GgufHandle(GgufHeader(ver, tensors.size(), pairs.size(), align), vals, names, tensors, blobs, ec, code)
+}
+
+openGGUF(String specPath): GgufHandle {
+    var f = File(specPath)
+    if (!f.exists()) {
+        return GgufHandle(GgufHeader(0, 0, 0, 32), listOf<MetaValue>(), listOf<String>(), listOf<TensorEntry>(), listOf<Int[]>(), 1, "E_FILE_NOT_FOUND")
+    }
+    var lines = splitStr(f.readText(), "\n")
+    if (lines.size() < 4) {
+        return GgufHandle(GgufHeader(0, 0, 0, 32), listOf<MetaValue>(), listOf<String>(), listOf<TensorEntry>(), listOf<Int[]>(), 1, "E_FORMAT")
+    }
+    var blob = ""
+    var li = 0
+    while (li < lines.size()) {
+        if (lines.get(li).startsWith("HEX")) {
+            blob = lines.get(li)
+        }
+        li = li + 1
+    }
+    return ggufParse(lines.get(0), lines.get(1), lines.get(2), blob)
+}
+
+getMetadata(GgufHandle h, String key): MetaValue {
+    var i = 0
+    while (i < h.metaNames.size()) {
+        if (h.metaNames.get(i) == key) {
+            return h.metaKeys.get(i)
+        }
+        i = i + 1
+    }
+    return MetaValue(-1, 0, "")
+}
+
+hasTensor(GgufHandle h, String name): Bool {
+    var i = 0
+    while (i < h.tensors.size()) {
+        if (h.tensors.get(i).name == name) {
+            return true
+        }
+        i = i + 1
+    }
+    return false
+}
+
+listTensors(GgufHandle h): List<String> {
+    var out = listOf<String>()
+    var i = 0
+    while (i < h.tensors.size()) {
+        out.add(h.tensors.get(i).name)
+        i = i + 1
+    }
+    return out
+}
+
+getTensorLazy(GgufHandle h, String name): Int[] {
+    var i = 0
+    while (i < h.tensors.size()) {
+        if (h.tensors.get(i).name == name) {
+            return h.blobs.get(0)
+        }
+        i = i + 1
+    }
+    return new Int[0]
+}
+
+tokenizerInfo(GgufHandle h): TokenizerMetadata {
+    var bos = getMetadata(h, "tokenizer.bos_id")
+    var eos = getMetadata(h, "tokenizer.eos_id")
+    var pad = getMetadata(h, "tokenizer.pad_id")
+    var unk = getMetadata(h, "tokenizer.unk_id")
+    var vocab = getMetadata(h, "context_length")
+    return TokenizerMetadata(vocab.intVal, bos.intVal, eos.intVal, pad.intVal, unk.intVal)
+}
+
+ropeInfo(GgufHandle h): RopeMetadataRec {
+    var dim = getMetadata(h, "rope.dimension_count")
+    var freq = getMetadata(h, "rope.freq_base")
+    var scaling = getMetadata(h, "rope.scaling.type")
+    var ctx = getMetadata(h, "context_length")
+    return RopeMetadataRec(dim.intVal, freq.intVal, scaling.strVal, ctx.intVal)
+}
+
+ggufVersion(GgufHandle h): Int {
+    var hdr = h.header
+    return hdr.version
+}
+
+ggufTensorCount(GgufHandle h): Int {
+    var hdr = h.header
+    return hdr.tensorCount
+}
+
+ggufErrorCount(GgufHandle h): Int {
+    return h.errorCount
+}
+
+ggufErrorCode(GgufHandle h): String {
+    return h.errorCode
+}
+
+ggufMetaCount(GgufHandle h): Int {
+    var hdr = h.header
+    return hdr.metaCount
+}
+
+ggufTensorCount2(GgufHandle h): Int {
+    var n = listTensors(h)
+    return n.size()
 }
 
 record BrainPlan(String intent, String entitiesJson, String contextJson, Int confidence, String ambiguitiesJson, String candidateToolsCsv, String candidateRecipesCsv, String candidateSymbolsCsv)
