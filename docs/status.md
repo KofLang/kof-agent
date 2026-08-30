@@ -8,7 +8,7 @@
 
 | Item | Estado |
 |------|--------|
-| Compilador | **baseline bdebf75 (kof 0.2.3-beta — fix N21 aritmética Int 32-bit)** · sweeps: 25d017a/9462a48/8dc4644/bdebf75 em docs/compiler/reports/ · N16/N17/N13/N12/N3/N6/N7/N8/N1/J4 ✅ fixed · N9 residual (abbcc) · N11/N18/N19/N10 abertos · N22-SUSPECT novo (SIGSEGV TU c/ event+scheduler) |
+| Compilador | **baseline e4aff30 (kof 0.2.3-beta — N21+N22 fechados; fix jvm int→long inference, corpo vazio ClassFormatError, top-level fn return type, kof_io_dir_delete recursivo/0-em-falha)** · sweeps: 25d017a/9462a48/8dc4644/bdebf75/9df8f72/e4aff30 em docs/compiler/reports/ · N16/N17/N13/N12/N3/N6/N7/N8/N1/J4/N22 ✅ fixed · N9 residual (abbcc) · N11/N18/N19/N10 abertos |
 | FASE 1 (M0–M9) | ✅ código completo · verificação parcial (N10-residual) |
 | FASE 2 (M10–M12) | 🟡 M10 native **9/9** ✅ (Q8 destravado c/ fix N17) · JVM segue J4-residual |
 | FASE 3 (M13–M15) | 🟡 código pronto · N10-progressivo persiste (1.5MB asm → 139) |
@@ -28,11 +28,12 @@
 | Treino QLoRA | ✅ pipeline pronta (training/scripts/train_koflm.py, resume-safe) — aguarda execução longa |
 
 **Próxima fila:**
-1. Investigar/limpar **N22-SUSPECT** (SIGSEGV TU 484KB c/ PARTs event; repro em regressions/N22-SUSPECT) — stress 10k/100k dependem disso
-2. Reportar **N21 (fixed em bdebf75) + N22-SUSPECT + N18/N19** upstream (repros em regressions/)
-3. Rodar `train_koflm.py` (dias) → merge → KofLM-Q4.gguf oficial
+1. ~~N22-SUSPECT~~ ✅ **FECHADO** (9df8f72: GC mark transitivo + sweep no-op + cdq; regressions/N22-SUSPECT/README.md)
+2. Reportar **N21/N22 (fixed) + N18/N19** upstream (repros em regressions/)
+3. Rodar `train_koflm.py` (dias) → merge → KofLM-Q4.gguf oficial (PLANO 002)
 4. M31 continuação: kernels completos no GraphExecutor + QuantDecoder F16/K
 5. Instalar mesa-vulkan-drivers → benchmark RX 6600
+6. Test suites do agente: **16/16 verdes** (scripts/test.sh, jvm+native) — manter hermeticidade nos testes novos
 | Bugs p/ upstream | **N18 CONFIRMED** (repro_minimal) + J4-residual + N10/N11/N12/N4/SC3/SC4 | (fechar 9 testes, bench real) (RoPE/KV Cache/Quantização/Sampler V3) · reportar J4+repro upstream |
 
 ## Bloqueios ativos
