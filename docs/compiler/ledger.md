@@ -22,3 +22,6 @@
 | SC3 | Open | Semantics | metodo inexistente compila |
 | SC4 | Open | Semantics | aridade de construtor errada compila |
 | SC5 | Open | Semantics | redeclaracao de local compila |
+| N20 | Open | Native | familia getter-trivial/SEM015 espurio (contornado no agente) |
+| N21 | Fixed upstream (bdebf75) | Native | aritmetica Int 64-bit vs literal 32-bit: comparacao falsa + println divergente |
+| N22 | Open (SUSPECT) | Native+jvm | TU c/ PARTs core+log+sched+event: native SIGSEGV consistente (139) mesmo com main() trivial; gatilho aparente = record+class com campo record (Subscription/CheckRec); JVM standalone passa (ClassFormatError no TU so via build.sh) |

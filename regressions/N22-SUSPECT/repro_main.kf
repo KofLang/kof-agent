@@ -1,0 +1,15 @@
+record CheckRec(String id, Bool ok, String detail)
+
+class Subscription {
+    Int id
+    CheckRec h
+    constructor(Int sid, CheckRec handler) {
+        id = sid
+        h = handler
+    }
+}
+
+main() {
+    var s = Subscription(1, CheckRec("a", true, "b"))
+    println("sub " + s.h.id)
+}
