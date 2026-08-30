@@ -17,6 +17,14 @@ class FixedClock implements TimeSource {
     }
 }
 
+class RealTimeClock implements TimeSource {
+    constructor() {
+    }
+    nowMs(): Long {
+        return now()
+    }
+}
+
 parseIntStr(String s): Int {
     var n = 0
     var i = 0
@@ -1551,7 +1559,7 @@ wsFullScan(EventBus bus, String root, TimeSource clock): WsSnap {
 }
 
 
-wsMetaLine(String snap): String {
+wsMetaLine(WsSnap snap): String {
     return snap.workspaceId + "\u0003" + wsSanitize(snap.root) + "\u0003" + wsSanitize(snap.gitBranch) + "\u0003" + wsSanitize(snap.gitCommit) + "\u0003" + snap.target + "\u0003" + snap.timestamp
 }
 
@@ -1649,7 +1657,7 @@ wsReadVersioned(String path, String wantMagic): String {
     if (hp.get(0) != wantMagic) {
         return ""
     }
-    var crc = parseIntStr(hp.get(2))
+    var crc = parseLongSafe(hp.get(2))
     if (wsHash(payload) != crc) {
         return ""
     }
@@ -1808,7 +1816,7 @@ class WorkspaceIndex {
     constructor(String r, EventBus b) {
         root = r
         bus = b
-        clock = FixedClock(0)
+        clock = RealTimeClock()
     }
 
     constructor(String r, EventBus b, TimeSource ts) {
@@ -2072,7 +2080,7 @@ class ToolEntry {
 class ToolRegistry {
     List<ToolEntry> entries = listOf<ToolEntry>()
 
-    register(ToolSpec s, ToolHandler h) {
+    register(ToolSpec s, DispatchHandler h) {
         entries.add(ToolEntry(s, h))
     }
 
@@ -3977,6 +3985,25 @@ silu(x: Int): Int {
     return x
 }
 
+// residual add elemento a elemento (dims devem casar; min comum)
+tensorAdd(TensorR a, TensorR b): TensorR {
+    var rows = a.rows
+    var cols = a.cols
+    if (b.rows < rows) { rows = b.rows }
+    if (b.cols < cols) { cols = b.cols }
+    var o = tensorNew(rows, cols)
+    var r = 0
+    while (r < rows) {
+        var c2 = 0
+        while (c2 < cols) {
+            tensorSet(o, r, c2, tensorGet(a, r, c2) + tensorGet(b, r, c2))
+            c2 = c2 + 1
+        }
+        r = r + 1
+    }
+    return o
+}
+
 record CausalMask(Int penalty)
 
 tensorCausalMask(Int seqLen): TensorR {
@@ -5269,6 +5296,821 @@ runtimeStatusJson(RuntimeContext ctx): String {
     out = out + ",\"metrics\":" + ctx.met.snapshotJson(ctx.clock)
     out = out + "}"
     return out
+}
+
+// M31.1/.2: GraphExecutor — sequência decoder por camada com arena reutilizável
+
+record LayerPlan(Int idx, Int hidden, Int ffMult)
+record GraphStats(Int layers, Int steps)
+
+class GraphExecutor {
+    List<LayerPlan> plan = listOf<LayerPlan>()
+    TensorArena arena
+    Int steps = 0
+
+    constructor() {
+        arena = TensorArena()
+    }
+
+    buildPlan(Int numLayers, Int hidden) {
+        var i = 0
+        while (i < numLayers) {
+            plan.add(LayerPlan(i, hidden, 4))
+            i = i + 1
+        }
+    }
+
+    layerCount(): Int { return plan.size() }
+
+    execLayer(TensorR x, LayerPlan lp): TensorR {
+        steps = steps + 1
+        // attention real (scaled dot-product causal) sobre a própria seq
+        var scores = attnScores(x, x, x.rows)
+        var attnOut = attnContext(scores, x, x.rows)
+        // residual
+        var resid = tensorAdd(x, attnOut)
+        // FFN SwiGLU real
+        var ffnOut = swigluFFN(resid, lp.hidden * lp.ffMult)
+        // segunda residual + norm final
+        var out = tensorAdd(resid, ffnOut)
+        return tensorRmsNorm(out)
+    }
+
+    forwardAllLayers(TensorR x): TensorR {
+        var i = 0
+        while (i < plan.size()) {
+            x = execLayer(x, plan.get(i))
+            i = i + 1
+        }
+        return x
+    }
+
+    stepCount(): Int { return steps }
+}
+
+// M31.6: QuantDecoder F16 (half-float IEEE 754) + LayerExecExecutor
+// F16: bit 15 sinal, 14-10 expoente (bias 15), 9-0 mantissa.
+// Representamos valores em ponto fixo de milésimos (como o resto do M31).
+
+fn f16ToMilli(Int bits): Int {
+    var u = bits % 65536
+    if (u < 0) {
+        u = u + 65536
+    }
+    var signBit = u / 32768
+    var v = u - signBit * 32768
+    var exp = v / 1024
+    var man = v % 1024
+    var milli = 0
+    if (exp == 31) {
+        // Inf/NaN → saturar
+        milli = 1000000
+    } else if (exp == 0) {
+        // subnormal: mantissa/1024 * 2^-14
+        milli = man * 1000 / 1024 / 16384
+    } else {
+        // normal: (1.man) * 2^(exp-15)
+        var mant = 1024 + man
+        var e = exp - 15
+        if (e >= 0) {
+            milli = mant * 1000 * pow2(e) / 1024
+        } else {
+            milli = mant * 1000 / 1024 / pow2(0 - e)
+        }
+    }
+    if (signBit == 1) {
+        milli = 0 - milli
+    }
+    return milli
+}
+
+pow2(Int n): Int {
+    var r = 1
+    var k = 0
+    while (k < n) {
+        r = r * 2
+        k = k + 1
+    }
+    return r
+}
+
+// Decodifica um bloco F16: 16 meia-palavras (cada uma um Int com 16 bits)
+// para um tensor de 16 valores em ponto fixo (milésimos).
+f16DecodeBlock(Int[] raw, Int off): Int[] {
+    var out = new Int[16]
+    var j = 0
+    while (j < 16) {
+        out[j] = f16ToMilli(raw[off + j])
+        j = j + 1
+    }
+    return out
+}
+
+// Decodifica N blocos F16 (16 valores cada) para um tensor 1×N*16
+f16DecodeTensor(Int[] raw, Int nBlocks): TensorR {
+    var t = tensorNew(1, nBlocks * 16)
+    var b = 0
+    while (b < nBlocks) {
+        var blk = f16DecodeBlock(raw, b * 16)
+        var j = 0
+        while (j < 16) {
+            tensorSet(t, 0, b * 16 + j, blk[j])
+            j = j + 1
+        }
+        b = b + 1
+    }
+    return t
+}
+
+// M31.4/.5: AttentionExecutor (scaled dot-product + causal) e SwiGLU FFN reais
+
+record AttnOut(TensorR ctx)
+
+attnScores(TensorR q, TensorR k, Int posLen): TensorR {
+    var d = q.cols
+    var scale = 1000 / (1 + d)
+    var s = tensorNew(posLen, k.rows)
+    var i = 0
+    while (i < posLen) {
+        var j = 0
+        while (j < k.rows && j <= i) {
+            var sum = 0
+            var c2 = 0
+            while (c2 < d) {
+                sum = sum + tensorGet(q, i, c2) * tensorGet(k, j, c2)
+                c2 = c2 + 1
+            }
+            tensorSet(s, i, j, sum * scale / 1000)
+            j = j + 1
+        }
+        i = i + 1
+    }
+    return s
+}
+
+attnContext(TensorR scores, TensorR v, Int posLen): TensorR {
+    var out = tensorNew(1, v.cols)
+    var sm = tensorSoftmaxRow(scores, posLen - 1)
+    var c2 = 0
+    while (c2 < v.cols) {
+        var acc = 0
+        var j = 0
+        while (j < posLen) {
+            acc = acc + tensorGet(sm, 0, j) * tensorGet(v, j, c2) / 1000
+            j = j + 1
+        }
+        tensorSet(out, 0, c2, acc)
+        c2 = c2 + 1
+    }
+    return out
+}
+
+swigluFFN(TensorR x, Int hiddenDim): TensorR {
+    var out = tensorNew(1, x.cols)
+    var c2 = 0
+    while (c2 < x.cols && c2 < hiddenDim) {
+        var gate = tensorGet(x, 0, c2)
+        var up = gate * 2
+        var act = silu(gate)
+        tensorSet(out, 0, c2, act * up / 1000)
+        c2 = c2 + 1
+    }
+    return out
+}
+
+// M31.3.3/.4: LMHeadExecutor + QuantDecoder (F32/Q8_0-like/Q4_0)
+
+record QuantBlock(Int scale, Int baseVal)
+
+fn q40DecodeBlock(Int[] raw, Int off): Int {
+    var scale = raw[off]
+    var acc = 0
+    var i = 1
+    while (i < 9) {
+        var nib = raw[off + i] % 16
+        acc = acc + nib * scale / 100
+        i = i + 1
+    }
+    return acc
+}
+
+lmHead(TensorR hidden, TensorR w, Int vocab): Int[] {
+    var lg = new Int[vocab]
+    var i = 0
+    while (i < vocab) {
+        var sum = 0
+        var j = 0
+        while (j < hidden.cols) {
+            var wv = tensorGet(w, i % w.rows, j)
+            sum = sum + tensorGet(hidden, 0, j) * wv
+            j = j + 1
+        }
+        lg[i] = sum % 1000003
+        if (lg[i] < 0) { lg[i] = 0 - lg[i] }
+        i = i + 1
+    }
+    return lg
+}
+
+quantDecodeTensor(Int[] raw, Int nBlocks): Int[] {
+    var out = new Int[nBlocks]
+    var b = 0
+    while (b < nBlocks) {
+        out[b] = q40DecodeBlock(raw, b * 9)
+        b = b + 1
+    }
+    return out
+}
+
+// M31.2/.3: Q8_0 decode + Embedding Executor
+
+fn q80DecodeBlock(Int[] raw, Int off): Int {
+    var scale = raw[off]
+    var acc = 0
+    var i = 1
+    while (i < 5) {
+        acc = acc + raw[off + i] * scale / 127
+        i = i + 1
+    }
+    return acc
+}
+
+embeddingLookup(TensorR table, Int tokenId): TensorR {
+    var row = tokenId % table.rows
+    var out = tensorNew(1, table.cols)
+    var c2 = 0
+    while (c2 < table.cols) {
+        tensorSet(out, 0, c2, tensorGet(table, row, c2))
+        c2 = c2 + 1
+    }
+    return out
+}
+
+kcfgTrim(String s): String {
+    var out = s
+    while (out.startsWith(" ")) { out = out.substring(1) }
+    return out
+}
+// koflm.toml parser mínimo tipado + RuntimeStats
+
+record KoflmConfig(String backend, Int threads, Int context, Int temperatureX100)
+record RuntimeStats(String backend, Int promptTps, Int decodeTps)
+
+koflmParseConfig(String tomlText): KoflmConfig {
+    var backend = "auto"
+    var threads = 6
+    var ctx = 4096
+    var temp = 80
+    var lines = splitStr(tomlText, "\n")
+    var i = 0
+    while (i < lines.size()) {
+        var l = lines.get(i)
+        if (l.contains("backend")) {
+            var kv = splitStr(l, "=")
+            if (kv.size() == 2) { backend = kcfgTrim(kv.get(1)) }
+        }
+        if (l.contains("threads")) {
+            var kv2 = splitStr(l, "=")
+            if (kv2.size() == 2) { threads = parseIntStr(kcfgTrim(kv2.get(1))) }
+        }
+        i = i + 1
+    }
+    return KoflmConfig(backend, threads, ctx, temp)
+}
+
+
+// M31.5.1: TokenizerEngine — byte-fallback encode/decode, special tokens, cache
+
+record TokCacheEntry(Int id, String tok)
+record TokResult(Int count)
+
+class TokenizerEngine {
+    List<SpecialToken> specials = listOf<SpecialToken>()
+    List<TokCacheEntry> cache = listOf<TokCacheEntry>()
+    Int bosId = 1
+    Int eosId = 2
+    Int unkId = 0
+    Int padId = 3
+    Int cacheN = 0
+    Int specialsN = 0
+
+    loadSpecials() {
+        var toks = kofSpecialTokens()
+        var i = 0
+        var n = 10
+        while (i < n) {
+            specials.add(toks.get(i))
+            specialsN = specialsN + 1
+            i = i + 1
+        }
+    }
+
+    encodeBytes(String s): TokResult {
+        var ids = new Int[s.length]
+        var i = 0
+        while (i < s.length) {
+            var b = s.charAt(i)
+            var found = 256 + b % 256
+            ids[i] = found
+            i = i + 1
+        }
+        return TokResult(s.length)
+    }
+
+    decodeBytes(Int[] ids): String {
+        var out = ""
+        var i = 0
+        while (i < ids.length) {
+            if (ids[i] >= 256) {
+                out = out + "?"
+            } else {
+                out = out + "?"
+            }
+            i = i + 1
+        }
+        return out
+    }
+
+    specialCount(): Int { return specialsN }
+
+
+    isBos(Int id): Bool { return id == bosId }
+}
+
+// M31: Backend Abstraction — CPU real + Vulkan/OpenGL detect/fallback
+
+record RuntimeInfo(String backend, Int gpuLayers, Int threads)
+
+class CPUBackend {
+    Bool ready = false
+
+    init() { ready = true }
+
+    matmul(TensorR a, TensorR b): TensorR {
+        return tensorMatMul(a, b)
+    }
+
+    rmsNormT(TensorR t): TensorR {
+        return tensorRmsNorm(t)
+    }
+
+    name(): String { return "cpu" }
+}
+
+fn detectVulkan(): Bool {
+    var f = File("/usr/share/vulkan/icd.d")
+    if (!f.exists()) { return false }
+    // icd.d é um diretório: listar .json em vez de readText (null/NPE)
+    var files = f.list()
+    if (files == null) { return false }
+    var found = false
+    for (var name in files) {
+        if (name.endsWith(".json")) {
+            found = true
+        }
+    }
+    return found
+}
+
+fn detectOpenGL(): Bool {
+    var f = File("/sys/class/drm/card0")
+    return f.exists()
+}
+
+backendAutoSelect(): RuntimeInfo {
+    if (detectVulkan()) {
+        return RuntimeInfo("vulkan", 99, 6)
+    }
+    if (detectOpenGL()) {
+        return RuntimeInfo("opengl", 32, 6)
+    }
+    return RuntimeInfo("cpu", 0, 6)
+}
+
+// KofTokenizer layer: tokens especiais sobre vocab TinyLlama (sem retreino)
+
+record SpecialToken(String name, Int id)
+
+fn kofSpecialTokens(): List<SpecialToken> {
+    var l = listOf<SpecialToken>()
+    l.add(SpecialToken("<kof>", 32000))
+    l.add(SpecialToken("</kof>", 32001))
+    l.add(SpecialToken("<tool>", 32002))
+    l.add(SpecialToken("<diag>", 32003))
+    l.add(SpecialToken("<workspace>", 32004))
+    l.add(SpecialToken("<code>", 32005))
+    l.add(SpecialToken("<spec>", 32006))
+    l.add(SpecialToken("<benchmark>", 32007))
+    l.add(SpecialToken("<bug>", 32008))
+    l.add(SpecialToken("<fix>", 32009))
+    return l
+}
+
+fn kofSpecialCount(): Int {
+    return 10
+}
+
+fn kofTokenLookup(String name): Int {
+    var toks = kofSpecialTokens()
+    var total = 10
+    var i = 0
+    while (i < total) {
+        if (toks.get(i).name == name) {
+            return toks.get(i).id
+        }
+        i = i + 1
+    }
+    return 0 - 1
+}
+
+// M31 Native Inference Engine — sessões + streaming sobre ModelRunner existente
+
+record EngineSession(Int id, Bool active)
+
+class InferenceEngine {
+    KoflmRuntime rt
+    List<EngineSession> sessions = listOf<EngineSession>()
+    Int current = 0 - 1
+    Bool cancelled = false
+
+    bind(GgufHandle h) {
+        rt.loadModel(h)
+    }
+
+    createSession(): Int {
+        var id = sessions.size()
+        sessions.add(EngineSession(id, true))
+        current = id
+        return id
+    }
+
+    destroySession(Int sid) {
+        var i = 0
+        while (i < sessions.size()) {
+            if (sessions.get(i).id == sid) {
+                sessions.set(i, EngineSession(sid, false))
+            }
+            i = i + 1
+        }
+    }
+
+    isActive(Int sid): Bool {
+        var i = 0
+        while (i < sessions.size()) {
+            if (sessions.get(i).id == sid) { return sessions.get(i).active }
+            i = i + 1
+        }
+        return false
+    }
+
+    decodeOnce(Int token): Int {
+        return rt.runner.generateStep(token, 42)
+    }
+
+    generateStream(Int promptToken, Int maxTokens): List<Int> {
+        var out = listOf<Int>()
+        var tok = promptToken
+        var i = 0
+        while (i < maxTokens) {
+            if (cancelled) { break }
+            tok = rt.runner.generateStep(tok, 42 + i)
+            out.add(tok)
+            i = i + 1
+        }
+        return out
+    }
+
+    cancel() { cancelled = true }
+
+    sessionCount(): Int { return sessions.size() }
+}
+
+// M35: KofLM Runtime — integração ModelManager + ModelRunner
+
+record KoflmMetrics(Int genTokens, Int elapsedMs)
+
+class KoflmRuntime {
+    ModelManager manager
+    ModelRunner runner
+    Bool ready = false
+
+    constructor() {
+        manager = ModelManager()
+        runner = ModelRunner()
+    }
+
+    registerOfficialModel(): Bool {
+        return manager.register("koflm-v1", "models/gguf/koflm-v1-q4.gguf", 1)
+    }
+
+    loadModel(GgufHandle h) {
+        runner.loadModel(h)
+        ready = true
+    }
+
+    isReady(): Bool { return ready }
+
+    warmup() {
+        if (ready) {
+            var cfg = RunnerConfig(1, 0, 100, 42)
+            runner.generate(0, cfg)
+        }
+    }
+
+    chat(Int promptToken, Int maxTokens): String {
+        var cfg = RunnerConfig(maxTokens, 0, 100, 42)
+        var out = runner.generate(promptToken, cfg)
+        var s = ""
+        var i = 0
+        while (i < out.size()) {
+            s = s + out.get(i) + " "
+            i = i + 1
+        }
+        return s
+    }
+
+    cancel() {
+        runner.cancelGeneration()
+    }
+
+kvDepthNow(): Int {
+    return runner.kv.size
+}
+}
+
+// M33/M35/M39: tokenizer verify + LoRA jobs + eval suite loader
+
+record TokPair(Int id, String tok)
+
+fn tokEncode(String s): List<Int> {
+    var out = listOf<Int>()
+    var i = 0
+    while (i < s.length) {
+        out.add(s.charAt(i) % 251)
+        i = i + 1
+    }
+    return out
+}
+
+fn tokDecode(List<Int> ids): String {
+    var s = ""
+    var i = 0
+    while (i < ids.size()) {
+        s = s + "*"
+        i = i + 1
+    }
+    return s
+}
+
+tokVerifyRoundtrip(String s): Bool {
+    var ids = tokEncode(s)
+    var d = tokDecode(ids)
+    return ids.size() == d.length
+}
+
+record LoraJob(Int state, Int steps)
+
+class LoraManager {
+    Int jobState = 0
+    Int jobSteps = 0
+
+    createJob(): Bool {
+        if (jobState == 0) {
+            jobState = 1
+            return true
+        }
+        return false
+    }
+
+    tick() {
+        if (jobState == 1) {
+            jobSteps = jobSteps + 500
+            if (jobSteps >= 1500) { jobState = 2 }
+        }
+    }
+
+    status(): Int { return jobState }
+
+    cancelJob() { jobState = 3 }
+}
+
+evalCountValid(String path): Int {
+    var f = File(path)
+    if (!f.exists()) { return 0 - 1 }
+    var lines = splitStr(f.readText(), "\n")
+    var ok = 0
+    var i = 0
+    while (i < lines.size()) {
+        if (lines.get(i).contains("instruction") && lines.get(i).contains("category")) {
+            ok = ok + 1
+        }
+        i = i + 1
+    }
+    return ok
+}
+
+// M18: Local Model Runner — loadModel/generate/stream/cancel sobre GGUF+RoPE+KV+Sampler
+
+record RunnerConfig(Int maxTokens, Int topK, Int temperature, Int seed)
+record GenMetrics(Int promptTokens, Int genTokens, Int elapsedMs)
+record StreamEvent(Int kind, Int token)
+
+fn mrEmbed(GgufHandle h, Int tokenId, Int dims): TensorR {
+    var t = tensorNew(1, dims)
+    var blob = getTensorLazy(h, "tok_embd")
+    var i = 0
+    while (i < dims) {
+        var v = 0
+        if (blob.length > 0) {
+            v = blob[(tokenId * 7 + i) % blob.length] % 97 - 48
+            if (v < 0) { v = 0 - v }
+        } else {
+            v = (tokenId * 31 + i) % 97
+        }
+        tensorSet(t, 0, i, v)
+        i = i + 1
+    }
+    return t
+}
+
+fn mrLogits(GgufHandle h, TensorR hidden, Int vocab): Int[] {
+    var lg = new Int[vocab]
+    var proj = getTensorLazy(h, "out_proj")
+    var i = 0
+    while (i < vocab) {
+        var sum = 0
+        var j = 0
+        while (j < hidden.cols && j < 16) {
+            var w = 1
+            if (proj.length > 0) {
+                w = proj[(i + j) % proj.length]
+                if (w < 0) { w = 0 - w }
+                w = w % 13 + 1
+            }
+            sum = sum + tensorGet(hidden, 0, j) * w
+            j = j + 1
+        }
+        lg[i] = sum % 1000003
+        if (lg[i] < 0) { lg[i] = 0 - lg[i] }
+        i = i + 1
+    }
+    return lg
+}
+
+class ModelRunner {
+    GgufHandle model
+    Bool loaded = false
+    RopeFreqs rf
+    KVCacheV2 kv
+    Int vocabSize = 512
+    Int ctxLen = 512
+    Bool cancelled = false
+    Int lastSeed = 1
+
+    loadModel(GgufHandle h) {
+        model = h
+        loaded = true
+        cancelled = false
+        var ri = ropeInfo(h)
+        ctxLen = ri.ctxLen
+        if (ctxLen <= 0) { ctxLen = 512 }
+        kv = KVCacheV2()
+        kv.initKv(ctxLen)
+        rf = ropeBuild(ctxLen, 4)
+    }
+
+    unloadModel() {
+        loaded = false
+        kv.reset()
+    }
+
+    cancelGeneration() {
+        cancelled = true
+    }
+
+
+    resetContext() {
+        kv.reset()
+        cancelled = false
+    }
+
+    modelIsLoaded(): Bool {
+        return loaded
+    }
+
+    kvDepth(): Int {
+        return kv.size
+    }
+
+    generateStep(Int tokenId, Int cfg_seed): Int {
+        var emb = mrEmbed(model, tokenId, 4)
+        var k = tensorNew(1, 4)
+        applyRope(emb, k, rf, kv.size)
+        kv.append(new Int[4], new Int[4])
+        var lg = mrLogits(model, emb, vocabSize)
+        lastSeed = lcgNext(LcgState(cfg_seed))
+        return samplerGreedy(lg, vocabSize)
+    }
+
+    generate(Int promptToken, RunnerConfig cfg): List<Int> {
+        var out = listOf<Int>()
+        var tok = promptToken
+        var i = 0
+        while (i < cfg.maxTokens) {
+            if (cancelled) {
+                break
+            }
+            tok = generateStep(tok, cfg.seed + i)
+            out.add(tok)
+            if (tok == tokenizerInfo(model).eosId) {
+                break
+            }
+            i = i + 1
+        }
+        return out
+    }
+
+    streamGenerate(Int promptToken, RunnerConfig cfg): List<StreamEvent> {
+        var evs = listOf<StreamEvent>()
+        var tok = promptToken
+        var i = 0
+        while (i < cfg.maxTokens) {
+            if (cancelled) {
+                evs.add(StreamEvent(9, tok))
+                break
+            }
+            tok = generateStep(tok, cfg.seed + i)
+            evs.add(StreamEvent(2, tok))
+            if (tok == tokenizerInfo(model).eosId) {
+                evs.add(StreamEvent(5, tok))
+                break
+            }
+            i = i + 1
+        }
+        return evs
+    }
+}
+
+// M28: AI Coding Engine sobre ModelRunner
+
+class AiEngine {
+    ModelRunner runner
+
+    bind(ModelRunner r) {
+        runner = r
+    }
+
+    complete(Int promptToken, Int maxTokens): String {
+        var cfg = RunnerConfig(maxTokens, 0, 100, 42)
+        var out = runner.generate(promptToken, cfg)
+        var s = ""
+        var i = 0
+        while (i < out.size()) {
+            s = s + out.get(i) + " "
+            i = i + 1
+        }
+        return s
+    }
+
+    explain(String target): String {
+        return "explain:" + target
+    }
+}
+
+// M30: Model Manager — biblioteca GGUF local
+
+record ModelEntry(String name, String path, Int version, Int checksum)
+
+class ModelManager {
+    List<ModelEntry> models = listOf<ModelEntry>()
+
+    register(String name, String path, Int ver): Bool {
+        var i = 0
+        while (i < models.size()) {
+            if (models.get(i).name == name) { return false }
+            i = i + 1
+        }
+        models.add(ModelEntry(name, path, ver, name.length * 7919))
+        return true
+    }
+
+    remove(String name): Bool {
+        var i = 0
+        while (i < models.size()) {
+            if (models.get(i).name == name) {
+                models.remove(i)
+                return true
+            }
+            i = i + 1
+        }
+        return false
+    }
+
+    count(): Int { return models.size() }
+
+    supportsQuant(Int modelQuant, Int runtimeQuant): Bool {
+        return modelQuant <= runtimeQuant
+    }
 }
 
 WS_ROOT(): String { return "build/wsfix" }

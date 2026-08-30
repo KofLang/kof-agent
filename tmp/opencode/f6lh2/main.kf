@@ -1,0 +1,1323 @@
+record CheckRec(String id, Bool ok, String detail)
+
+interface TimeSource {
+    nowMs(): Long
+}
+
+class FixedClock implements TimeSource {
+    Long value = 0
+    constructor(Long v) {
+        value = v
+    }
+    nowMs(): Long {
+        return value
+    }
+    advance(Long ms) {
+        value = value + ms
+    }
+}
+
+class RealTimeClock implements TimeSource {
+    constructor() {
+    }
+    nowMs(): Long {
+        return now()
+    }
+}
+
+parseIntStr(String s): Int {
+    var n = 0
+    var i = 0
+    if (s.length == 0) {
+        throw "parse: empty integer"
+    }
+    var start = 0
+    if (s.charAt(0) == 45) {
+        start = 1
+        if (s.length == 1) {
+            throw "parse: invalid integer '" + s + "'"
+        }
+    }
+    i = start
+    while (i < s.length) {
+        var c = s.charAt(i)
+        if (c < 48 || c > 57) {
+            throw "parse: invalid integer '" + s + "'"
+        }
+        n = n * 10 + (c - 48)
+        i = i + 1
+    }
+    if (start == 1) {
+        n = 0 - n
+    }
+    return n
+}
+
+parseBoolStr(String s): Bool {
+    var v = s.toLowerCase()
+    if (v == "true" || v == "1" || v == "yes" || v == "on") {
+        return true
+    }
+    if (v == "false" || v == "0" || v == "no" || v == "off" || v == "") {
+        return false
+    }
+    throw "parse: invalid boolean '" + s + "'"
+}
+
+escapeJson(String s): String {
+    var out = ""
+    var i = 0
+    while (i < s.length) {
+        var c = s.charAt(i)
+        if (c == 34) {
+            out = out + "\\\""
+        } else if (c == 92) {
+            out = out + "\\\\"
+        } else if (c == 10) {
+            out = out + "\\n"
+        } else if (c == 13) {
+            out = out + "\\r"
+        } else if (c == 9) {
+            out = out + "\\t"
+        } else {
+            out = out + s.substring(i, i + 1)
+        }
+        i = i + 1
+    }
+    return out
+}
+
+joinPath(String a, String b): String {
+    if (a == "") {
+        return b
+    }
+    if (a.substring(a.length - 1, a.length) == "/") {
+        return a + b
+    }
+    return a + "/" + b
+}
+
+splitStr(String s, String sep): List<String> {
+    var out = listOf<String>()
+    if (s.length == 0) {
+        return out
+    }
+    var sc = sep.charAt(0)
+    var start = 0
+    var i = 0
+    while (i < s.length) {
+        if (s.charAt(i) == sc) {
+            out.add(s.substring(start, i))
+            start = i + 1
+        }
+        i = i + 1
+    }
+    out.add(s.substring(start, s.length))
+    return out
+}
+
+loadArgsFile(String path): List<String> {
+    var argv = listOf<String>()
+    var f = File(path)
+    if (!f.exists()) {
+        return argv
+    }
+    var txt = f.readText()
+    var lines = splitStr(txt, "\n")
+    for (var line in lines) {
+        var t = line.trim()
+        if (t.length > 0) {
+            argv.add(t)
+        }
+    }
+    return argv
+}
+
+sortInts(Int[] a, Int n) {
+    var i = 1
+    while (i < n) {
+        var key = a[i]
+        var j = i - 1
+        var placed = false
+        while (!placed) {
+            if (j < 0) {
+                placed = true
+            } else {
+                if (a[j] > key) {
+                    a[j + 1] = a[j]
+                    j = j - 1
+                } else {
+                    placed = true
+                }
+            }
+        }
+        a[j + 1] = key
+        i = i + 1
+    }
+}
+
+retLower(String s): String {
+    return s.toLowerCase()
+}
+
+mkFile(String path, String content): Bool {
+    var parent = ""
+    var parts = splitStr(path, "/")
+    if (parts.size > 1) {
+        var i = 0
+        while (i < parts.size - 1) {
+            if (parent == "") {
+                parent = parts.get(i)
+            } else {
+                parent = joinPath(parent, parts.get(i))
+            }
+            i = i + 1
+        }
+        var d = Directory(parent)
+        if (!d.exists()) {
+            d.createDirectories()
+        }
+    }
+    var f = File(path)
+    if (f.exists()) {
+        f.delete()
+    }
+    return f.writeText(content)
+}
+
+class EventCounter implements EventHandler {
+    Int count = 0
+    constructor() {
+    }
+    onEvent(EventEnvelope e): Bool {
+        count = count + 1
+        return true
+    }
+}
+
+class RecordingHandler implements EventHandler {
+    List<String> seen = listOf<String>()
+    constructor() {
+    }
+    onEvent(EventEnvelope e): Bool {
+        seen.add(e.topic + "=" + e.payload)
+        return true
+    }
+}
+
+freshBus(): EventBus {
+    return EventBus()
+}
+
+WS_IDX_VERSION(): Int { return 3 }
+
+WsSnapEmpty(): WsSnap {
+    return WsSnap()
+}
+
+
+WS_MAGIC_A(): Int { return 87 }
+WS_MAGIC_B(): Int { return 83 }
+WS_MAGIC_C(): Int { return 73 }
+WS_MAGIC_D(): Int { return 88 }
+
+record WsFileRec(String path, Int hash, Int sizeChars)
+record WsSymRec(String name, String kind, String file)
+record WsImpRec(String file, String name)
+record WsEdgeRec(String from, String to)
+record WsGitRec(String branch, String commit)
+class WsSnap {
+    String workspaceId = ""
+    String root = ""
+    String gitBranch = ""
+    String gitCommit = ""
+    String target = ""
+    Long timestamp = 0
+    List<WsFileRec> files = listOf<WsFileRec>()
+    List<WsSymRec> symbols = listOf<WsSymRec>()
+    List<WsImpRec> imports = listOf<WsImpRec>()
+    List<WsEdgeRec> deps = listOf<WsEdgeRec>()
+    constructor() {
+    }
+}
+
+record WsParsedRec(String path, Int hash, String pkg, List<String> imports, List<WsSymRec> syms)
+record WsDiffRec(List<String> added, List<String> modified, List<String> deleted, List<String> renamedOld, List<String> renamedNew, List<String> symAdded, List<String> symRemoved)
+record WsDiagRec(String file, Int hash, Int diagCount, String codes)
+
+wsHash(String s): Int {
+    var h = 5381
+    var i = 0
+    while (i < s.length) {
+        h = h * 33 + s.charAt(i)
+        i = i + 1
+    }
+    return h
+}
+
+wsSanitize(String s): String {
+    var out = ""
+    var i = 0
+    while (i < s.length) {
+        var c = s.charAt(i)
+        if (c == 1 || c == 2 || c == 3) {
+            out = out + "?"
+        } else {
+            out = out + s.substring(i, i + 1)
+        }
+        i = i + 1
+    }
+    return out
+}
+
+wsJoin(List<String> xs, String sep): String {
+    var out = ""
+    var first = true
+    for (var x in xs) {
+        if (!first) {
+            out = out + sep
+        }
+        first = false
+        out = out + x
+    }
+    return out
+}
+
+wsInList(List<String> xs, String v): Bool {
+    for (var x in xs) {
+        if (x == v) {
+            return true
+        }
+    }
+    return false
+}
+
+parseLongSafe(String s): Long {
+    var n = 0
+    var i = 0
+    while (i < s.length) {
+        var c = s.charAt(i)
+        if (c >= 48 && c <= 57) {
+            n = n * 10 + (c - 48)
+        }
+        i = i + 1
+    }
+    return n
+}
+
+wsCountOccurrences(String textIn, String needle): Int {
+    var n = 0
+    var rest = textIn
+    while (rest.length >= needle.length) {
+        var idx = rest.indexOf(needle)
+        if (idx < 0) {
+            break
+        }
+        n = n + 1
+        rest = rest.substring(idx + needle.length, rest.length)
+    }
+    return n
+}
+
+wsFirstToken(String s): String {
+    var out = ""
+    var i = 0
+    while (i < s.length) {
+        var c = s.charAt(i)
+        if (c == 40 || c == 32 || c == 123 || c == 58 || c == 61) {
+            break
+        }
+        out = out + s.substring(i, i + 1)
+        i = i + 1
+    }
+    return out.trim()
+}
+
+wsLastSpace(String s): Int {
+    var found = 0 - 1
+    var i = 0
+    while (i < s.length) {
+        if (s.charAt(i) == 32) {
+            found = i
+        }
+        i = i + 1
+    }
+    return found
+}
+
+wsIsKeyword(String t): Bool {
+    if (t == "if") { return true }
+    if (t == "for") { return true }
+    if (t == "while") { return true }
+    if (t == "switch") { return true }
+    if (t == "return") { return true }
+    if (t == "catch") { return true }
+    if (t == "else") { return true }
+    if (t == "do") { return true }
+    if (t == "spawn") { return true }
+    if (t == "assert") { return true }
+    return false
+}
+
+wsCollectFiles(String dir, Int depth, List<String> out) {
+    if (depth > 6) {
+        return
+    }
+    var d = Directory(dir)
+    if (!d.exists()) {
+        return
+    }
+    if (!d.isDirectory()) {
+        return
+    }
+    var names = d.list()
+    for (var n in names) {
+        var skipIt = n == ".git" || n == "build" || n == "out"
+        if (!skipIt) {
+            var child = joinPath(dir, n)
+            var f = File(child)
+            if (f.isFile()) {
+                if (n.length >= 3) {
+                    var ext = n.substring(n.length - 3, n.length)
+                    if (ext == ".kf") {
+                        out.add(child)
+                    }
+                }
+            } else {
+                if (f.isDirectory()) {
+                    wsCollectFiles(child, depth + 1, out)
+                }
+            }
+        }
+    }
+}
+
+wsParseFile(String path): WsParsedRec {
+    var f = File(path)
+    var txt = ""
+    if (f.exists() && f.isFile()) {
+        txt = f.readText()
+    }
+    var hash = wsHash(txt)
+    var imports = listOf<String>()
+    var syms = listOf<WsSymRec>()
+    var pkg = ""
+    var lines = splitStr(txt, "\n")
+    for (var raw in lines) {
+        var t = raw.trim()
+        if (t.length > 0) {
+            var isComment = t.startsWith("//")
+            if (!isComment) {
+                var isPkg = t.startsWith("package ")
+                var isImp = t.startsWith("import ")
+                if (isPkg) {
+                    pkg = t.substring(8, t.length).trim()
+                }
+                if (isImp) {
+                    imports.add(t.substring(7, t.length).trim())
+                }
+                if (!isPkg && !isImp) {
+                    var kind = ""
+                    if (t.startsWith("record ")) {
+                        kind = "record"
+                    }
+                    if (kind == "" && t.startsWith("interface ")) {
+                        kind = "interface"
+                    }
+                    if (kind == "" && t.startsWith("entity ")) {
+                        kind = "entity"
+                    }
+                    if (kind == "" && t.startsWith("abstract class ")) {
+                        kind = "class"
+                    }
+                    if (kind == "" && t.startsWith("class ")) {
+                        kind = "class"
+                    }
+                    if (kind != "") {
+                        var rest = ""
+                        if (t.startsWith("abstract class ")) {
+                            rest = t.substring(15, t.length)
+                        } else if (t.startsWith("record ")) {
+                            rest = t.substring(7, t.length)
+                        } else if (t.startsWith("interface ")) {
+                            rest = t.substring(10, t.length)
+                        } else if (t.startsWith("entity ")) {
+                            rest = t.substring(7, t.length)
+                        } else {
+                            rest = t.substring(6, t.length)
+                        }
+                        var nm = wsFirstToken(rest)
+                        if (nm.length > 0) {
+                            syms.add(WsSymRec(nm, kind, path))
+                        }
+                    } else {
+                        var p2 = t.indexOf("(")
+                        if (p2 > 0) {
+                            var head = t.substring(0, p2).trim()
+                            var sp = wsLastSpace(head)
+                            var cand = head
+                            if (sp >= 0) {
+                                cand = head.substring(sp + 1, head.length)
+                            }
+                            var looksFn = false
+                            if (cand.length > 0) {
+                                var c0 = cand.charAt(0)
+                                var alpha = (c0 >= 65 && c0 <= 90) || (c0 >= 97 && c0 <= 122) || c0 == 95
+                                if (alpha) {
+                                    var kw = wsIsKeyword(cand)
+                                    if (!kw) {
+                                        var hasRet = t.contains("): ")
+                                        var hasExpr = t.contains(") = ")
+                                        var hasBrace = t.endsWith("{")
+                                        if (hasRet || hasExpr || hasBrace) {
+                                            looksFn = true
+                                        }
+                                    }
+                                }
+                            }
+                            if (looksFn) {
+                                syms.add(WsSymRec(cand, "function", path))
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    return WsParsedRec(path, hash, pkg, imports, syms)
+}
+
+wsGitInfo(String root): WsGitRec {
+    var headFile = File(joinPath(joinPath(root, ".git"), "HEAD"))
+    var branch = ""
+    var commit = ""
+    if (headFile.exists() && headFile.isFile()) {
+        var head = headFile.readText().trim()
+        if (head.startsWith("ref: refs/heads/")) {
+            branch = head.substring(16, head.length).trim()
+            var refFile = File(joinPath(joinPath(root, ".git"), joinPath("refs", "heads")))
+            var shaFile = File(joinPath(joinPath(joinPath(root, ".git"), "refs"), joinPath("heads", branch)))
+            if (shaFile.exists() && shaFile.isFile()) {
+                commit = shaFile.readText().trim()
+            }
+        } else {
+            commit = head
+        }
+    }
+    return WsGitRec(branch, commit)
+}
+
+wsBuildEdges(List<WsParsedRec> parsed, List<WsImpRec> flatImports): List<WsEdgeRec> {
+    var edges = listOf<WsEdgeRec>()
+    for (var imp in flatImports) {
+        var target = ""
+        for (var p in parsed) {
+            if (target == "") {
+                for (var s in p.syms) {
+                    if (target == "" && s.name == imp.name && s.file != imp.file) {
+                        target = p.path
+                    }
+                }
+            }
+        }
+        if (target != "") {
+            edges.add(WsEdgeRec(imp.file, target))
+        }
+    }
+    return edges
+}
+
+wsUnusedImports(List<WsParsedRec> parsed, List<WsImpRec> flatAll): List<WsImpRec> {
+    var unused = listOf<WsImpRec>()
+    for (var imp in flatAll) {
+        var txt = ""
+        var rf = File(imp.file)
+        if (rf.exists() && rf.isFile()) {
+            txt = rf.readText()
+        }
+        var occurrences = wsCountOccurrences(txt, imp.name)
+        if (occurrences <= 1) {
+            unused.add(imp)
+        }
+    }
+    return unused
+}
+
+wsHasCycleRec(String node, List<WsEdgeRec> edges, List<String> visited, List<String> stack, List<String> cycleOut): Bool {
+    if (wsInList(stack, node)) {
+        cycleOut.add(node)
+        return true
+    }
+    if (wsInList(visited, node)) {
+        return false
+    }
+    visited.add(node)
+    stack.add(node)
+    for (var e in edges) {
+        if (e.from == node) {
+            var found = wsHasCycleRec(e.to, edges, visited, stack, cycleOut)
+            if (found) {
+                return true
+            }
+        }
+    }
+    stack.remove(stack.size - 1)
+    return false
+}
+
+wsDetectCycle(List<WsEdgeRec> edges): List<String> {
+    var visited = listOf<String>()
+    var stack = listOf<String>()
+    var cycle = listOf<String>()
+    var roots = listOf<String>()
+    for (var e in edges) {
+        if (!wsInList(roots, e.from)) {
+            roots.add(e.from)
+        }
+    }
+    for (var r in roots) {
+        var found = wsHasCycleRec(r, edges, visited, stack, cycle)
+        if (found) {
+            return cycle
+        }
+    }
+    return cycle
+}
+
+wsFullScan(EventBus bus, String root, TimeSource clock): WsSnap {
+    bus.publish("workspace.indexing", root)
+    var paths = listOf<String>()
+    wsCollectFiles(root, 1, paths)
+    var files = listOf<WsFileRec>()
+    var syms = listOf<WsSymRec>()
+    var imps = listOf<WsImpRec>()
+    var parsedAll = listOf<WsParsedRec>()
+    for (var p in paths) {
+        var pr = wsParseFile(p)
+        parsedAll.add(pr)
+        var sz = 0
+        var rf = File(p)
+        if (rf.exists() && rf.isFile()) {
+            sz = rf.readText().length
+        }
+        files.add(WsFileRec(p, pr.hash, sz))
+        for (var s in pr.syms) {
+            syms.add(s)
+        }
+        for (var i in pr.imports) {
+            imps.add(WsImpRec(p, i))
+        }
+    }
+    var deps = wsBuildEdges(parsedAll, imps)
+    var gi = wsGitInfo(root)
+    var cfg = Config()
+    cfg.loadFile(joinPath(root, "kof.config"))
+    var target = cfg.getStr("target", "native")
+    var wsId = "" + wsHash(root + "|" + gi.branch + "|" + gi.commit)
+    var snap = WsSnap()
+    snap.workspaceId = wsId
+    snap.root = root
+    snap.gitBranch = gi.branch
+    snap.gitCommit = gi.commit
+    snap.target = target
+    snap.timestamp = clock.nowMs()
+    snap.files = files
+    snap.symbols = syms
+    snap.imports = imps
+    snap.deps = deps
+    bus.publish("snapshot.created", root)
+    bus.publish("workspace.indexed", "files=" + files.size + " symbols=" + syms.size)
+    return snap
+}
+
+
+wsMetaLine(WsSnap snap): String {
+    return snap.workspaceId + "\u0003" + wsSanitize(snap.root) + "\u0003" + wsSanitize(snap.gitBranch) + "\u0003" + wsSanitize(snap.gitCommit) + "\u0003" + snap.target + "\u0003" + snap.timestamp
+}
+
+wsSerializeIndex(WsSnap snap): String {
+    var filesSec = ""
+    var firstF = true
+    for (var f in snap.files) {
+        if (!firstF) {
+            filesSec = filesSec + "\u0002"
+        }
+        firstF = false
+        filesSec = filesSec + f.path + "\u0003" + f.hash + "\u0003" + f.sizeChars
+    }
+    var symSec = ""
+    var firstS = true
+    for (var x in snap.symbols) {
+        if (!firstS) {
+            symSec = symSec + "\u0002"
+        }
+        firstS = false
+        symSec = symSec + x.name + "\u0003" + x.kind + "\u0003" + x.file
+    }
+    var impSec = ""
+    var firstI = true
+    for (var x in snap.imports) {
+        if (!firstI) {
+            impSec = impSec + "\u0002"
+        }
+        firstI = false
+        impSec = impSec + x.file + "\u0003" + x.name
+    }
+    var depSec = ""
+    var firstD = true
+    for (var x in snap.deps) {
+        if (!firstD) {
+            depSec = depSec + "\u0002"
+        }
+        firstD = false
+        depSec = depSec + x.from + "\u0003" + x.to
+    }
+    var payload = wsMetaLine(snap)
+    payload = payload + "\u0001" + filesSec
+    payload = payload + "\u0001" + symSec
+    payload = payload + "\u0001" + impSec
+    payload = payload + "\u0001" + depSec
+    return payload
+}
+
+wsWriteVersioned(String path, String magic, Int version, String payload): Bool {
+    var crc = wsHash(payload)
+    var head = magic + "|" + version + "|" + crc + "\n"
+    var f = File(path)
+    if (f.exists()) {
+        f.delete()
+    }
+    return f.writeText(head + payload)
+}
+
+wsSaveAll(EventBus bus, String dir, WsSnap snap): Bool {
+    var d = Directory(dir)
+    if (!d.exists()) {
+        d.createDirectories()
+    }
+    var body = wsSerializeIndex(snap)
+    var okIdx = wsWriteVersioned(joinPath(dir, "workspace.idx"), "WSIDX", WS_IDX_VERSION(), body)
+    var okSnap = wsWriteVersioned(joinPath(dir, "workspace.snapshot"), "WSSNP", WS_IDX_VERSION(), body)
+    var hashes = listOf<String>()
+    for (var f in snap.files) {
+        hashes.add("" + f.hash)
+    }
+    var okH = wsWriteVersioned(joinPath(dir, "workspace.hashes"), "WSHSH", WS_IDX_VERSION(), wsJoin(hashes, "\u0002"))
+    bus.publish("snapshot.created", dir)
+    return okIdx && okSnap && okH
+}
+
+wsReadVersioned(String path, String wantMagic): String {
+    var f = File(path)
+    if (!f.exists()) {
+        return ""
+    }
+    if (!f.isFile()) {
+        return ""
+    }
+    var txt = f.readText()
+    var nl = txt.indexOf("\n")
+    if (nl < 0) {
+        return ""
+    }
+    var head = txt.substring(0, nl)
+    var payload = txt.substring(nl + 1, txt.length)
+    var hp = splitStr(head, "|")
+    if (hp.size != 3) {
+        return ""
+    }
+    if (hp.get(0) != wantMagic) {
+        return ""
+    }
+    var crc = parseLongSafe(hp.get(2))
+    if (wsHash(payload) != crc) {
+        return ""
+    }
+    return payload
+}
+
+wsSection(String payload, Int idx): String {
+    var parts = splitStr(payload, "\u0001")
+    if (idx < parts.size) {
+        return parts.get(idx)
+    }
+    return ""
+}
+
+wsParseMeta(String sec, String fallbackRoot): WsSnap {
+    var f6 = splitStr(sec, "\u0003")
+    if (f6.size < 6) {
+        return WsSnapEmpty()
+    }
+    var out2 = WsSnap()
+    if (f6.size >= 6) {
+        out2.workspaceId = f6.get(0)
+        out2.root = f6.get(1)
+        out2.gitBranch = f6.get(2)
+        out2.gitCommit = f6.get(3)
+        out2.target = f6.get(4)
+        out2.timestamp = parseLongSafe(f6.get(5))
+    }
+    return out2
+}
+
+wsLoadIndex(String path): WsSnap {
+    var payload = wsReadVersioned(path, "WSIDX")
+    if (payload == "") {
+        return WsSnapEmpty()
+    }
+    var meta = wsParseMeta(wsSection(payload, 0), "")
+    var files = meta.files
+    var fsec = wsSection(payload, 1)
+    for (var entry in splitStr(fsec, "\u0002")) {
+        var fl = splitStr(entry, "\u0003")
+        if (fl.size == 3) {
+            files.add(WsFileRec(fl.get(0), parseIntStr(fl.get(1)), parseIntStr(fl.get(2))))
+        }
+    }
+    var syms = meta.symbols
+    var ssec = wsSection(payload, 2)
+    for (var entry in splitStr(ssec, "\u0002")) {
+        var sl = splitStr(entry, "\u0003")
+        if (sl.size == 3) {
+            syms.add(WsSymRec(sl.get(0), sl.get(1), sl.get(2)))
+        }
+    }
+    var imps = meta.imports
+    var isec = wsSection(payload, 3)
+    for (var entry in splitStr(isec, "\u0002")) {
+        var il = splitStr(entry, "\u0003")
+        if (il.size == 2) {
+            imps.add(WsImpRec(il.get(0), il.get(1)))
+        }
+    }
+    var deps = meta.deps
+    var dsec = wsSection(payload, 4)
+    for (var entry in splitStr(dsec, "\u0002")) {
+        var dl = splitStr(entry, "\u0003")
+        if (dl.size == 2) {
+            deps.add(WsEdgeRec(dl.get(0), dl.get(1)))
+        }
+    }
+    meta.files = files
+    meta.symbols = syms
+    meta.imports = imps
+    meta.deps = deps
+    return meta
+}
+
+wsDiff(List<WsFileRec> prevFiles, List<WsFileRec> nextFiles): WsDiffRec {
+    var added = listOf<String>()
+    var modified = listOf<String>()
+    var unchanged = listOf<String>()
+    var deleted = listOf<String>()
+    for (var nf in nextFiles) {
+        var found = false
+        var oldHash = 0
+        for (var pf in prevFiles) {
+            if (pf.path == nf.path) {
+                found = true
+                oldHash = pf.hash
+            }
+        }
+        if (!found) {
+            added.add(nf.path)
+        } else if (oldHash != nf.hash) {
+            modified.add(nf.path)
+        } else {
+            unchanged.add(nf.path)
+        }
+    }
+    for (var pf in prevFiles) {
+        var still = false
+        for (var nf in nextFiles) {
+            if (nf.path == pf.path) {
+                still = true
+            }
+        }
+        if (!still) {
+            deleted.add(pf.path)
+        }
+    }
+    var renamedOld = listOf<String>()
+    var renamedNew = listOf<String>()
+    for (var delPath in deleted) {
+        var delHash = 0
+        for (var pf in prevFiles) {
+            if (pf.path == delPath) {
+                delHash = pf.hash
+            }
+        }
+        for (var addPath in added) {
+            var addHash = 0
+            for (var nf in nextFiles) {
+                if (nf.path == addPath) {
+                    addHash = nf.hash
+                }
+            }
+            if (addHash == delHash && delHash != 0) {
+                renamedOld.add(delPath)
+                renamedNew.add(addPath)
+            }
+        }
+    }
+    var realAdded = listOf<String>()
+    for (var a in added) {
+        if (!wsInList(renamedNew, a)) {
+            realAdded.add(a)
+        }
+    }
+    var realDeleted = listOf<String>()
+    for (var d in deleted) {
+        if (!wsInList(renamedOld, d)) {
+            realDeleted.add(d)
+        }
+    }
+    return WsDiffRec(realAdded, modified, realDeleted, renamedOld, renamedNew, listOf<String>(), listOf<String>())
+}
+
+class WorkspaceIndex {
+    String root = "."
+    EventBus bus
+    WsSnap current = WsSnap()
+    List<WsDiagRec> diagCache = listOf<WsDiagRec>()
+    Bool loaded = false
+
+    TimeSource clock
+
+    constructor(String r, EventBus b) {
+        root = r
+        bus = b
+        clock = RealTimeClock()
+    }
+
+    constructor(String r, EventBus b, TimeSource ts) {
+        root = r
+        bus = b
+        clock = ts
+    }
+
+    fullRescan(): WsSnap {
+        var snap = wsFullScan(bus, root, clock)
+        var diff = wsDiff(current.files, snap.files)
+        publishFileEvents(diff)
+        current = snap
+        loaded = true
+        return snap
+    }
+
+    incremental(): WsSnap {
+        if (!loaded) {
+            return fullRescan()
+        }
+        var fresh = wsFullScan(bus, root, clock)
+        var diff = wsDiff(current.files, fresh.files)
+        fresh.workspaceId = current.workspaceId
+        current = fresh
+        bus.publish("workspace.changed", "added=" + diff.added.size + " modified=" + diff.modified.size + " deleted=" + diff.deleted.size + " renamed=" + diff.renamedOld.size)
+        publishFileEvents(diff)
+        return fresh
+    }
+
+    publishFileEvents(WsDiffRec d) {
+        for (var a in d.added) {
+            bus.publish("file.added", a)
+        }
+        for (var m in d.modified) {
+            bus.publish("file.modified", m)
+        }
+        for (var x in d.deleted) {
+            bus.publish("file.removed", x)
+        }
+        if (d.renamedOld.size > 0) {
+            bus.publish("file.renamed", d.renamedOld.get(0) + "->" + d.renamedNew.get(0))
+        }
+        bus.publish("diff.computed", "added=" + d.added.size + ",deleted=" + d.deleted.size + ",modified=" + d.modified.size)
+    }
+
+    save(): Bool {
+        return wsSaveAll(bus, joinPath(root, "build"), current)
+    }
+
+    load(): Bool {
+        var idxPath = joinPath(joinPath(root, "build"), "workspace.idx")
+        var snap = wsLoadIndex(idxPath)
+        if (snap.root == "") {
+            loaded = false
+            bus.publish("workspace.cacheInvalid", idxPath)
+            return false
+        }
+        if (snap.root != root) {
+            bus.publish("workspace.cacheInvalid", "root mismatch")
+            return false
+        }
+        current = snap
+        loaded = true
+        return true
+    }
+
+    symbolsOf(String file): List<WsSymRec> {
+        var out = listOf<WsSymRec>()
+        for (var s in current.symbols) {
+            if (s.file == file) {
+                out.add(s)
+            }
+        }
+        return out
+    }
+
+    findSymbol(String name): List<WsSymRec> {
+        var out = listOf<WsSymRec>()
+        for (var s in current.symbols) {
+            if (s.name == name) {
+                out.add(s)
+            }
+        }
+        return out
+    }
+
+    importsOf(String file): List<String> {
+        var out = listOf<String>()
+        for (var i in current.imports) {
+            if (i.file == file) {
+                out.add(i.name)
+            }
+        }
+        return out
+    }
+
+    depsFrom(String file): List<String> {
+        var out = listOf<String>()
+        for (var e in current.deps) {
+            if (e.from == file) {
+                out.add(e.to)
+            }
+        }
+        return out
+    }
+
+    cycles(): List<String> {
+        return wsDetectCycle(current.deps)
+    }
+
+    unusedImports(): List<WsImpRec> {
+        var parsed = listOf<WsParsedRec>()
+        for (var f in current.files) {
+            parsed.add(wsParseFile(f.path))
+        }
+        var flat = current.imports
+        return wsUnusedImports(parsed, flat)
+    }
+
+    diffVsCurrent(): WsDiffRec {
+        var freshPaths = listOf<String>()
+        wsCollectFiles(root, 1, freshPaths)
+        var nextFiles = listOf<WsFileRec>()
+        for (var p in freshPaths) {
+            var pr = wsParseFile(p)
+            var sz = 0
+            nextFiles.add(WsFileRec(p, pr.hash, sz))
+        }
+        return wsDiff(current.files, nextFiles)
+    }
+
+    putDiag(String file, Int hash, Int count, String codes) {
+        diagCache.add(WsDiagRec(file, hash, count, codes))
+    }
+
+    cachedDiag(String file, Int hash): WsDiagRec {
+        for (var d in diagCache) {
+            if (d.file == file && d.hash == hash) {
+                return d
+            }
+        }
+        return WsDiagRec("", 0, -1, "")
+    }
+
+    statsJson(): String {
+        var out = "{\"root\":\"" + escapeJson(root) + "\""
+        out = out + ",\"files\":" + current.files.size
+        out = out + ",\"symbols\":" + current.symbols.size
+        out = out + ",\"imports\":" + current.imports.size
+        out = out + ",\"deps\":" + current.deps.size
+        out = out + ",\"branch\":\"" + escapeJson(current.gitBranch) + "\""
+        out = out + ",\"commit\":\"" + escapeJson(current.gitCommit) + "\""
+        out = out + ",\"target\":\"" + current.target + "\""
+        out = out + ",\"loaded\":" + loaded
+        out = out + "}"
+        return out
+    }
+}
+
+record GgufInfoRec(String path, Bool magicOk, Int version, Int nTensors)
+record TensorR(Int rows, Int cols, Int[] data)
+
+tkTokenize(String text): List<String> {
+    var out = listOf<String>()
+    var cur = ""
+    var i = 0
+    while (i < text.length) {
+        var c = text.charAt(i)
+        var alpha = (c >= 65 && c <= 90) || (c >= 97 && c <= 122) || (c >= 48 && c <= 57)
+        if (alpha) {
+            cur = cur + text.substring(i, i + 1)
+        } else {
+            if (cur.length > 0) {
+                out.add(cur)
+                cur = ""
+            }
+        }
+        i = i + 1
+    }
+    if (cur.length > 0) {
+        out.add(cur)
+    }
+    return out
+}
+
+class Vocab {
+    List<String> tokens = listOf<String>()
+    constructor() {
+    }
+    addToken(String t): Int {
+        var id = tkId(t)
+        tokens.add(t)
+        return id
+    }
+    size(): Int {
+        return tokens.size
+    }
+    tokenAt(Int i): String {
+        return tokens.get(i)
+    }
+}
+
+tkId(String t): Int {
+    var h = wsHash(retLower(t))
+    if (h < 0) {
+        h = 0 - h
+    }
+    return h % 50000
+}
+
+vocabBuildFromCorpus(CorpusIndex ix): Vocab {
+    var v = Vocab()
+    for (var d in ix.docs) {
+        var toks = tkTokenize(d.meta.title + " " + d.body)
+        for (var t in toks) {
+            if (v.size() < 4096) {
+                var dup = false
+                for (var e in v.tokens) {
+                    if (e == t) {
+                        dup = true
+                    }
+                }
+                if (!dup) {
+                    v.addToken(t)
+                }
+            }
+        }
+    }
+    return v
+}
+
+tkEncode(Vocab v, String text): List<Int> {
+    var ids = listOf<Int>()
+    for (var t in tkTokenize(text)) {
+        ids.add(tkId(t))
+    }
+    return ids
+}
+
+tkDecode(List<Int> ids): String {
+    var out = ""
+    for (var id in ids) {
+        out = out + "<" + id + ">"
+    }
+    return out
+}
+
+samplerLcg(Int seed): Int {
+    var x = seed * 1103515245 + 12345
+    if (x < 0) {
+        x = 0 - x
+    }
+    return x % 2147483647
+}
+
+samplerTopK(Int[] logits, Int n, Int k, Int seed): Int {
+    var best = logits[0]
+    var bi = 0
+    var s = samplerLcg(seed)
+    var i = 0
+    while (i < n) {
+        if (logits[i] > best) {
+            best = logits[i]
+            bi = i
+        }
+        i = i + 1
+    }
+    var jitter = s % (k + 1)
+    if (jitter == 0) {
+        return bi
+    }
+    var alt = (bi + jitter) % n
+    return alt
+}
+
+tensorNew(Int rows, Int cols): TensorR {
+    return TensorR(rows, cols, new Int[rows * cols])
+}
+
+tensorGet(TensorR t, Int r, Int cc): Int {
+    return t.data[r * t.cols + cc]
+}
+
+tensorSet(TensorR t, Int r, Int cc, Int v) {
+    t.data[r * t.cols + cc] = v
+}
+
+tensorTranspose(TensorR t): TensorR {
+    var o = tensorNew(t.cols, t.rows)
+    var r = 0
+    while (r < t.rows) {
+        var c2 = 0
+        while (c2 < t.cols) {
+            tensorSet(o, c2, r, tensorGet(t, r, c2))
+            c2 = c2 + 1
+        }
+        r = r + 1
+    }
+    return o
+}
+
+tensorMatMul(TensorR a, TensorR b): TensorR {
+    var o = tensorNew(a.rows, b.cols)
+    var r = 0
+    while (r < a.rows) {
+        var c2 = 0
+        while (c2 < b.cols) {
+            var acc = 0
+            var kk = 0
+            while (kk < a.cols) {
+                acc = acc + tensorGet(a, r, kk) * tensorGet(b, kk, c2)
+                kk = kk + 1
+            }
+            tensorSet(o, r, c2, acc)
+            c2 = c2 + 1
+        }
+        r = r + 1
+    }
+    return o
+}
+
+ggufParseHeader(String path): GgufInfoRec {
+    var f = File(path)
+    if (!f.exists()) {
+        return GgufInfoRec(path, false, 0, 0)
+    }
+    var txt = f.readText()
+    var magicOk = txt.startsWith("GGUF")
+    var ver = 0
+    var nt = 0
+    if (magicOk && txt.length > 9) {
+        ver = parseIntStr(txt.substring(4, 6))
+        nt = parseIntStr(txt.substring(6, 9))
+    }
+    return GgufInfoRec(path, magicOk, ver, nt)
+}
+
+// M31.3.3/.4: LMHeadExecutor + QuantDecoder (F32/Q8_0-like/Q4_0)
+
+record QuantBlock(Int scale, Int baseVal)
+
+fn q40DecodeBlock(Int[] raw, Int off): Int {
+    var scale = raw[off]
+    var acc = 0
+    var i = 1
+    while (i < 9) {
+        var nib = raw[off + i] % 16
+        acc = acc + nib * scale / 100
+        i = i + 1
+    }
+    return acc
+}
+
+lmHead(TensorR hidden, TensorR w, Int vocab): Int[] {
+    var lg = new Int[vocab]
+    var i = 0
+    while (i < vocab) {
+        var sum = 0
+        var j = 0
+        while (j < hidden.cols) {
+            var wv = tensorGet(w, i % w.rows, j)
+            sum = sum + tensorGet(hidden, 0, j) * wv
+            j = j + 1
+        }
+        lg[i] = sum % 1000003
+        if (lg[i] < 0) { lg[i] = 0 - lg[i] }
+        i = i + 1
+    }
+    return lg
+}
+
+quantDecodeTensor(Int[] raw, Int nBlocks): Int[] {
+    var out = new Int[nBlocks]
+    var b = 0
+    while (b < nBlocks) {
+        out[b] = q40DecodeBlock(raw, b * 9)
+        b = b + 1
+    }
+    return out
+}
+
+// M31.2/.3: Q8_0 decode + Embedding Executor
+
+fn q80DecodeBlock(Int[] raw, Int off): Int {
+    var scale = raw[off]
+    var acc = 0
+    var i = 1
+    while (i < 5) {
+        acc = acc + raw[off + i] * scale / 127
+        i = i + 1
+    }
+    return acc
+}
+
+embeddingLookup(TensorR table, Int tokenId): TensorR {
+    var row = tokenId % table.rows
+    var out = tensorNew(1, table.cols)
+    var c2 = 0
+    while (c2 < table.cols) {
+        tensorSet(out, 0, c2, tensorGet(table, row, c2))
+        c2 = c2 + 1
+    }
+    return out
+}
+
+test "lm head produces bounded logits" {
+    var h = tensorNew(1, 4)
+    tensorSet(h, 0, 0, 100)
+    var w = tensorNew(8, 4)
+    tensorSet(w, 0, 0, 2)
+    var lg = lmHead(h, w, 16)
+    assert(lg.length == 16)
+    assert(lg[0] >= 0)
+}
+
+test "q4_0 decode block scales" {
+    var raw = new Int[9]
+    raw[0] = 200
+    raw[1] = 50
+    var v = q40DecodeBlock(raw, 0)
+    assert(v == 4)
+    assert(v >= 0)
+}
+
+test "quant decode tensor full pass" {
+    var raw = new Int[18]
+    raw[0] = 100
+    raw[9] = 300
+    var o = quantDecodeTensor(raw, 2)
+    assert(o.length == 2)
+}

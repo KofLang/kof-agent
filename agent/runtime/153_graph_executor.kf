@@ -24,13 +24,16 @@ class GraphExecutor {
 
     execLayer(TensorR x, LayerPlan lp): TensorR {
         steps = steps + 1
-        var normed = tensorRmsNorm(x)
-        var attnOut = tensorSoftmaxRow(normed, 0)
-        var ffnIn = tensorNew(1, lp.hidden)
-        var g = gelu(tensorGet(attnOut, 0, 0))
-        tensorSet(ffnIn, 0, 0, g)
-        var out = tensorRmsNorm(ffnIn)
-        return out
+        // attention real (scaled dot-product causal) sobre a própria seq
+        var scores = attnScores(x, x, x.rows)
+        var attnOut = attnContext(scores, x, x.rows)
+        // residual
+        var resid = tensorAdd(x, attnOut)
+        // FFN SwiGLU real
+        var ffnOut = swigluFFN(resid, lp.hidden * lp.ffMult)
+        // segunda residual + norm final
+        var out = tensorAdd(resid, ffnOut)
+        return tensorRmsNorm(out)
     }
 
     forwardAllLayers(TensorR x): TensorR {

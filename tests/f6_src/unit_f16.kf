@@ -1,0 +1,51 @@
+test "f16 one decodes to 1.0 milli 1000" {
+    // 1.0 = 0x3C00 = 15360
+    assert(f16ToMilli(15360) == 1000)
+}
+
+test "f16 two decodes to 2.0" {
+    // 2.0 = 0x4000 = 16384
+    assert(f16ToMilli(16384) == 2000)
+}
+
+test "f16 half decodes to 0.5" {
+    // 0.5 = 0x3800 = 14336
+    assert(f16ToMilli(14336) == 500)
+}
+
+test "f16 negative sign bit" {
+    // -1.0 = 0xBC00 = 15360 + 32768 = 48128
+    assert(f16ToMilli(48128) == -1000)
+}
+
+test "f16 subnormal small" {
+    // menor subnormal 0x0001 ≈ 5.96e-8 → ~0 milésimos
+    assert(f16ToMilli(1) >= 0)
+    assert(f16ToMilli(1) < 10)
+}
+
+test "f16 decode block 16 values" {
+    var raw = new Int[16]
+    var j = 0
+    while (j < 16) {
+        raw[j] = 15360
+        j = j + 1
+    }
+    var blk = f16DecodeBlock(raw, 0)
+    assert(blk.length == 16)
+    assert(blk[0] == 1000)
+    assert(blk[15] == 1000)
+}
+
+test "f16 decode tensor 2 blocks" {
+    var raw = new Int[32]
+    var j = 0
+    while (j < 32) {
+        raw[j] = 15360
+        j = j + 1
+    }
+    var t = f16DecodeTensor(raw, 2)
+    assert(t.rows == 1)
+    assert(t.cols == 32)
+    assert(tensorGet(t, 0, 31) == 1000)
+}

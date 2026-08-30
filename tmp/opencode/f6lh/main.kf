@@ -1,0 +1,483 @@
+record CheckRec(String id, Bool ok, String detail)
+
+interface TimeSource {
+    nowMs(): Long
+}
+
+class FixedClock implements TimeSource {
+    Long value = 0
+    constructor(Long v) {
+        value = v
+    }
+    nowMs(): Long {
+        return value
+    }
+    advance(Long ms) {
+        value = value + ms
+    }
+}
+
+class RealTimeClock implements TimeSource {
+    constructor() {
+    }
+    nowMs(): Long {
+        return now()
+    }
+}
+
+parseIntStr(String s): Int {
+    var n = 0
+    var i = 0
+    if (s.length == 0) {
+        throw "parse: empty integer"
+    }
+    var start = 0
+    if (s.charAt(0) == 45) {
+        start = 1
+        if (s.length == 1) {
+            throw "parse: invalid integer '" + s + "'"
+        }
+    }
+    i = start
+    while (i < s.length) {
+        var c = s.charAt(i)
+        if (c < 48 || c > 57) {
+            throw "parse: invalid integer '" + s + "'"
+        }
+        n = n * 10 + (c - 48)
+        i = i + 1
+    }
+    if (start == 1) {
+        n = 0 - n
+    }
+    return n
+}
+
+parseBoolStr(String s): Bool {
+    var v = s.toLowerCase()
+    if (v == "true" || v == "1" || v == "yes" || v == "on") {
+        return true
+    }
+    if (v == "false" || v == "0" || v == "no" || v == "off" || v == "") {
+        return false
+    }
+    throw "parse: invalid boolean '" + s + "'"
+}
+
+escapeJson(String s): String {
+    var out = ""
+    var i = 0
+    while (i < s.length) {
+        var c = s.charAt(i)
+        if (c == 34) {
+            out = out + "\\\""
+        } else if (c == 92) {
+            out = out + "\\\\"
+        } else if (c == 10) {
+            out = out + "\\n"
+        } else if (c == 13) {
+            out = out + "\\r"
+        } else if (c == 9) {
+            out = out + "\\t"
+        } else {
+            out = out + s.substring(i, i + 1)
+        }
+        i = i + 1
+    }
+    return out
+}
+
+joinPath(String a, String b): String {
+    if (a == "") {
+        return b
+    }
+    if (a.substring(a.length - 1, a.length) == "/") {
+        return a + b
+    }
+    return a + "/" + b
+}
+
+splitStr(String s, String sep): List<String> {
+    var out = listOf<String>()
+    if (s.length == 0) {
+        return out
+    }
+    var sc = sep.charAt(0)
+    var start = 0
+    var i = 0
+    while (i < s.length) {
+        if (s.charAt(i) == sc) {
+            out.add(s.substring(start, i))
+            start = i + 1
+        }
+        i = i + 1
+    }
+    out.add(s.substring(start, s.length))
+    return out
+}
+
+loadArgsFile(String path): List<String> {
+    var argv = listOf<String>()
+    var f = File(path)
+    if (!f.exists()) {
+        return argv
+    }
+    var txt = f.readText()
+    var lines = splitStr(txt, "\n")
+    for (var line in lines) {
+        var t = line.trim()
+        if (t.length > 0) {
+            argv.add(t)
+        }
+    }
+    return argv
+}
+
+sortInts(Int[] a, Int n) {
+    var i = 1
+    while (i < n) {
+        var key = a[i]
+        var j = i - 1
+        var placed = false
+        while (!placed) {
+            if (j < 0) {
+                placed = true
+            } else {
+                if (a[j] > key) {
+                    a[j + 1] = a[j]
+                    j = j - 1
+                } else {
+                    placed = true
+                }
+            }
+        }
+        a[j + 1] = key
+        i = i + 1
+    }
+}
+
+retLower(String s): String {
+    return s.toLowerCase()
+}
+
+mkFile(String path, String content): Bool {
+    var parent = ""
+    var parts = splitStr(path, "/")
+    if (parts.size > 1) {
+        var i = 0
+        while (i < parts.size - 1) {
+            if (parent == "") {
+                parent = parts.get(i)
+            } else {
+                parent = joinPath(parent, parts.get(i))
+            }
+            i = i + 1
+        }
+        var d = Directory(parent)
+        if (!d.exists()) {
+            d.createDirectories()
+        }
+    }
+    var f = File(path)
+    if (f.exists()) {
+        f.delete()
+    }
+    return f.writeText(content)
+}
+
+class EventCounter implements EventHandler {
+    Int count = 0
+    constructor() {
+    }
+    onEvent(EventEnvelope e): Bool {
+        count = count + 1
+        return true
+    }
+}
+
+class RecordingHandler implements EventHandler {
+    List<String> seen = listOf<String>()
+    constructor() {
+    }
+    onEvent(EventEnvelope e): Bool {
+        seen.add(e.topic + "=" + e.payload)
+        return true
+    }
+}
+
+freshBus(): EventBus {
+    return EventBus()
+}
+
+record GgufInfoRec(String path, Bool magicOk, Int version, Int nTensors)
+record TensorR(Int rows, Int cols, Int[] data)
+
+tkTokenize(String text): List<String> {
+    var out = listOf<String>()
+    var cur = ""
+    var i = 0
+    while (i < text.length) {
+        var c = text.charAt(i)
+        var alpha = (c >= 65 && c <= 90) || (c >= 97 && c <= 122) || (c >= 48 && c <= 57)
+        if (alpha) {
+            cur = cur + text.substring(i, i + 1)
+        } else {
+            if (cur.length > 0) {
+                out.add(cur)
+                cur = ""
+            }
+        }
+        i = i + 1
+    }
+    if (cur.length > 0) {
+        out.add(cur)
+    }
+    return out
+}
+
+class Vocab {
+    List<String> tokens = listOf<String>()
+    constructor() {
+    }
+    addToken(String t): Int {
+        var id = tkId(t)
+        tokens.add(t)
+        return id
+    }
+    size(): Int {
+        return tokens.size
+    }
+    tokenAt(Int i): String {
+        return tokens.get(i)
+    }
+}
+
+tkId(String t): Int {
+    var h = wsHash(retLower(t))
+    if (h < 0) {
+        h = 0 - h
+    }
+    return h % 50000
+}
+
+vocabBuildFromCorpus(CorpusIndex ix): Vocab {
+    var v = Vocab()
+    for (var d in ix.docs) {
+        var toks = tkTokenize(d.meta.title + " " + d.body)
+        for (var t in toks) {
+            if (v.size() < 4096) {
+                var dup = false
+                for (var e in v.tokens) {
+                    if (e == t) {
+                        dup = true
+                    }
+                }
+                if (!dup) {
+                    v.addToken(t)
+                }
+            }
+        }
+    }
+    return v
+}
+
+tkEncode(Vocab v, String text): List<Int> {
+    var ids = listOf<Int>()
+    for (var t in tkTokenize(text)) {
+        ids.add(tkId(t))
+    }
+    return ids
+}
+
+tkDecode(List<Int> ids): String {
+    var out = ""
+    for (var id in ids) {
+        out = out + "<" + id + ">"
+    }
+    return out
+}
+
+samplerLcg(Int seed): Int {
+    var x = seed * 1103515245 + 12345
+    if (x < 0) {
+        x = 0 - x
+    }
+    return x % 2147483647
+}
+
+samplerTopK(Int[] logits, Int n, Int k, Int seed): Int {
+    var best = logits[0]
+    var bi = 0
+    var s = samplerLcg(seed)
+    var i = 0
+    while (i < n) {
+        if (logits[i] > best) {
+            best = logits[i]
+            bi = i
+        }
+        i = i + 1
+    }
+    var jitter = s % (k + 1)
+    if (jitter == 0) {
+        return bi
+    }
+    var alt = (bi + jitter) % n
+    return alt
+}
+
+tensorNew(Int rows, Int cols): TensorR {
+    return TensorR(rows, cols, new Int[rows * cols])
+}
+
+tensorGet(TensorR t, Int r, Int cc): Int {
+    return t.data[r * t.cols + cc]
+}
+
+tensorSet(TensorR t, Int r, Int cc, Int v) {
+    t.data[r * t.cols + cc] = v
+}
+
+tensorTranspose(TensorR t): TensorR {
+    var o = tensorNew(t.cols, t.rows)
+    var r = 0
+    while (r < t.rows) {
+        var c2 = 0
+        while (c2 < t.cols) {
+            tensorSet(o, c2, r, tensorGet(t, r, c2))
+            c2 = c2 + 1
+        }
+        r = r + 1
+    }
+    return o
+}
+
+tensorMatMul(TensorR a, TensorR b): TensorR {
+    var o = tensorNew(a.rows, b.cols)
+    var r = 0
+    while (r < a.rows) {
+        var c2 = 0
+        while (c2 < b.cols) {
+            var acc = 0
+            var kk = 0
+            while (kk < a.cols) {
+                acc = acc + tensorGet(a, r, kk) * tensorGet(b, kk, c2)
+                kk = kk + 1
+            }
+            tensorSet(o, r, c2, acc)
+            c2 = c2 + 1
+        }
+        r = r + 1
+    }
+    return o
+}
+
+ggufParseHeader(String path): GgufInfoRec {
+    var f = File(path)
+    if (!f.exists()) {
+        return GgufInfoRec(path, false, 0, 0)
+    }
+    var txt = f.readText()
+    var magicOk = txt.startsWith("GGUF")
+    var ver = 0
+    var nt = 0
+    if (magicOk && txt.length > 9) {
+        ver = parseIntStr(txt.substring(4, 6))
+        nt = parseIntStr(txt.substring(6, 9))
+    }
+    return GgufInfoRec(path, magicOk, ver, nt)
+}
+
+// M31.3.3/.4: LMHeadExecutor + QuantDecoder (F32/Q8_0-like/Q4_0)
+
+record QuantBlock(Int scale, Int baseVal)
+
+fn q40DecodeBlock(Int[] raw, Int off): Int {
+    var scale = raw[off]
+    var acc = 0
+    var i = 1
+    while (i < 9) {
+        var nib = raw[off + i] % 16
+        acc = acc + nib * scale / 100
+        i = i + 1
+    }
+    return acc
+}
+
+lmHead(TensorR hidden, TensorR w, Int vocab): Int[] {
+    var lg = new Int[vocab]
+    var i = 0
+    while (i < vocab) {
+        var sum = 0
+        var j = 0
+        while (j < hidden.cols) {
+            var wv = tensorGet(w, i % w.rows, j)
+            sum = sum + tensorGet(hidden, 0, j) * wv
+            j = j + 1
+        }
+        lg[i] = sum % 1000003
+        if (lg[i] < 0) { lg[i] = 0 - lg[i] }
+        i = i + 1
+    }
+    return lg
+}
+
+quantDecodeTensor(Int[] raw, Int nBlocks): Int[] {
+    var out = new Int[nBlocks]
+    var b = 0
+    while (b < nBlocks) {
+        out[b] = q40DecodeBlock(raw, b * 9)
+        b = b + 1
+    }
+    return out
+}
+
+// M31.2/.3: Q8_0 decode + Embedding Executor
+
+fn q80DecodeBlock(Int[] raw, Int off): Int {
+    var scale = raw[off]
+    var acc = 0
+    var i = 1
+    while (i < 5) {
+        acc = acc + raw[off + i] * scale / 127
+        i = i + 1
+    }
+    return acc
+}
+
+embeddingLookup(TensorR table, Int tokenId): TensorR {
+    var row = tokenId % table.rows
+    var out = tensorNew(1, table.cols)
+    var c2 = 0
+    while (c2 < table.cols) {
+        tensorSet(out, 0, c2, tensorGet(table, row, c2))
+        c2 = c2 + 1
+    }
+    return out
+}
+
+test "lm head produces bounded logits" {
+    var h = tensorNew(1, 4)
+    tensorSet(h, 0, 0, 100)
+    var w = tensorNew(8, 4)
+    tensorSet(w, 0, 0, 2)
+    var lg = lmHead(h, w, 16)
+    assert(lg.length == 16)
+    assert(lg[0] >= 0)
+}
+
+test "q4_0 decode block scales" {
+    var raw = new Int[9]
+    raw[0] = 200
+    raw[1] = 50
+    var v = q40DecodeBlock(raw, 0)
+    assert(v == 4)
+    assert(v >= 0)
+}
+
+test "quant decode tensor full pass" {
+    var raw = new Int[18]
+    raw[0] = 100
+    raw[9] = 300
+    var o = quantDecodeTensor(raw, 2)
+    assert(o.length == 2)
+}

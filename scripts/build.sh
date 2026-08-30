@@ -33,6 +33,21 @@ PARTS=(
   agent/runtime/69_planner.kf
   agent/runtime/71_executor.kf
   agent/runtime/90_runtime.kf
+  agent/runtime/153_graph_executor.kf
+  agent/runtime/158_f16_decoder.kf
+  agent/runtime/154_attention_swiglu.kf
+  agent/runtime/156_lmhead_quant.kf
+  agent/runtime/157_quant8_embed.kf
+  agent/runtime/151_koflm_config.kf
+  agent/runtime/155_tokenizer_engine.kf
+  agent/runtime/150_koflm_backend.kf
+  agent/runtime/147_koflm_tokenizer.kf
+  agent/runtime/152_inference_engine.kf
+  agent/runtime/144_koflm_runtime.kf
+  agent/runtime/146_koflm_v2.kf
+  agent/runtime/85_model_runner.kf
+  agent/runtime/131_ai_engine.kf
+  agent/runtime/133_model_manager.kf
 )
 
 # usage: build.sh <entry.kf> <out.kf> [--with-gateway]

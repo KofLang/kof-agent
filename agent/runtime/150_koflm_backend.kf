@@ -21,8 +21,16 @@ class CPUBackend {
 fn detectVulkan(): Bool {
     var f = File("/usr/share/vulkan/icd.d")
     if (!f.exists()) { return false }
-    var txt = f.readText()
-    return txt.length > 0
+    // icd.d é um diretório: listar .json em vez de readText (null/NPE)
+    var files = f.list()
+    if (files == null) { return false }
+    var found = false
+    for (var name in files) {
+        if (name.endsWith(".json")) {
+            found = true
+        }
+    }
+    return found
 }
 
 fn detectOpenGL(): Bool {

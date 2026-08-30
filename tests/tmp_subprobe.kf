@@ -1,0 +1,6 @@
+main() {
+    var bus = freshBus()
+    var counter = EventCounter()
+    bus.subscribe("t", counter)
+    println("sub ok")
+}

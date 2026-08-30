@@ -1,0 +1,1065 @@
+record CheckRec(String id, Bool ok, String detail)
+
+interface TimeSource {
+    nowMs(): Long
+}
+
+class FixedClock implements TimeSource {
+    Long value = 0
+    constructor(Long v) {
+        value = v
+    }
+    nowMs(): Long {
+        return value
+    }
+    advance(Long ms) {
+        value = value + ms
+    }
+}
+
+class RealTimeClock implements TimeSource {
+    constructor() {
+    }
+    nowMs(): Long {
+        return now()
+    }
+}
+
+parseIntStr(String s): Int {
+    var n = 0
+    var i = 0
+    if (s.length == 0) {
+        throw "parse: empty integer"
+    }
+    var start = 0
+    if (s.charAt(0) == 45) {
+        start = 1
+        if (s.length == 1) {
+            throw "parse: invalid integer '" + s + "'"
+        }
+    }
+    i = start
+    while (i < s.length) {
+        var c = s.charAt(i)
+        if (c < 48 || c > 57) {
+            throw "parse: invalid integer '" + s + "'"
+        }
+        n = n * 10 + (c - 48)
+        i = i + 1
+    }
+    if (start == 1) {
+        n = 0 - n
+    }
+    return n
+}
+
+parseBoolStr(String s): Bool {
+    var v = s.toLowerCase()
+    if (v == "true" || v == "1" || v == "yes" || v == "on") {
+        return true
+    }
+    if (v == "false" || v == "0" || v == "no" || v == "off" || v == "") {
+        return false
+    }
+    throw "parse: invalid boolean '" + s + "'"
+}
+
+escapeJson(String s): String {
+    var out = ""
+    var i = 0
+    while (i < s.length) {
+        var c = s.charAt(i)
+        if (c == 34) {
+            out = out + "\\\""
+        } else if (c == 92) {
+            out = out + "\\\\"
+        } else if (c == 10) {
+            out = out + "\\n"
+        } else if (c == 13) {
+            out = out + "\\r"
+        } else if (c == 9) {
+            out = out + "\\t"
+        } else {
+            out = out + s.substring(i, i + 1)
+        }
+        i = i + 1
+    }
+    return out
+}
+
+joinPath(String a, String b): String {
+    if (a == "") {
+        return b
+    }
+    if (a.substring(a.length - 1, a.length) == "/") {
+        return a + b
+    }
+    return a + "/" + b
+}
+
+splitStr(String s, String sep): List<String> {
+    var out = listOf<String>()
+    if (s.length == 0) {
+        return out
+    }
+    var sc = sep.charAt(0)
+    var start = 0
+    var i = 0
+    while (i < s.length) {
+        if (s.charAt(i) == sc) {
+            out.add(s.substring(start, i))
+            start = i + 1
+        }
+        i = i + 1
+    }
+    out.add(s.substring(start, s.length))
+    return out
+}
+
+loadArgsFile(String path): List<String> {
+    var argv = listOf<String>()
+    var f = File(path)
+    if (!f.exists()) {
+        return argv
+    }
+    var txt = f.readText()
+    var lines = splitStr(txt, "\n")
+    for (var line in lines) {
+        var t = line.trim()
+        if (t.length > 0) {
+            argv.add(t)
+        }
+    }
+    return argv
+}
+
+sortInts(Int[] a, Int n) {
+    var i = 1
+    while (i < n) {
+        var key = a[i]
+        var j = i - 1
+        var placed = false
+        while (!placed) {
+            if (j < 0) {
+                placed = true
+            } else {
+                if (a[j] > key) {
+                    a[j + 1] = a[j]
+                    j = j - 1
+                } else {
+                    placed = true
+                }
+            }
+        }
+        a[j + 1] = key
+        i = i + 1
+    }
+}
+
+retLower(String s): String {
+    return s.toLowerCase()
+}
+
+mkFile(String path, String content): Bool {
+    var parent = ""
+    var parts = splitStr(path, "/")
+    if (parts.size > 1) {
+        var i = 0
+        while (i < parts.size - 1) {
+            if (parent == "") {
+                parent = parts.get(i)
+            } else {
+                parent = joinPath(parent, parts.get(i))
+            }
+            i = i + 1
+        }
+        var d = Directory(parent)
+        if (!d.exists()) {
+            d.createDirectories()
+        }
+    }
+    var f = File(path)
+    if (f.exists()) {
+        f.delete()
+    }
+    return f.writeText(content)
+}
+
+class EventCounter implements EventHandler {
+    Int count = 0
+    constructor() {
+    }
+    onEvent(EventEnvelope e): Bool {
+        count = count + 1
+        return true
+    }
+}
+
+class RecordingHandler implements EventHandler {
+    List<String> seen = listOf<String>()
+    constructor() {
+    }
+    onEvent(EventEnvelope e): Bool {
+        seen.add(e.topic + "=" + e.payload)
+        return true
+    }
+}
+
+freshBus(): EventBus {
+    return EventBus()
+}
+
+record LogLine(Long ts, String level, String req, String msg)
+
+LOG_TRACE(): Int { return 0 }
+LOG_DEBUG(): Int { return 1 }
+LOG_INFO(): Int { return 2 }
+LOG_WARN(): Int { return 3 }
+LOG_ERROR(): Int { return 4 }
+LOG_FATAL(): Int { return 5 }
+
+logLevelName(Int lvl): String {
+    if (lvl == 0) { return "TRACE" }
+    if (lvl == 1) { return "DEBUG" }
+    if (lvl == 2) { return "INFO" }
+    if (lvl == 3) { return "WARN" }
+    if (lvl == 4) { return "ERROR" }
+    return "FATAL"
+}
+
+logLevelFromName(String s): Int {
+    var v = s.toUpperCase()
+    if (v == "TRACE") { return 0 }
+    if (v == "DEBUG") { return 1 }
+    if (v == "INFO") { return 2 }
+    if (v == "WARN") { return 3 }
+    if (v == "ERROR") { return 4 }
+    if (v == "FATAL") { return 5 }
+    return -1
+}
+
+class Logger {
+    Int level = LOG_INFO()
+    Bool color = false
+    Bool json = false
+    Bool quiet = false
+    String requestId = "-"
+    TimeSource clock
+
+    constructor(TimeSource ts) {
+        clock = ts
+    }
+
+    configure(Int lvl, Bool col, Bool js) {
+        level = lvl
+        color = col
+        json = js
+    }
+
+    setRequestId(String rid) {
+        requestId = rid
+    }
+
+    trace(String m): String { return write(LOG_TRACE(), m) }
+    debug(String m): String { return write(LOG_DEBUG(), m) }
+    info(String m): String { return write(LOG_INFO(), m) }
+    warn(String m): String { return write(LOG_WARN(), m) }
+    error(String m): String { return write(LOG_ERROR(), m) }
+    fatal(String m): String { return write(LOG_FATAL(), m) }
+
+    isEnabled(Int lvl): Bool {
+        return lvl >= level
+    }
+
+    write(Int lvl, String msg): String {
+        if (!isEnabled(lvl)) {
+            return ""
+        }
+        var ts = clock.nowMs()
+        var name = logLevelName(lvl)
+        var line = ""
+        if (json) {
+            line = "{\"ts\":\"" + ts + "\",\"level\":\"" + name + "\",\"req\":\"" + escapeJson(requestId) + "\",\"msg\":\"" + escapeJson(msg) + "\"}"
+        } else {
+            var body = "[" + name + "] [" + requestId + "] " + msg
+            if (color) {
+                body = ansiFor(lvl) + body + "\u001b[0m"
+            }
+            line = ts + " " + body
+        }
+        if (!quiet) {
+            println(line)
+        }
+        return line
+    }
+
+    ansiFor(Int lvl): String {
+        if (lvl <= LOG_DEBUG()) {
+            return "\u001b[90m"
+        }
+        if (lvl == LOG_INFO()) {
+            return "\u001b[36m"
+        }
+        if (lvl == LOG_WARN()) {
+            return "\u001b[33m"
+        }
+        if (lvl == LOG_ERROR()) {
+            return "\u001b[31m"
+        }
+        return "\u001b[35m"
+    }
+}
+
+record CfgEntry(String key, String value)
+
+class Config {
+    List<CfgEntry> entries = listOf<CfgEntry>()
+    String sourcePath = ""
+    Bool loaded = false
+
+    loadFile(String path): Bool {
+        entries = listOf<CfgEntry>()
+        sourcePath = path
+        var f = File(path)
+        if (!f.exists()) {
+            loaded = false
+            return false
+        }
+        if (!f.isFile()) {
+            loaded = false
+            return false
+        }
+        var text = f.readText()
+        parseInto(text)
+        loaded = true
+        return true
+    }
+
+    reload(): Bool {
+        return loadFile(sourcePath)
+    }
+
+    parseInto(String text) {
+        var lines = splitStr(text, "\n")
+        for (var raw in lines) {
+            var line = raw.trim()
+            if (line.length > 0) {
+                if (!line.startsWith("#")) {
+                    var kv = splitStr(line, "=")
+                    if (kv.size == 2) {
+                        var k = kv.get(0).trim()
+                        var v = kv.get(1).trim()
+                        entries.add(CfgEntry(k, v))
+                    }
+                }
+            }
+        }
+    }
+
+    has(String key): Bool {
+        for (var e in entries) {
+            if (e.key == key) {
+                return true
+            }
+        }
+        return false
+    }
+
+    getRaw(String key): String {
+        for (var e in entries) {
+            if (e.key == key) {
+                return e.value
+            }
+        }
+        throw "config: missing key '" + key + "'"
+    }
+
+    getStr(String key, String def): String {
+        if (!has(key)) {
+            return def
+        }
+        return getRaw(key)
+    }
+
+    getInt(String key, Int def): Int {
+        if (!has(key)) {
+            return def
+        }
+        var v = getRaw(key)
+        try {
+            return parseIntStr(v)
+        } catch (String e) {
+            throw "config: invalid integer for '" + key + "': '" + v + "'"
+        }
+    }
+
+    getBool(String key, Bool def): Bool {
+        if (!has(key)) {
+            return def
+        }
+        var v = getRaw(key)
+        try {
+            return parseBoolStr(v)
+        } catch (String e) {
+            throw "config: invalid boolean for '" + key + "': '" + v + "'"
+        }
+    }
+
+    snapshotJson(): String {
+        var out = "{\"source\":\"" + escapeJson(sourcePath) + "\",\"loaded\":"
+        if (loaded) {
+            out = out + "true"
+        } else {
+            out = out + "false"
+        }
+        out = out + ",\"entries\":["
+        var first = true
+        for (var e in entries) {
+            if (!first) {
+                out = out + ","
+            }
+            first = false
+            out = out + "{\"key\":\"" + escapeJson(e.key) + "\",\"value\":\"" + escapeJson(e.value) + "\"}"
+        }
+        out = out + "]}"
+        return out
+    }
+}
+
+record GgufInfoRec(String path, Bool magicOk, Int version, Int nTensors)
+record TensorR(Int rows, Int cols, Int[] data)
+
+tkTokenize(String text): List<String> {
+    var out = listOf<String>()
+    var cur = ""
+    var i = 0
+    while (i < text.length) {
+        var c = text.charAt(i)
+        var alpha = (c >= 65 && c <= 90) || (c >= 97 && c <= 122) || (c >= 48 && c <= 57)
+        if (alpha) {
+            cur = cur + text.substring(i, i + 1)
+        } else {
+            if (cur.length > 0) {
+                out.add(cur)
+                cur = ""
+            }
+        }
+        i = i + 1
+    }
+    if (cur.length > 0) {
+        out.add(cur)
+    }
+    return out
+}
+
+class Vocab {
+    List<String> tokens = listOf<String>()
+    constructor() {
+    }
+    addToken(String t): Int {
+        var id = tkId(t)
+        tokens.add(t)
+        return id
+    }
+    size(): Int {
+        return tokens.size
+    }
+    tokenAt(Int i): String {
+        return tokens.get(i)
+    }
+}
+
+tkId(String t): Int {
+    var h = wsHash(retLower(t))
+    if (h < 0) {
+        h = 0 - h
+    }
+    return h % 50000
+}
+
+vocabBuildFromCorpus(CorpusIndex ix): Vocab {
+    var v = Vocab()
+    for (var d in ix.docs) {
+        var toks = tkTokenize(d.meta.title + " " + d.body)
+        for (var t in toks) {
+            if (v.size() < 4096) {
+                var dup = false
+                for (var e in v.tokens) {
+                    if (e == t) {
+                        dup = true
+                    }
+                }
+                if (!dup) {
+                    v.addToken(t)
+                }
+            }
+        }
+    }
+    return v
+}
+
+tkEncode(Vocab v, String text): List<Int> {
+    var ids = listOf<Int>()
+    for (var t in tkTokenize(text)) {
+        ids.add(tkId(t))
+    }
+    return ids
+}
+
+tkDecode(List<Int> ids): String {
+    var out = ""
+    for (var id in ids) {
+        out = out + "<" + id + ">"
+    }
+    return out
+}
+
+samplerLcg(Int seed): Int {
+    var x = seed * 1103515245 + 12345
+    if (x < 0) {
+        x = 0 - x
+    }
+    return x % 2147483647
+}
+
+samplerTopK(Int[] logits, Int n, Int k, Int seed): Int {
+    var best = logits[0]
+    var bi = 0
+    var s = samplerLcg(seed)
+    var i = 0
+    while (i < n) {
+        if (logits[i] > best) {
+            best = logits[i]
+            bi = i
+        }
+        i = i + 1
+    }
+    var jitter = s % (k + 1)
+    if (jitter == 0) {
+        return bi
+    }
+    var alt = (bi + jitter) % n
+    return alt
+}
+
+tensorNew(Int rows, Int cols): TensorR {
+    return TensorR(rows, cols, new Int[rows * cols])
+}
+
+tensorGet(TensorR t, Int r, Int cc): Int {
+    return t.data[r * t.cols + cc]
+}
+
+tensorSet(TensorR t, Int r, Int cc, Int v) {
+    t.data[r * t.cols + cc] = v
+}
+
+tensorTranspose(TensorR t): TensorR {
+    var o = tensorNew(t.cols, t.rows)
+    var r = 0
+    while (r < t.rows) {
+        var c2 = 0
+        while (c2 < t.cols) {
+            tensorSet(o, c2, r, tensorGet(t, r, c2))
+            c2 = c2 + 1
+        }
+        r = r + 1
+    }
+    return o
+}
+
+tensorMatMul(TensorR a, TensorR b): TensorR {
+    var o = tensorNew(a.rows, b.cols)
+    var r = 0
+    while (r < a.rows) {
+        var c2 = 0
+        while (c2 < b.cols) {
+            var acc = 0
+            var kk = 0
+            while (kk < a.cols) {
+                acc = acc + tensorGet(a, r, kk) * tensorGet(b, kk, c2)
+                kk = kk + 1
+            }
+            tensorSet(o, r, c2, acc)
+            c2 = c2 + 1
+        }
+        r = r + 1
+    }
+    return o
+}
+
+ggufParseHeader(String path): GgufInfoRec {
+    var f = File(path)
+    if (!f.exists()) {
+        return GgufInfoRec(path, false, 0, 0)
+    }
+    var txt = f.readText()
+    var magicOk = txt.startsWith("GGUF")
+    var ver = 0
+    var nt = 0
+    if (magicOk && txt.length > 9) {
+        ver = parseIntStr(txt.substring(4, 6))
+        nt = parseIntStr(txt.substring(6, 9))
+    }
+    return GgufInfoRec(path, magicOk, ver, nt)
+}
+
+record TVView(TensorR base, Int offR, Int offC, Int rows, Int cols)
+
+tvGet(TVView v, Int r, Int c): Int {
+    return tensorGet(v.base, v.offR + r, v.offC + c)
+}
+
+tvSet(TVView v, Int r, Int c2, Int newVal) {
+    tensorSet(v.base, v.offR + r, v.offC + c2, newVal)
+}
+
+tvSliceRows(TensorR t, Int offR, Int rows): TVView {
+    return TVView(t, offR, 0, rows, t.cols)
+}
+
+tvBroadcast(Int fill, Int rows, Int cols): TensorR {
+    var t = tensorNew(rows, cols)
+    var r = 0
+    while (r < rows) {
+        var c2 = 0
+        while (c2 < cols) {
+            tensorSet(t, r, c2, fill)
+            c2 = c2 + 1
+        }
+        r = r + 1
+    }
+    return t
+}
+
+tensorReshape(TensorR t, Int rows, Int cols): TensorR {
+    var o = tensorNew(rows, cols)
+    var i = 0
+    while (i < rows * cols && i < t.data.length) {
+        o.data[i] = t.data[i]
+        i = i + 1
+    }
+    return o
+}
+
+tensorConcatRows(TensorR a, TensorR b): TensorR {
+    var o = tensorNew(a.rows + b.rows, a.cols)
+    var r = 0
+    while (r < a.rows) {
+        var c2 = 0
+        while (c2 < a.cols) {
+            tensorSet(o, r, c2, tensorGet(a, r, c2))
+            c2 = c2 + 1
+        }
+        r = r + 1
+    }
+    r = 0
+    while (r < b.rows) {
+        var c3 = 0
+        while (c3 < b.cols) {
+            tensorSet(o, a.rows + r, c3, tensorGet(b, r, c3))
+            c3 = c3 + 1
+        }
+        r = r + 1
+    }
+    return o
+}
+
+class Arena {
+    Int[] buf = new Int[1024]
+    Int used = 0
+    constructor() {
+    }
+    alloc(Int n): Int {
+        var at = used
+        if (used + n > buf.length) {
+            return -1
+        }
+        used = used + n
+        return at
+    }
+    reset() {
+        used = 0
+    }
+    capacity(): Int {
+        return buf.length
+    }
+    utilization(): Int {
+        return used
+    }
+}
+
+Q8_BLOCK(): Int { return 32 }
+
+quantizeQ8Block(Int[] src, Int off): Int[] {
+    var out = new Int[Q8_BLOCK() + 1]
+    var maxAbs = 0
+    var i = 0
+    while (i < Q8_BLOCK()) {
+        var v = src[off + i]
+        if (v < 0) {
+            if ((0 - v) > maxAbs) {
+                maxAbs = 0 - v
+            }
+        } else {
+            if (v > maxAbs) {
+                maxAbs = v
+            }
+        }
+        i = i + 1
+    }
+    out[0] = maxAbs
+    i = 0
+    while (i < Q8_BLOCK()) {
+        var v = src[off + i]
+        var q = 0
+        if (maxAbs > 0) {
+            q = v * 127 / maxAbs
+        }
+        out[i + 1] = q
+        i = i + 1
+    }
+    return out
+}
+
+dequantizeQ8Block(Int[] blk): Int[] {
+    var o = new Int[Q8_BLOCK()]
+    var scale = blk[0]
+    var i = 0
+    while (i < Q8_BLOCK()) {
+        var v = blk[i + 1]
+        if (scale > 0) {
+            v = v * scale / 127
+        }
+        o[i] = v
+        i = i + 1
+    }
+    return o
+}
+
+class KVCache {
+    List<Int[]> keys = listOf<Int[]>()
+    List<Int[]> vals = listOf<Int[]>()
+    Int window = 64
+    Int evictions = 0
+    constructor() {
+    }
+    append(Int[] k, Int[] v) {
+        keys.add(k)
+        vals.add(v)
+        if (keys.size > window) {
+            keys.remove(0)
+            vals.remove(0)
+            evictions = evictions + 1
+        }
+    }
+    size(): Int {
+        return keys.size
+    }
+    compact() {
+        keys = keys
+        vals = vals
+    }
+}
+
+// M16 part 82: Tensor ops V2 — arena, stable softmax, rmsnorm, gelu/silu, causal mask
+
+record ArenaStats(Int allocs, Int reuses, Int peakBytes)
+record ArenaSlot(Int key, TensorR tensor)
+
+class TensorArena {
+    List<ArenaSlot> free = listOf<ArenaSlot>()
+    ArenaStats stats = ArenaStats(0, 0, 0)
+
+    acquire(Int rows, Int cols): TensorR {
+        var key = rows * 100000 + cols
+        var i = 0
+        while (i < free.size()) {
+            var s = free.get(i)
+            if (s.key == key) {
+                var out2 = s.tensor
+                var j = i
+                while (j < free.size() - 1) {
+                    free.set(j, free.get(j + 1))
+                    j = j + 1
+                }
+                stats = ArenaStats(stats.allocs + 1, stats.reuses + 1, stats.peakBytes)
+                return out2
+            }
+            i = i + 1
+        }
+        stats = ArenaStats(stats.allocs + 1, stats.reuses, stats.peakBytes)
+        return tensorNew(rows, cols)
+    }
+
+    release(TensorR t) {
+        free.add(ArenaSlot(t.rows * 100000 + t.cols, t))
+        var bytes = t.rows * t.cols * 4
+        if (bytes > stats.peakBytes) {
+            stats = ArenaStats(stats.allocs, stats.reuses, bytes)
+        }
+    }
+}
+
+tensorSoftmaxRow(TensorR t, Int row): TensorR {
+    var out = tensorNew(1, t.cols)
+    var maxv = tensorGet(t, row, 0)
+    var c2 = 1
+    while (c2 < t.cols) {
+        if (tensorGet(t, row, c2) > maxv) {
+            maxv = tensorGet(t, row, c2)
+        }
+        c2 = c2 + 1
+    }
+    var sum = 0
+    c2 = 0
+    while (c2 < t.cols) {
+        var d = maxv - tensorGet(t, row, c2)
+        var e = 10000000 / (10 + d)
+        tensorSet(out, 0, c2, e)
+        sum = sum + e
+        c2 = c2 + 1
+    }
+    if (sum == 0) { sum = 1 }
+    c2 = 0
+    while (c2 < t.cols) {
+        tensorSet(out, 0, c2, tensorGet(out, 0, c2) * 10000 / sum)
+        c2 = c2 + 1
+    }
+    return out
+}
+
+tensorRmsNorm(TensorR t): TensorR {
+    var out = tensorNew(t.rows, t.cols)
+    var r = 0
+    while (r < t.rows) {
+        var ss = 0
+        var c2 = 0
+        while (c2 < t.cols) {
+            var v = tensorGet(t, r, c2)
+            ss = ss + v * v / 1000
+            c2 = c2 + 1
+        }
+        var inv = 31623 * 1000 / (100 + ss)
+        c2 = 0
+        while (c2 < t.cols) {
+            tensorSet(out, r, c2, tensorGet(t, r, c2) * inv / 100000)
+            c2 = c2 + 1
+        }
+        r = r + 1
+    }
+    return out
+}
+
+gelu(x: Int): Int {
+    var x3 = x * x * x / 1000000
+    return (x + x3 / 6) / 2
+}
+
+silu(x: Int): Int {
+    if (x <= 0) { return x / 4 }
+    return x
+}
+
+record CausalMask(Int penalty)
+
+tensorCausalMask(Int seqLen): TensorR {
+    var m = tensorNew(seqLen, seqLen)
+    var cm = CausalMask(1000000)
+    var i = 0
+    while (i < seqLen) {
+        var j = 0
+        while (j < seqLen) {
+            if (j > i) {
+                tensorSet(m, i, j, cm.penalty)
+            } else {
+                tensorSet(m, i, j, 0)
+            }
+            j = j + 1
+        }
+        i = i + 1
+    }
+    return m
+}
+
+record NNLimitsRec(Int ropeDims, Int heads, Int kvLayers)
+
+nnRMSNormApprox(Int[] x): Int[] {
+    var acc = 0
+    var i = 0
+    while (i < x.length) {
+        acc = acc + x[i] * x[i]
+        i = i + 1
+    }
+    var mean = 0
+    if (x.length > 0) {
+        mean = acc / x.length
+    }
+    var scale = mean / 4 + 1
+    var out = new Int[x.length]
+    i = 0
+    while (i < x.length) {
+        out[i] = x[i] * 1000 / scale
+        i = i + 1
+    }
+    return out
+}
+
+nnLayerNormApprox(Int[] x): Int[] {
+    return nnRMSNormApprox(x)
+}
+
+nnRopeRotatePairs(Int[] q): Int[] {
+    var out = new Int[q.length]
+    var i = 0
+    while (i + 1 < q.length) {
+        out[i] = q[i + 1]
+        out[i + 1] = 0 - q[i]
+        i = i + 2
+    }
+    if (q.length % 2 == 1) {
+        out[q.length - 1] = q[q.length - 1]
+    }
+    return out
+}
+
+nnFeedForwardInt(Int[] x, Int mult): Int[] {
+    var o = new Int[x.length]
+    var i = 0
+    while (i < x.length) {
+        o[i] = x[i] * mult
+        i = i + 1
+    }
+    return o
+}
+
+nnResidual(Int[] a, Int[] b): Int[] {
+    var o = new Int[a.length]
+    var i = 0
+    while (i < a.length && i < b.length) {
+        o[i] = a[i] + b[i]
+        i = i + 1
+    }
+    return o
+}
+
+nnAttentionScoresInt(Int[] q, List<Int[]> ks): List<Int> {
+    var scores = listOf<Int>()
+    for (var k in ks) {
+        scores.add(halDot(q, k))
+    }
+    return scores
+}
+
+samplerRepeatPenalty(Int[] logits, List<Int> recent, Int penaltyNum, Int penaltyDen): Int[] {
+    var out = new Int[logits.length]
+    var i = 0
+    while (i < logits.length) {
+        out[i] = logits[i]
+        var seen = false
+        for (var r in recent) {
+            if (r == i) {
+                seen = true
+            }
+        }
+        if (seen && out[i] > 0) {
+            out[i] = out[i] * penaltyDen / penaltyNum
+        }
+        i = i + 1
+    }
+    return out
+}
+
+samplerTopPApprox(Int[] logits, Int n, Int topPPermille, Int seed): Int {
+    var total = 0
+    var i = 0
+    while (i < n) {
+        if (logits[i] > 0) {
+            total = total + logits[i]
+        }
+        i = i + 1
+    }
+    if (total == 0) {
+        return samplerTopK(logits, n, 1, seed)
+    }
+    var threshold = total * topPPermille / 1000
+    var cum = 0
+    var pick = 0
+    i = 0
+    while (i < n) {
+        if (logits[i] > 0) {
+            cum = cum + logits[i]
+            if (cum >= threshold) {
+                pick = i
+                i = n
+            }
+        }
+        i = i + 1
+    }
+    return pick
+}
+
+ggufMeta(String path, String key): String {
+    return metaField(wsReadVersioned(path, "GGUFT"), key)
+}
+
+// M31.1/.2: GraphExecutor — sequência decoder por camada com arena reutilizável
+
+record LayerPlan(Int idx, Int hidden, Int ffMult)
+record GraphStats(Int layers, Int steps)
+
+class GraphExecutor {
+    List<LayerPlan> plan = listOf<LayerPlan>()
+    TensorArena arena
+    Int steps = 0
+
+    constructor() {
+        arena = TensorArena()
+    }
+
+    buildPlan(Int numLayers, Int hidden) {
+        var i = 0
+        while (i < numLayers) {
+            plan.add(LayerPlan(i, hidden, 4))
+            i = i + 1
+        }
+    }
+
+    layerCount(): Int { return plan.size() }
+
+    execLayer(TensorR x, LayerPlan lp): TensorR {
+        steps = steps + 1
+        var normed = tensorRmsNorm(x)
+        var attnOut = tensorSoftmaxRow(normed, 0)
+        var ffnIn = tensorNew(1, lp.hidden)
+        var g = gelu(tensorGet(attnOut, 0, 0))
+        tensorSet(ffnIn, 0, 0, g)
+        var out = tensorRmsNorm(ffnIn)
+        return out
+    }
+
+    forwardAllLayers(TensorR x): TensorR {
+        var i = 0
+        while (i < plan.size()) {
+            x = execLayer(x, plan.get(i))
+            i = i + 1
+        }
+        return x
+    }
+
+    stepCount(): Int { return steps }
+}
+
+test "graph plan builds N layers" {
+    var g = GraphExecutor()
+    g.buildPlan(22, 2048)
+    assert(g.layerCount() == 22)
+}
+
+test "forward runs all layers counting steps" {
+    var g = GraphExecutor()
+    g.buildPlan(4, 8)
+    var x = tensorNew(1, 8)
+    var y = g.forwardAllLayers(x)
+    assert(g.stepCount() == 4)
+}

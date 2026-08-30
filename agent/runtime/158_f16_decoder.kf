@@ -1,0 +1,73 @@
+// M31.6: QuantDecoder F16 (half-float IEEE 754) + LayerExecExecutor
+// F16: bit 15 sinal, 14-10 expoente (bias 15), 9-0 mantissa.
+// Representamos valores em ponto fixo de milésimos (como o resto do M31).
+
+fn f16ToMilli(Int bits): Int {
+    var u = bits % 65536
+    if (u < 0) {
+        u = u + 65536
+    }
+    var signBit = u / 32768
+    var v = u - signBit * 32768
+    var exp = v / 1024
+    var man = v % 1024
+    var milli = 0
+    if (exp == 31) {
+        // Inf/NaN → saturar
+        milli = 1000000
+    } else if (exp == 0) {
+        // subnormal: mantissa/1024 * 2^-14
+        milli = man * 1000 / 1024 / 16384
+    } else {
+        // normal: (1.man) * 2^(exp-15)
+        var mant = 1024 + man
+        var e = exp - 15
+        if (e >= 0) {
+            milli = mant * 1000 * pow2(e) / 1024
+        } else {
+            milli = mant * 1000 / 1024 / pow2(0 - e)
+        }
+    }
+    if (signBit == 1) {
+        milli = 0 - milli
+    }
+    return milli
+}
+
+pow2(Int n): Int {
+    var r = 1
+    var k = 0
+    while (k < n) {
+        r = r * 2
+        k = k + 1
+    }
+    return r
+}
+
+// Decodifica um bloco F16: 16 meia-palavras (cada uma um Int com 16 bits)
+// para um tensor de 16 valores em ponto fixo (milésimos).
+f16DecodeBlock(Int[] raw, Int off): Int[] {
+    var out = new Int[16]
+    var j = 0
+    while (j < 16) {
+        out[j] = f16ToMilli(raw[off + j])
+        j = j + 1
+    }
+    return out
+}
+
+// Decodifica N blocos F16 (16 valores cada) para um tensor 1×N*16
+f16DecodeTensor(Int[] raw, Int nBlocks): TensorR {
+    var t = tensorNew(1, nBlocks * 16)
+    var b = 0
+    while (b < nBlocks) {
+        var blk = f16DecodeBlock(raw, b * 16)
+        var j = 0
+        while (j < 16) {
+            tensorSet(t, 0, b * 16 + j, blk[j])
+            j = j + 1
+        }
+        b = b + 1
+    }
+    return t
+}

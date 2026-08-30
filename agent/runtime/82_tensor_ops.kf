@@ -97,6 +97,25 @@ silu(x: Int): Int {
     return x
 }
 
+// residual add elemento a elemento (dims devem casar; min comum)
+tensorAdd(TensorR a, TensorR b): TensorR {
+    var rows = a.rows
+    var cols = a.cols
+    if (b.rows < rows) { rows = b.rows }
+    if (b.cols < cols) { cols = b.cols }
+    var o = tensorNew(rows, cols)
+    var r = 0
+    while (r < rows) {
+        var c2 = 0
+        while (c2 < cols) {
+            tensorSet(o, r, c2, tensorGet(a, r, c2) + tensorGet(b, r, c2))
+            c2 = c2 + 1
+        }
+        r = r + 1
+    }
+    return o
+}
+
 record CausalMask(Int penalty)
 
 tensorCausalMask(Int seqLen): TensorR {
