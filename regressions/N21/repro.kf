@@ -1,0 +1,77 @@
+record Payload(String body)
+
+wsHashRepro(String s): Int {
+    var h = 5381
+    var i = 0
+    while (i < s.length) {
+        h = h * 33 + s.charAt(i)
+        i = i + 1
+    }
+    return h
+}
+
+splitPipe(String head): List<String> {
+    var f = listOf<String>()
+    var cur = ""
+    var i = 0
+    while (i < head.length) {
+        var c = head.substring(i, i + 1)
+        if (c == "|") {
+            f.add(cur)
+            cur = ""
+        } else {
+            cur = cur + c
+        }
+        i = i + 1
+    }
+    f.add(cur)
+    return f
+}
+
+manualParse(String s): Int {
+    var n = 0
+    var i = 0
+    while (i < s.length) {
+        var c = s.charAt(i)
+        n = n * 10 + (c - 48)
+        i = i + 1
+    }
+    return n
+}
+
+readVer(String path, String wantMagic): String {
+    var f = File(path)
+    if (!f.exists()) {
+        return ""
+    }
+    if (!f.isFile()) {
+        return ""
+    }
+    var txt = f.readText()
+    var nl = txt.indexOf("\n")
+    if (nl < 0) {
+        return ""
+    }
+    var head = txt.substring(0, nl)
+    var payload = txt.substring(nl + 1, txt.length)
+    var hp = splitPipe(head)
+    if (hp.size != 3) {
+        return ""
+    }
+    if (hp.get(0) != wantMagic) {
+        return ""
+    }
+    var crc = manualParse(hp.get(2))
+    println("inside: crc=" + crc + " calc=" + wsHashRepro(payload))
+    if (wsHashRepro(payload) == crc) {
+        return payload
+    }
+    return ""
+}
+
+main() {
+    var f = File("build/n21.txt")
+    f.writeText("MEMSNP|1|1490553936\n" + "x" + "\u0003" + "episodic")
+    var r = readVer("build/n21.txt", "MEMSNP")
+    println("r.len=" + r.length)
+}

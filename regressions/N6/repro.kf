@@ -1,0 +1,8 @@
+main() {
+    var t = File("regressions/N6/seed.txt").readText()
+    if (t == null) {
+        println("null")
+    } else {
+        println("ok")
+    }
+}

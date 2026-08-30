@@ -1,0 +1,5 @@
+main() {
+    var s = ""
+    var r = s.length == 0 || s.charAt(0) == 35
+    println("r=" + r)
+}

@@ -1,0 +1,7 @@
+main() {
+    println(f())
+}
+
+fn f(): Int {
+    return 42
+}

@@ -1,0 +1,4 @@
+main() {
+    var s = "aab"
+    println(s.lastIndexOf("a"))
+}

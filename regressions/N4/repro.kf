@@ -1,0 +1,4 @@
+main() {
+    var p = "a=b=c".split("=")
+    println(p[0] + "|" + p[1] + "|" + p[2])
+}

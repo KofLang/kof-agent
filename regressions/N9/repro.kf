@@ -1,0 +1,11 @@
+fn buildAcc(): String {
+    var out = ""
+    out += "a"
+    out += "bb"
+    out += "cc"
+    return out
+}
+
+main() {
+    println(buildAcc())
+}
