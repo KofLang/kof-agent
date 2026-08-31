@@ -1,0 +1,67 @@
+test "q4k block decodes with nibble q+min" {
+    // scale=200, nibbles: q=3,m=0 → 3*200/4/2 = 75; q=0,m=3 → 3/2 = 1
+    var raw = new Int[9]
+    raw[0] = 200
+    raw[1] = 3
+    raw[2] = 13
+    var v = q4kDecodeBlock(raw, 0)
+    assert(v > 0)
+    assert(v < 500)
+}
+
+test "q6k block decodes 6-bit centered" {
+    // scale=640: v=32 (centro) → 0; v=63 → 31*640/64 = 310.
+    // Slots restantes ficam no centro (32) para não poluir o acc.
+    var raw = new Int[9]
+    raw[0] = 640
+    var i = 1
+    while (i < 9) {
+        raw[i] = 32
+        i = i + 1
+    }
+    raw[2] = 63
+    var acc = q6kDecodeBlock(raw, 0)
+    assert(acc == 310)
+}
+
+test "kq decode tensor four blocks q6k" {
+    var raw = new Int[36]
+    var b = 0
+    while (b < 4) {
+        raw[b * 9] = 640
+        var j = 1
+        while (j < 9) {
+            raw[b * 9 + j] = 32
+            j = j + 1
+        }
+        raw[b * 9 + 1] = 63
+        b = b + 1
+    }
+    var out = kqDecodeTensor("Q6_K", raw, 4)
+    assert(out.length == 4)
+    assert(out[0] == 310)
+    assert(out[3] == 310)
+}
+
+test "kq decode selects q4k by name" {
+    var raw = new Int[9]
+    raw[0] = 200
+    raw[1] = 3
+    var a = kqDecodeBlock("Q4_K_M", raw, 0)
+    var b = kqDecodeBlock("desconhecido", raw, 0)
+    assert(a == b)
+}
+
+test "gguf quants lists k variants" {
+    var q = ggufQuants()
+    var has4k = false
+    var has6k = false
+    var i = 0
+    while (i < q.size()) {
+        if (q.get(i).name == "Q4_K_M") { has4k = true }
+        if (q.get(i).name == "Q6_K") { has6k = true }
+        i = i + 1
+    }
+    assert(has4k)
+    assert(has6k)
+}

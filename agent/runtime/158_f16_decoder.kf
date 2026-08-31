@@ -71,3 +71,58 @@ f16DecodeTensor(Int[] raw, Int nBlocks): TensorR {
     }
     return t
 }
+
+// M31.8: K-quants (Q4_K_M / Q6_K) — decoders de bloco no formato
+// simplificado do projeto (milésimos, inteiro). Cada bloco carrega o
+// scale no slot 0 e os quantizados nos slots seguintes, coerente com
+// q40DecodeBlock/q80DecodeBlock (156/157) e com ggufQuants() (143).
+
+// Q4_K_M: bloco de 9 — scale + 8 nibbles (sub-blocos de 4 bits).
+fn q4kDecodeBlock(Int[] raw, Int off): Int {
+    var scale = raw[off]
+    var acc = 0
+    var i = 1
+    while (i < 9) {
+        var nib = raw[off + i] % 16
+        // K-quants usam min/scale por sub-bloco: nibble alto = 4 bits
+        // de min, baixo = 4 bits de q. Reconstrói q0..q7 por nibble.
+        var q = nib % 4
+        var m = nib / 4
+        acc = acc + (q * scale / 4 + m) / 2
+        i = i + 1
+    }
+    return acc
+}
+
+// Q6_K: bloco de 9 — scale + 8 valores base 6-bit (0..63) com
+// min implícito 32 (centro da faixa 6-bit).
+fn q6kDecodeBlock(Int[] raw, Int off): Int {
+    var scale = raw[off]
+    var acc = 0
+    var i = 1
+    while (i < 9) {
+        var v = raw[off + i] % 64
+        acc = acc + (v - 32) * scale / 64
+        i = i + 1
+    }
+    return acc
+}
+
+// Seleciona o decoder pelo nome do quant (ggufQuants/143).
+kqDecodeBlock(String quant, Int[] raw, Int off): Int {
+    if (quant == "Q6_K") {
+        return q6kDecodeBlock(raw, off)
+    }
+    return q4kDecodeBlock(raw, off)
+}
+
+// Decodifica N blocos do quant K informado (igual quantDecodeTensor/156).
+kqDecodeTensor(String quant, Int[] raw, Int nBlocks): Int[] {
+    var out = new Int[nBlocks]
+    var b = 0
+    while (b < nBlocks) {
+        out[b] = kqDecodeBlock(quant, raw, b * 9)
+        b = b + 1
+    }
+    return out
+}
