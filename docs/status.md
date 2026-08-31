@@ -21,7 +21,7 @@
 | KofLM inferência real | ✅ **KofLM** Q4 local: 37 tok/s decode (CPU) · llama.cpp CPU+Vulkan buildado · RX 6600 aguarda ICD RADV |
 | N19-SUSPECT | 🔴 novo: crash combinando 152+144 (~1MB asm); engine aguarda workaround |
 | GraphExecutor | ✅ decoder plan N-layers/forward-all/steps (2/2) |
-| M31 kernels | ✅ Attention+SwiGLU+LMHead+QuantDecoder Q4_0/Q8_0/F16 (12/12) · TokenizerEngine (3/3, N20 contornado) · GraphExecutor execução real (attention+residual+SwiGLU+rmsnorm, tensorAdd) · **GL/VK compute shaders ✅ 7 módulos SPIR-V** (matmul/softmax_causal/rmsnorm/rope/embedding/swiglu/attention_scores em gpu/shaders/, compilados glslangValidator, validados via 159_shader_hal.kf 6/6 jvm+native + gpu/harness.py) |
+| M31 kernels | ✅ Attention+SwiGLU+LMHead+QuantDecoder Q4_0/Q8_0/F16/**Q4_K_M/Q6_K** (unit_kq 5/5) · (12/12) · TokenizerEngine (3/3, N20 contornado) · GraphExecutor execução real (attention+residual+SwiGLU+rmsnorm, tensorAdd) · **GL/VK compute shaders ✅ 7 módulos SPIR-V** (matmul/softmax_causal/rmsnorm/rope/embedding/swiglu/attention_scores em gpu/shaders/, compilados glslangValidator, validados via 159_shader_hal.kf 6/6 jvm+native + gpu/harness.py) |
 | M32 FFI Vulkan | ✅ M32.1: JvmVkRuntime (FFM, JDK 21+) no compilador `b657dd8` — cadeia instance→device→pipeline validada end-to-end (RADV RX550 + llvmpipe, rc=0), structs Vulkan conferidos via C puro dlsym (stage inline no ComputePipelineCreateInfo = causa do segfault inicial); dispatch degradado p/ CPU por bug do ambiente Mesa 25.2.8 (RADV crasha no vkCmdDispatch / lvp ignora escrita — reproduzido em C puro, não é o FFI). **M32.2 ✅ namespace `gpu.*` no compilador `1436a1f`** (KofGpu: available/failReason/dispatchMatmul, GPU001 no JS, stubs asm no native) + fix COMP001 fechamento da classe KofRuntime; gpuMatmul no shader HAL com fallback golden CPU — unit_shaders 7/7 jvm+native, 16/16 suítes. fila: M32.3 dispatch real (ambiente RADV estável) |
 | Backend abstraction | ✅ CPUBackend real + auto-select vulkan→opengl→cpu + koflm.toml parser (3/3) |
 | Rebranding | ✅ models/KofLM/{metadata.json,config.toml} — origem checkpoint só em metadata |
@@ -32,7 +32,7 @@
 1. ~~N22-SUSPECT~~ ✅ **FECHADO** (9df8f72: GC mark transitivo + sweep no-op + cdq; regressions/N22-SUSPECT/README.md)
 2. ~~Reportar N21/N22/N18/N19 upstream~~ ✅ re-test vs 0.2.6-beta: todos passam (repros em regressions/; N23 fixado 2b09aa1)
 3. Rodar `train_koflm.py` (dias) → merge → KofLM-Q4.gguf oficial (PLANO 002)
-4. M31 continuação: kernels completos no GraphExecutor + QuantDecoder F16/K
+4. ~~M31 continuação: kernels completos no GraphExecutor + QuantDecoder F16/K~~ ✅ M31.8 K-quants (q4k/q6kDecodeBlock + kqDecodeTensor, unit_kq 5/5 jvm+native)
 5. Instalar mesa-vulkan-drivers → benchmark RX 6600
 6. Test suites do agente: **16/16 verdes** (scripts/test.sh, jvm+native) — manter hermeticidade nos testes novos
 | Bugs p/ upstream | ~~N18 CONFIRMED + N10/N11/N12/N4~~ ✅ fechados vs 0.2.6-beta · J4-residual monitorado (repro exit 0) · SC3/SC4 sem repro | (fechar 9 testes, bench real) (RoPE/KV Cache/Quantização/Sampler V3) |
