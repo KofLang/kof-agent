@@ -47,7 +47,7 @@ run_case() {
   run_case N4   regressions/N4/repro.kf             native run "fix (a|b|c; repro evita List.size — família N20)"
   run_case N6   regressions/N6/repro.kf             native run "fix (ok)"
   run_case N7   regressions/N7/repro.kf             native run "fix (termina, 3)" 10
-  run_case N9   regressions/N9/repro.kf             native run "residual (esperado aabbcc; 0.2.3 devolve abbcc)"
+  run_case N9   regressions/N9/repro.kf             native run "fix (abbcc — a+bb+cc; expectativa antiga aabbcc era erro do repro)"
   run_case N8   regressions/N8/repro.kf             native run "fix (r=true, sem crash)"
   run_case N1   regressions/N1/repro.kf             native run "fix (42)"
   "$ROOT/scripts/build.sh" "tests/f3_src/unit_f3.kf" "build/tests_f3/unit_f3.kf" --only=00_core.kf,05_log.kf,10_config.kf,50_metrics.kf,20_scheduler.kf,25_event.kf,30_lifecycle.kf,40_workspace.kf,45_windex.kf,47_tools.kf,03_tool_exec.kf,57_corpus.kf,67_retrieval.kf,87_memory.kf,88_conversation.kf,89_orchestrator.kf --native-clock >/dev/null 2>&1 || true
