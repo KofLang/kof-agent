@@ -18,3 +18,21 @@ test "config parse toml fields" {
     var c = koflmParseConfig("backend = \"auto\"\nthreads = 8\n")
     assert(c.threads == 8)
 }
+
+test "software vk icd does not count as vulkan" {
+    assert(!isSoftwareVkIcd("radeon_icd.json"))
+    assert(isSoftwareVkIcd("lvp_icd.x86_64.json"))
+    assert(isSoftwareVkIcd("swiftshader_icd.json"))
+    assert(isSoftwareVkIcd("virtio_icd.json"))
+}
+
+test "drm cards 0..7 scanned" {
+    // RX 550 = card1 neste host; card0 nem sempre existe
+    var any = false
+    var i = 0
+    while (i < 8) {
+        if (File("/sys/class/drm/card" + i).exists()) { any = true }
+        i = i + 1
+    }
+    assert(any == detectOpenGL())
+}

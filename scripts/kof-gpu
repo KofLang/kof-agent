@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+# kof-gpu — wrapper que injeta o ambiente de GPU detectado antes do bin/kof.
+# Uso: scripts/kof-gpu <args do kof>  (ex.: scripts/kof-gpu run x.kf --target native)
+set -euo pipefail
+. "$(dirname "$0")/gpu-env.sh"
+[ -n "${KOF_VK_ICD:-}" ] && export VK_ICD_FILENAMES="${KOF_VK_ICD}${VK_ICD_FILENAMES:+:$VK_ICD_FILENAMES}"
+exec "${KOF:-$HOME/Documentos/Kof4j/bin/kof}" "$@"
