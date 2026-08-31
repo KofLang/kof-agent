@@ -89,7 +89,11 @@ quando N14 fechar.
 
 ## Sweep final 416ff4b (REPORT_COMPILER_HEAD_416ff4b.md)
 
-N16 ✅ · N17 ✅ · **N13 ✅ NOVO FIX** · N11 ❌ · N12 ❌ (9º campo=0) · J4 🟡 parcial · N10 ❌
+N16 ✅ · N17 ✅ · **N13 ✅ NOVO FIX** · N12 ❌ (9º campo=0) · J4 🟡 parcial · N10 ❌
+
+## Sweep final 0.2.6-beta (sweep-2b09aa1/sweep-67e6e8c/sweep-84db7ea, 2026-08-31)
+
+N11 ✅ FECHADO (String_lastIndexOf runtime asm + handler no emitCall, Kof4j 84db7ea) · N18 ✅ · N19 ✅ (repros unit, PARTs via build.sh; N18u/N19u no sweep) · N22 ✅ (stress 10k/100k verdes, 1.85MB asm) · N10 ✅ (TU 1.85MB exit 0) · N9 ✅ (expectativa do repro estava errada: a+bb+cc=abbcc) · **N23 ✅ NOVO FIX** (ctor >=6 args: cleanup stack args pós-call, 2b09aa1) · J4 exit 0 · N12 fechado no 0.2.6-beta · Abertos: SC3(p)/SC4(?)
 
 
 ## N18-SUSPECT (2026-08-25, 416ff4b)
