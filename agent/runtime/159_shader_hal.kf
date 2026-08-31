@@ -80,6 +80,36 @@ shaderSpvDir(): String {
     return "gpu/shaders"
 }
 
+// M32.2: dispatch Vulkan com fallback golden CPU. O compilador JVM emite
+// kof_vk_dispatch (FFM); em native/js o namespace gpu.* não existe (GPU001)
+// e usamos direto o golden. O contrato: 0 = ok (out preenchido), != 0 = CPU.
+
+// M32.2: dispatch Vulkan com fallback golden CPU. O compilador JVM emite
+// kof_vk_dispatch (FFM); em native/js o namespace gpu.* não existe (GPU001)
+// e usamos direto o golden. O contrato: 0 = ok (out preenchido), != 0 = CPU.
+
+gpuMatmul(TensorR a, TensorR b): TensorR {
+    var m = a.rows
+    var k = a.cols
+    var n = b.cols
+    var af = a.data
+    var bf = b.data
+    var cf = new Int[m * n]
+    var rc = 1
+    if (gpuAvailable()) {
+        rc = gpu.dispatchMatmul(af, bf, cf, m, n, k)
+    }
+    if (rc != 0) {
+        var gold = tensorMatMul(a, b)
+        cf = gold.data
+    }
+    return TensorR(m, n, cf)
+}
+
+gpuAvailable(): Bool {
+    return false
+}
+
 // valida todos os 7 módulos SPIR-V do HAL
 shadersValid(): Bool {
     var names = listOf<String>()

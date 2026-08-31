@@ -45,3 +45,21 @@ test "golden rmsnorm matches runtime op" {
     var rt = tensorRmsNorm(x)
     assert(tensorGet(g, 0, 0) == tensorGet(rt, 0, 0))
 }
+
+test "gpu matmul dispatch com fallback golden" {
+    var a = tensorNew(2, 3)
+    tensorSet(a, 0, 0, 1); tensorSet(a, 0, 1, 2); tensorSet(a, 0, 2, 3)
+    tensorSet(a, 1, 0, 4); tensorSet(a, 1, 1, 5); tensorSet(a, 1, 2, 6)
+    var b = tensorNew(3, 2)
+    tensorSet(b, 0, 0, 7); tensorSet(b, 0, 1, 8)
+    tensorSet(b, 1, 0, 9); tensorSet(b, 1, 1, 10)
+    tensorSet(b, 2, 0, 11); tensorSet(b, 2, 1, 12)
+    var c = gpuMatmul(a, b)
+    // golden CPU: A×B com A={1,2,3,4,5,6}, B={7,8,9,10,11,12} → {58,64,139,154}
+    assert(tensorGet(c, 0, 0) == 58)
+    assert(tensorGet(c, 0, 1) == 64)
+    assert(tensorGet(c, 1, 0) == 139)
+    assert(tensorGet(c, 1, 1) == 154)
+    // sem device vulkan ativo, gpuAvailable() retorna false → golden usado
+    assert(gpuAvailable() == false)
+}
