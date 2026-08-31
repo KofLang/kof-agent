@@ -35,11 +35,17 @@ run_case() {
   echo
   echo "| ID | Arquivo | Resultado | Esperado | Evidência (stdout/stderr) |"
   echo "|----|---------|-----------|----------|---------------------------|"
+  mkdir -p "$ROOT/build/sweep"
   run_case N16  regressions/N16/n16_fwd.kf          native run "fix (N16-OK)"
   run_case N17  regressions/N17/repro.kf            native run "fix (lt0=true)"
   run_case N13  regressions/N13/repro.kf            native run "fix (1)"
   run_case N12  regressions/N12/repro.kf            native run "fix (6)"
   run_case N18  regressions/N18-SUSPECT/repro.kf    native test "aberto (crash/erro)"
+  # N18/N19 unit repros precisam PARTs: buildar antes (build.sh resolve runtime)
+  "$ROOT/scripts/build.sh" regressions/N18-SUSPECT/repro.kf build/sweep/n18full.kf >/dev/null 2>&1
+  run_case N18u build/sweep/n18full.kf               native test "fix (openGGUF v=3)"
+  "$ROOT/scripts/build.sh" regressions/N19-SUSPECT/unit_engine.kf build/sweep/n19u.kf >/dev/null 2>&1
+  run_case N19u build/sweep/n19u.kf                  native test "fix (engine 3/3)"
   run_case J4   regressions/J4/repro_full.kf        native run "fix (exit 0)"
   run_case N19  regressions/N19-SUSPECT/repro_full.kf native run "aberto (crash/erro)"
   run_case N11  regressions/N11/repro.kf            native run "fix (1 — String_lastIndexOf runtime asm)"
