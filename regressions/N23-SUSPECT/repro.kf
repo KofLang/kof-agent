@@ -1,0 +1,6 @@
+record R6(Int c0, Int c1, Int c2, Int c3, Int c4, Int c5)
+
+test "t6" {
+    var x = R6(1, 2, 3, 4, 5, 6)
+    println("v=" + x.c5)
+}

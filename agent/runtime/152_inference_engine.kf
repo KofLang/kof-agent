@@ -3,7 +3,7 @@
 record EngineSession(Int id, Bool active)
 
 class InferenceEngine {
-    KoflmRuntime rt
+    KoflmRuntime rt = KoflmRuntime()
     List<EngineSession> sessions = listOf<EngineSession>()
     Int current = 0 - 1
     Bool cancelled = false

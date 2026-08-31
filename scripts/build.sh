@@ -39,6 +39,11 @@ PARTS=(
   agent/runtime/154_attention_swiglu.kf
   agent/runtime/156_lmhead_quant.kf
   agent/runtime/157_quant8_embed.kf
+  agent/runtime/140_dataset_builder.kf
+  agent/runtime/141_corpus_intel.kf
+  agent/runtime/142_training_pipeline.kf
+  agent/runtime/143_gguf_builder.kf
+  agent/runtime/145_koflm_dataset_loader.kf
   agent/runtime/151_koflm_config.kf
   agent/runtime/155_tokenizer_engine.kf
   agent/runtime/150_koflm_backend.kf

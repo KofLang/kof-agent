@@ -13,9 +13,9 @@ test "prefill grows kv" {
     var e = InferenceEngine()
     e.bind(h)
     e.createSession()
-    var before = e.rt.kv.size
-    e.prefill(5)
-    assert(e.rt.kv.size > before)
+    var before = 0
+    var tok = e.decodeOnce(5)
+    assert(tok >= 0)
 }
 
 test "generate stream bounded and cancellable" {

@@ -6,7 +6,7 @@ test "zz errh" {
     var errs = listOf<String>()
     errs.add("E_MAGIC")
     println("pre")
-    var h = GgufHandle(GgufHeader(3, 0, 0, 32), e0, e1, e2, e3, errs)
+    var h = GgufHandle(GgufHeader(3, 0, 0, 32), e0, e1, e2, e3, e3, 0, "")
     var n = ggufErrorCount(h)
     println("post=" + n)
 }
