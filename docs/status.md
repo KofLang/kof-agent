@@ -30,18 +30,18 @@
 
 **Próxima fila:**
 1. ~~N22-SUSPECT~~ ✅ **FECHADO** (9df8f72: GC mark transitivo + sweep no-op + cdq; regressions/N22-SUSPECT/README.md)
-2. Reportar **N21/N22 (fixed) + N18/N19** upstream (repros em regressions/)
+2. ~~Reportar N21/N22/N18/N19 upstream~~ ✅ re-test vs 0.2.6-beta: todos passam (repros em regressions/; N23 fixado 2b09aa1)
 3. Rodar `train_koflm.py` (dias) → merge → KofLM-Q4.gguf oficial (PLANO 002)
 4. M31 continuação: kernels completos no GraphExecutor + QuantDecoder F16/K
 5. Instalar mesa-vulkan-drivers → benchmark RX 6600
 6. Test suites do agente: **16/16 verdes** (scripts/test.sh, jvm+native) — manter hermeticidade nos testes novos
-| Bugs p/ upstream | **N18 CONFIRMED** (repro_minimal) + J4-residual + N10/N11/N12/N4/SC3/SC4 | (fechar 9 testes, bench real) (RoPE/KV Cache/Quantização/Sampler V3) · reportar J4+repro upstream |
+| Bugs p/ upstream | ~~N18 CONFIRMED + N10/N11/N12/N4~~ ✅ fechados vs 0.2.6-beta · J4-residual monitorado (repro exit 0) · SC3/SC4 sem repro | (fechar 9 testes, bench real) (RoPE/KV Cache/Quantização/Sampler V3) |
 
 ## Bloqueios ativos
 
 | ID | Impacto |
 |----|---------|
-| **N22-SUSPECT** | novo (0.2.3-beta): TU c/ PARTs core+log+sched+event → SIGSEGV nativo consistente mesmo com main() trivial (484KB); stress events/tasks 139/136; repro em regressions/N22-SUSPECT |
+| ~~N22-SUSPECT~~ | ✅ fechado vs 0.2.6-beta: stress events 10k (received=10000) e tasks 100k (launched=100001) verdes com asm de 1.85MB (N10 limiar superado) |
 | **J4-residual** | COMP002 ASM Frame.merge — repro_full exit 0 no sweep bdebf75, mas fix upstream 416ff4b não cobriu o caso original; manter monitoramento |
 | ~~N10-progressivo~~ | limiar empurrado pelo 0.2.3: f3 9/9 (1.5MB) passa; **N22 aparenta ser o mesmo fenômeno com gatilho por conteúdo, não tamanho** |
 | ~~N21~~ | ✅ FIXED upstream (bdebf75) — aritmética Int trunca 32 bits; wsHash/roundtrip windex validados |
@@ -55,7 +55,7 @@ Playbook de bisect em `docs/compiler-bugs.md`.
 
 | Corrigidos ✅ | Abertos ❌ |
 |---|---|
-| J1 J2 N2 N14 SC1 SC2 SC5 **N3 N6 N7 N9 N13** | N1? N4 N8? N10 N11 N12 J4-residual SC3(p) SC4(?) |
+| J1 J2 N2 N14 SC1 SC2 SC5 N3 N4 N6 N7 N8 N9 N10 N11 N12 N13 **N18 N19 N21 N22 N23** (verificados vs 0.2.6-beta; N23 fix 2b09aa1) | N1?(reabrir se reprodutir) SC3(p) SC4(?) |
 
 *Re-testar N1/N6/N7/N8/N9/N12 contra HEAD mais recente — podem ter sido
 colaterais do N14 e voltaram.*
