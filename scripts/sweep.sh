@@ -42,7 +42,7 @@ run_case() {
   run_case N18  regressions/N18-SUSPECT/repro.kf    native test "aberto (crash/erro)"
   run_case J4   regressions/J4/repro_full.kf        native run "fix (exit 0)"
   run_case N19  regressions/N19-SUSPECT/repro_full.kf native run "aberto (crash/erro)"
-  run_case N11  regressions/N11/repro.kf            native run "aberto (COMP001 lastIndexOf)"
+  run_case N11  regressions/N11/repro.kf            native run "fix (1 — String_lastIndexOf runtime asm)"
   run_case N3   regressions/N3/repro.kf             native run "fix (imprime 0)"
   run_case N4   regressions/N4/repro.kf             native run "fix (a|b|c; repro evita List.size — família N20)"
   run_case N6   regressions/N6/repro.kf             native run "fix (ok)"

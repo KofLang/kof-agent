@@ -8,7 +8,7 @@
 
 | Item | Estado |
 |------|--------|
-| Compilador | **baseline e4aff30 (kof 0.2.3-beta — N21+N22 fechados; fix jvm int→long inference, corpo vazio ClassFormatError, top-level fn return type, kof_io_dir_delete recursivo/0-em-falha)** · sweeps: 25d017a/9462a48/8dc4644/bdebf75/9df8f72/e4aff30 em docs/compiler/reports/ · N16/N17/N13/N12/N3/N6/N7/N8/N1/J4/N22 ✅ fixed · N9 residual (abbcc) · N11/N18/N19/N10 abertos |
+| Compilador | **HEAD 67e6e8c (kof 0.2.6-beta — N23 fix ctor >=6 args 2b09aa1; String_lastIndexOf runtime asm → N11 fechado; + tudo do e4aff30)** · sweeps: 25d017a/9462a48/8dc4644/bdebf75/9df8f72/e4aff30/2b09aa1/67e6e8c em docs/compiler/reports/ · N16/N17/N13/N12/N3/N6/N7/N8/N1/J4/N22/N11 ✅ fixed · N9 residual (abbcc) · N18/N19/N10 fechados vs 0.2.6-beta (repros unit) |
 | FASE 1 (M0–M9) | ✅ código completo · verificação parcial (N10-residual) |
 | FASE 2 (M10–M12) | 🟡 M10 native **9/9** ✅ (Q8 destravado c/ fix N17) · JVM segue J4-residual |
 | FASE 3 (M13–M15) | 🟡 código pronto · N10-progressivo persiste (1.5MB asm → 139) |
