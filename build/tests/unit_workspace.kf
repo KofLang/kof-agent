@@ -5422,6 +5422,61 @@ f16DecodeTensor(Int[] raw, Int nBlocks): TensorR {
     return t
 }
 
+// M31.8: K-quants (Q4_K_M / Q6_K) — decoders de bloco no formato
+// simplificado do projeto (milésimos, inteiro). Cada bloco carrega o
+// scale no slot 0 e os quantizados nos slots seguintes, coerente com
+// q40DecodeBlock/q80DecodeBlock (156/157) e com ggufQuants() (143).
+
+// Q4_K_M: bloco de 9 — scale + 8 nibbles (sub-blocos de 4 bits).
+fn q4kDecodeBlock(Int[] raw, Int off): Int {
+    var scale = raw[off]
+    var acc = 0
+    var i = 1
+    while (i < 9) {
+        var nib = raw[off + i] % 16
+        // K-quants usam min/scale por sub-bloco: nibble alto = 4 bits
+        // de min, baixo = 4 bits de q. Reconstrói q0..q7 por nibble.
+        var q = nib % 4
+        var m = nib / 4
+        acc = acc + (q * scale / 4 + m) / 2
+        i = i + 1
+    }
+    return acc
+}
+
+// Q6_K: bloco de 9 — scale + 8 valores base 6-bit (0..63) com
+// min implícito 32 (centro da faixa 6-bit).
+fn q6kDecodeBlock(Int[] raw, Int off): Int {
+    var scale = raw[off]
+    var acc = 0
+    var i = 1
+    while (i < 9) {
+        var v = raw[off + i] % 64
+        acc = acc + (v - 32) * scale / 64
+        i = i + 1
+    }
+    return acc
+}
+
+// Seleciona o decoder pelo nome do quant (ggufQuants/143).
+kqDecodeBlock(String quant, Int[] raw, Int off): Int {
+    if (quant == "Q6_K") {
+        return q6kDecodeBlock(raw, off)
+    }
+    return q4kDecodeBlock(raw, off)
+}
+
+// Decodifica N blocos do quant K informado (igual quantDecodeTensor/156).
+kqDecodeTensor(String quant, Int[] raw, Int nBlocks): Int[] {
+    var out = new Int[nBlocks]
+    var b = 0
+    while (b < nBlocks) {
+        out[b] = kqDecodeBlock(quant, raw, b * 9)
+        b = b + 1
+    }
+    return out
+}
+
 // M31.7: Shader HAL — SPIR-V module loader/validador + golden mirrors.
 // Os .comp fontes ficam em gpu/shaders/ (compilados por glslangValidator -V).
 // Em runtime com Vulkan device ativo, os .spv alimentam os pipelines compute.
@@ -5502,6 +5557,36 @@ goldenEmbedding(TensorR table, Int tokenId): TensorR {
 
 shaderSpvDir(): String {
     return "gpu/shaders"
+}
+
+// M32.2: dispatch Vulkan com fallback golden CPU. O compilador JVM emite
+// kof_vk_dispatch (FFM); em native/js o namespace gpu.* não existe (GPU001)
+// e usamos direto o golden. O contrato: 0 = ok (out preenchido), != 0 = CPU.
+
+// M32.2: dispatch Vulkan com fallback golden CPU. O compilador JVM emite
+// kof_vk_dispatch (FFM); em native/js o namespace gpu.* não existe (GPU001)
+// e usamos direto o golden. O contrato: 0 = ok (out preenchido), != 0 = CPU.
+
+gpuMatmul(TensorR a, TensorR b): TensorR {
+    var m = a.rows
+    var k = a.cols
+    var n = b.cols
+    var af = a.data
+    var bf = b.data
+    var cf = new Int[m * n]
+    var rc = 1
+    if (gpuAvailable()) {
+        rc = gpu.dispatchMatmul(af, bf, cf, m, n, k)
+    }
+    if (rc != 0) {
+        var gold = tensorMatMul(a, b)
+        cf = gold.data
+    }
+    return TensorR(m, n, cf)
+}
+
+gpuAvailable(): Bool {
+    return false
 }
 
 // valida todos os 7 módulos SPIR-V do HAL
@@ -5648,6 +5733,137 @@ embeddingLookup(TensorR table, Int tokenId): TensorR {
         c2 = c2 + 1
     }
     return out
+}
+
+// M31: Dataset Builder PT-BR — categorização, dedup, split determinístico
+
+record DsExample(String category, String inputText, String outputText, Int hash)
+
+fn dsHash(String s): Int {
+    var h = 0
+    var i = 0
+    while (i < s.length) {
+        h = (h * 31 + s.charAt(i)) % 999983
+        i = i + 1
+    }
+    return h
+}
+
+fn dsCategoryFor(String path): String {
+    if (path.contains("bugs")) { return "BUG" }
+    if (path.contains("tests")) { return "TEST" }
+    if (path.contains("specs")) { return "COMPILER" }
+    if (path.contains("runtime")) { return "RUNTIME" }
+    return "LANGUAGE"
+}
+
+class DatasetBuilder {
+    List<DsExample> examples = listOf<DsExample>()
+
+    add(String path, String inp, String out) {
+        var h = dsHash(inp)
+        var i = 0
+        while (i < examples.size()) {
+            if (examples.get(i).hash == h) { return }
+            i = i + 1
+        }
+        examples.add(DsExample(dsCategoryFor(path), inp, out, h))
+    }
+
+    count(): Int { return examples.size() }
+
+    splitBucket(Int seed, Int idx): String {
+        var v = (seed * 1103515245 + idx * 12345) % 100
+        if (v < 0) { v = 0 - v }
+        if (v < 90) { return "train" }
+        if (v < 95) { return "validation" }
+        return "test"
+    }
+
+    toAlpaca(Int seed): List<String> {
+        var out = listOf<String>()
+        var i = 0
+        while (i < examples.size()) {
+            var e = examples.get(i)
+            out.add("{\"bucket\":\"" + splitBucket(seed, i) + "\",\"category\":\"" + e.category + "\",\"input\":\"" + e.inputText + "\",\"output\":\"" + e.outputText + "\"}")
+            i = i + 1
+        }
+        return out
+    }
+}
+
+// M32: Corpus Intelligence — exemplos supervisionados de bugs upstream
+
+record BugExample(String bugId, String question, String answer)
+
+corpusBugExamples(): List<BugExample> {
+    var l = listOf<BugExample>()
+    l.add(BugExample("N10", "Por que artefatos grandes segfaultam?", "N10-progressivo: TU >800KB asm crasha no native; workaround: particionar em PARTS pequenas com --only."))
+    l.add(BugExample("N11", "lastIndexOf nao funciona no native?", "N11: funcao ausente no backend nativo; workaround: implementar busca manual reversa."))
+    l.add(BugExample("N18", "Record com listas quebra?", "N18: record c/ multiplos List fields corrompe memoria no native; workaround: campos planos + acessores."))
+    l.add(BugExample("J4", "Erro COMP002 em purgeExpired?", "J4-residual: Frame.merge ASM crasha no JVM; repro em regressions/J4/."))
+    return l
+}
+
+// M33: Training Pipeline — configs TinyLlama QLoRA
+
+record TrainCfg(Int rank, Int alpha, Int ctx, Int epochs)
+
+defaultTrainCfg(): TrainCfg {
+    return TrainCfg(32, 64, 2048, 3)
+}
+
+trainingConfigJson(TrainCfg c): String {
+    return "{\"base\":\"TinyLlama-1.1B-Chat\",\"qlora\":true,\"bits\":4,\"rank\":" + c.rank + ",\"alpha\":" + c.alpha + ",\"context\":" + c.ctx + ",\"epochs\":" + c.epochs + ",\"lr\":2e-4,\"scheduler\":\"cosine\",\"seed\":42}"
+}
+
+// M34: GGUF Builder — manifesto + quants oficiais
+
+record QuantEntry(String name, Int bits)
+
+ggufQuants(): List<QuantEntry> {
+    var l = listOf<QuantEntry>()
+    l.add(QuantEntry("Q4_K_M", 4))
+    l.add(QuantEntry("Q5_K_M", 5))
+    l.add(QuantEntry("Q6_K", 6))
+    l.add(QuantEntry("Q8_0", 8))
+    return l
+}
+
+modelManifestJson(String dsVersion, Int dsHash): String {
+    return "{\"model\":\"KofLM-v1\",\"base\":\"TinyLlama-1.1B-Chat\",\"lang\":\"PT-BR\",\"dataset_version\":\"" + dsVersion + "\",\"dataset_hash\":" + dsHash + ",\"compiler_head\":\"416ff4b\",\"ctx\":2048}"
+}
+
+// M31.1: loader do dataset real gerado (valida estrutura Alpaca)
+
+record DsStats(Int total, Int trainLike)
+
+dsValidateLine(String line): Bool {
+    return line.contains("instruction") && line.contains("bucket")
+}
+
+dsCountValid(String path): DsStats {
+    var f = File(path)
+    if (!f.exists()) {
+        return DsStats(0 - 1, 0)
+    }
+    var lines = splitStr(f.readText(), "\n")
+    var ok = 0
+    var tr = 0
+    var i = 0
+    while (i < lines.size()) {
+        var l = lines.get(i)
+        if (l.length > 10) {
+            if (dsValidateLine(l)) {
+                ok = ok + 1
+            }
+            if (l.contains("train")) {
+                tr = tr + 1
+            }
+        }
+        i = i + 1
+    }
+    return DsStats(ok, tr)
 }
 
 kcfgTrim(String s): String {
@@ -5832,7 +6048,7 @@ fn kofTokenLookup(String name): Int {
 record EngineSession(Int id, Bool active)
 
 class InferenceEngine {
-    KoflmRuntime rt
+    KoflmRuntime rt = KoflmRuntime()
     List<EngineSession> sessions = listOf<EngineSession>()
     Int current = 0 - 1
     Bool cancelled = false
