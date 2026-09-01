@@ -70,6 +70,13 @@ if [ "$KOF_GPU_BACKEND" = "cpu" ] && command -v glxinfo >/dev/null 2>&1; then
   fi
 fi
 
+# SPV do matmul pro dispatch real (libvkchain): repo local ou instalado
+if [ -f "$KOF_ROOT/gpu/shaders/matmul.spv" ]; then
+  export KOF_GPU_SPV="$KOF_ROOT/gpu/shaders/matmul.spv"
+else
+  export KOF_GPU_SPV="${KOF_GPU_SPV:-gpu/shaders/matmul.spv}"
+fi
+
 export KOF_GPU_BACKEND KOF_GPU_NAME KOF_GPU_DISCRETE KOF_LLVMPIPE KOF_VK_ICD
 
 # --- Híbridos: NVIDIA PRIME / switcheroo (só afeta execução de binários GL) ---
@@ -81,7 +88,7 @@ fi
 
 # --- Resumo ---
 kof_gpu_report() {
-  echo "backend=$KOF_GPU_BACKEND gpu=[$KOF_GPU_NAME] dGPU=$KOF_GPU_DISCRETE llvmpipe=$KOF_LLVMPIPE"
+  echo "backend=$KOF_GPU_BACKEND gpu=[$KOF_GPU_NAME] dGPU=$KOF_GPU_DISCRETE llvmpipe=$KOF_LLVMPIPE spv=$KOF_GPU_SPV"
   echo "vk_icd=$KOF_VK_ICD"
   echo "data=$KOF_DATA (livre: $(df -h --output=avail "$KOF_DATA" | tail -1 | tr -d ' '))"
 }
