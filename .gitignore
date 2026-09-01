@@ -1,2 +1,8 @@
 *.gguf
 build/
+
+# builds temporários locais
+tmp/
+tmp-*.kf
+tmp-entry/
+*.class

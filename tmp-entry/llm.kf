@@ -1,5 +1,0 @@
-fn main() {
-    var rt = KoflmRuntime()
-    var out = llmChatPrompt(rt, "diga apenas: ok", 6)
-    println("LLM: " + out)
-}
