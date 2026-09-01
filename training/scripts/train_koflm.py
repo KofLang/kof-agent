@@ -7,7 +7,7 @@ from transformers import (AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfi
                           TrainingArguments, Trainer, DataCollatorForLanguageModeling)
 from peft import LoraConfig, get_peft_model, prepare_model_for_kbit_training
 
-CFG_PATH = pathlib.Path("training/configs/koflm.yaml")
+CFG_PATH = pathlib.Path(os.environ.get("KOFLM_CFG", "training/configs/koflm.yaml"))
 
 def load_cfg():
     cfg = {}
@@ -35,11 +35,15 @@ def main():
     ds = ds.map(lambda b: tok(b["text"], truncation=True, max_length=int(cfg["context"])),
                 batched=True, remove_columns=["text"])
 
-    bnb = BitsAndBytesConfig(load_in_4bit=True, bnb_4bit_quant_type="nf4",
-                             bnb_4bit_compute_dtype=torch.bfloat16 if torch.cuda.is_bf16_supported() else torch.float16)
-    model = AutoModelForCausalLM.from_pretrained(cfg["model"], quantization_config=bnb,
-                                                 device_map="auto", torch_dtype="auto")
-    model = prepare_model_for_kbit_training(model)
+    # CPU-first (RX 550 não tem CUDA; bitsandbytes/QLoRA só em NVIDIA):
+    if torch.cuda.is_available():
+        bnb = BitsAndBytesConfig(load_in_4bit=True, bnb_4bit_quant_type="nf4",
+                                 bnb_4bit_compute_dtype=torch.bfloat16 if torch.cuda.is_bf16_supported() else torch.float16)
+        model = AutoModelForCausalLM.from_pretrained(cfg["model"], quantization_config=bnb,
+                                                     device_map="auto", torch_dtype="auto")
+        model = prepare_model_for_kbit_training(model)
+    else:
+        model = AutoModelForCausalLM.from_pretrained(cfg["model"], torch_dtype=torch.float32)
     model.resize_token_embeddings(len(tok))
     lora = LoraConfig(r=int(cfg["lora_rank"]), lora_alpha=int(cfg["lora_alpha"]),
                       lora_dropout=float(cfg["lora_dropout"]), task_type="CAUSAL_LM",
@@ -54,12 +58,12 @@ def main():
         gradient_accumulation_steps=int(cfg["gradient_accumulation_steps"]),
         learning_rate=float(cfg["learning_rate"]),
         lr_scheduler_type="cosine",
-        warmup_ratio=float(cfg["warmup_ratio"]),
+        warmup_steps=max(1, int(0.05 * len(ds) * int(cfg["epochs"]) / (int(cfg["batch_size"]) * int(cfg["gradient_accumulation_steps"])))),  # warmup_ratio 5% (transformers 5.x: warmup_steps)
         logging_steps=10,
         save_steps=int(cfg["save_every_steps"]),
         save_total_limit=3,
         bf16=(cfg.get("bf16") == "auto" and torch.cuda.is_available()),
-        fp16=not torch.cuda.is_available(),
+        fp16=False,  # fp16 não é suportado no Trainer CPU
         optim="paged_adamw_8bit" if torch.cuda.is_available() else "adamw_torch",
         report_to=[],
         seed=seed,

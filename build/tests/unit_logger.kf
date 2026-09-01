@@ -5586,7 +5586,7 @@ gpuMatmul(TensorR a, TensorR b): TensorR {
 }
 
 gpuAvailable(): Bool {
-    return false
+    return gpu.available()
 }
 
 // valida todos os 7 módulos SPIR-V do HAL
@@ -5957,7 +5957,9 @@ class TokenizerEngine {
     isBos(Int id): Bool { return id == bosId }
 }
 
-// M31: Backend Abstraction — CPU real + Vulkan/OpenGL detect/fallback
+// M31/M32: Backend Abstraction — CPU real + Vulkan/OpenGL detect/fallback.
+// Máquinas alvo: dGPU dedicada, híbridos (iGPU+dGPU), notebooks só-iGPU,
+// VMs/PC fraco (llvmpipe → cpu). Sempre degrada: nunca falha.
 
 record RuntimeInfo(String backend, Int gpuLayers, Int threads)
 
@@ -5992,13 +5994,59 @@ fn detectVulkan(): Bool {
     return found
 }
 
+// llvmpipe/lavapipe = rasterizador de software: compute neles é MAIS LENTO
+// que o CPU puro (comprovado no M32.1 — lvp nem escreve o resultado).
+fn isSoftwareVkIcd(name: String): Bool {
+    return name.contains("lvp") || name.contains("swiftshader")
+        || name.contains("virtio") || name.contains("gfxstream")
+}
+
+fn hasHardwareVk(): Bool {
+    var f = File("/usr/share/vulkan/icd.d")
+    if (!f.exists()) { return false }
+    var files = f.list()
+    if (files == null) { return false }
+    var found = false
+    for (var name in files) {
+        if (name.endsWith(".json") && !isSoftwareVkIcd(name)) {
+            found = true
+        }
+    }
+    return found
+}
+
 fn detectOpenGL(): Bool {
-    var f = File("/sys/class/drm/card0")
-    return f.exists()
+    // card[0-9] real (card1 = RX 550 no OptiPlex; card0 nem sempre existe)
+    var i = 0
+    while (i < 8) {
+        var f = File("/sys/class/drm/card" + i)
+        if (f.exists()) { return true }
+        i = i + 1
+    }
+    return false
+}
+
+// Override por ambiente (gpu-env.sh): KOF_GPU_BACKEND=vulkan|opengl|cpu.
+// secrets.get lê /proc/self/environ no nativo e System.getenv no JVM.
+fn envBackendOverride(): String {
+    var v = secrets.get("KOF_GPU_BACKEND")
+    if (v == null) { return "" }
+    return v
 }
 
 backendAutoSelect(): RuntimeInfo {
-    if (detectVulkan()) {
+    var forced = envBackendOverride()
+    if (forced == "cpu") {
+        return RuntimeInfo("cpu", 0, 6)
+    }
+    if (forced == "vulkan") {
+        return RuntimeInfo("vulkan", 99, 6)
+    }
+    if (forced == "opengl") {
+        return RuntimeInfo("opengl", 32, 6)
+    }
+    // automático: hardware VK > GL > cpu (llvmpipe NÃO conta como VK)
+    if (hasHardwareVk()) {
         return RuntimeInfo("vulkan", 99, 6)
     }
     if (detectOpenGL()) {
