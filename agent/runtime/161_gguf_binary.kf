@@ -9,19 +9,22 @@
 record GgufBinHeader(Int version, Int tensorCount, Int kvCount, Int alignment)
 record GgufBinKv(String key, Int kind, Int intVal, String strVal)
 record GgufBinTensor(String name, Int nDims, Int d0, Int d1, Int quant, Int offsetLo, Int offsetHi, Int nElems)
-record GgufBinModel(GgufBinHeader header, List<GgufBinKv> kv, List<GgufBinTensor> tensors, Int errorCount, String errorCode)
+record GgufBinModel(GgufBinHeader header, List<GgufBinKv> kv, List<GgufBinTensor> tensors, Int errorCount, String errorCode, Long dataOff)
 record GgufBinStr(Int len, Int[] chars)
 
 // ── leitura little-endian de um Int[] de bytes ──────────────────────────
 fn gbU32(Int[] b, Int off): Int {
+    if (off + 4 > b.length) { return 0 }
     return b[off] + b[off + 1] * 256 + b[off + 2] * 65536 + b[off + 3] * 16777216
 }
 
 fn gbU64Low(Int[] b, Int off): Int {
+    if (off + 8 > b.length) { return 0 }
     return b[off] + b[off + 1] * 256 + b[off + 2] * 65536 + b[off + 3] * 16777216
 }
 
 fn gbU64High(Int[] b, Int off): Int {
+    if (off + 8 > b.length) { return 0 }
     return b[off + 4] + b[off + 5] * 256 + b[off + 6] * 65536 + b[off + 7] * 16777216
 }
 
@@ -35,8 +38,19 @@ fn gbU64ToLong(Int[] b, Int off): Long {
     return gbU64Low(b, off) + hi * 4294967296
 }
 
+// len disponível na janela a partir de off+8 (evita index OOB quando a
+// string cruza o fim do buffer lido)
+fn gbStrAvail(Int[] b, Int off): Int {
+    var avail = b.length - (off + 8)
+    if (avail < 0) { return 0 }
+    return avail
+}
+
 fn gbReadStr(Int[] b, Int off): GgufBinStr {
     var len = gbU64Low(b, off)
+    var avail = gbStrAvail(b, off)
+    if (len > avail) { len = avail }
+    if (len < 0) { len = 0 }
     var chars = new Int[len]
     var i = 0
     while (i < len) {
@@ -51,10 +65,50 @@ fn gbStr(Int[] b, Int off): String {
     var st = gbReadStr(b, off)
     var i = 0
     while (i < st.len) {
-        s = s + String.valueOf(st.chars[i])
+        s = s + String.valueOf(st.chars[i] as Char)
         i = i + 1
     }
     return s
+}
+
+// bytes que ESTE kv consome na janela (aprox p/ array de strings: soma real)
+// bytes que o VALOR deste kv consome (pVal = offset APÓS o u32 do kind).
+// Retorna NEGATIVO se a janela é pequena demais (qualquer leitura truncada —
+// sinal p/ o driver dobrar a janela antes de confiar no valor)
+fn gbKvNeed(Int[] buf, Int pVal, Int kind): Int {
+    if (pVal + 8 > buf.length) { return 0 - 1 }
+    if (kind == 8) {
+        var vs = gbReadStr(buf, pVal)
+        if (pVal + 8 + vs.len > buf.length && vs.len == gbStrAvail(buf, pVal)) {
+            return 0 - 1
+        }
+        return pVal + 8 + vs.len
+    }
+    if (kind == 9) {
+        if (pVal + 12 > buf.length) { return 0 - 1 }
+        var etype = gbU32(buf, pVal)
+        var elen = gbU64Low(buf, pVal + 4)
+        var q = pVal + 12
+        if (etype == 8) {
+            var si = 0
+            while (si < elen) {
+                if (q + 8 > buf.length) { return 0 - 1 }
+                var sst = gbReadStr(buf, q)
+                if (q + 8 + sst.len >= buf.length && sst.len == gbStrAvail(buf, q)) {
+                    return 0 - 1
+                }
+                q = q + 8 + sst.len
+                si = si + 1
+            }
+            return q
+        }
+        var total = q + gbArrayElemSize(etype) * elen
+        if (total > buf.length) { return 0 - 1 }
+        return total
+    }
+    var need = pVal + gbArrayElemSize(kind)
+    if (need > buf.length) { return 0 - 1 }
+    return need
 }
 
 fn gbArrayElemSize(Int kind): Int {
@@ -76,17 +130,17 @@ ggufBinOpen(String path): GgufBinModel {
     var head = f.readRange(0, 24)
     if (head == null || head.length < 24) {
         return GgufBinModel(GgufBinHeader(0, 0, 0, 0), listOf<GgufBinKv>(),
-            listOf<GgufBinTensor>(), 1, "E_READ")
+            listOf<GgufBinTensor>(), 1, "E_READ", 0)
     }
     var magic = gbU32(head, 0)
     if (magic != 1179993927) { // "GGUF" LE
         return GgufBinModel(GgufBinHeader(0, 0, 0, 0), listOf<GgufBinKv>(),
-            listOf<GgufBinTensor>(), 1, "E_MAGIC")
+            listOf<GgufBinTensor>(), 1, "E_MAGIC", 0)
     }
     var version = gbU32(head, 4)
     if (version != 2 && version != 3) {
         return GgufBinModel(GgufBinHeader(version, 0, 0, 0), listOf<GgufBinKv>(),
-            listOf<GgufBinTensor>(), 1, "E_VERSION")
+            listOf<GgufBinTensor>(), 1, "E_VERSION", 0)
     }
     var tensorCount = gbU64Low(head, 8)
     var kvCount = gbU64Low(head, 16)
@@ -96,15 +150,32 @@ ggufBinOpen(String path): GgufBinModel {
     var win: Long = 4096
     var i = 0
     while (i < kvCount) {
+        // janela dinâmica: o vocab de strings (tokenizer.ggml.tokens) passa
+        // de 500KB — dobra a leitura enquanto o parse cruzar o fim do buffer
         var buf = f.readRange(pos, win)
+        var st = gbReadStr(buf, 0)
+        var p0 = 8 + st.len
+        var kind0 = gbU32(buf, p0)
+        var need = gbKvNeed(buf, p0 + 4, kind0)
+        while (need < 0 && win < 8388608) {
+            win = win * 2
+            buf = f.readRange(pos, win)
+            st = gbReadStr(buf, 0)
+            p0 = 8 + st.len
+            kind0 = gbU32(buf, p0)
+            need = gbKvNeed(buf, p0 + 4, kind0)
+        }
+        if (need < 0) {
+            return GgufBinModel(GgufBinHeader(version, tensorCount, kvCount, align),
+                kv, listOf<GgufBinTensor>(), 1, "E_KVWIN", 0)
+        }
         if (buf == null || buf.length < 16) {
             return GgufBinModel(GgufBinHeader(version, tensorCount, kvCount, align),
-                kv, listOf<GgufBinTensor>(), 1, "E_KV")
+                kv, listOf<GgufBinTensor>(), 1, "E_KV", 0)
         }
-        var st = gbReadStr(buf, 0)
         var key = gbStr(buf, 0)
         var p = 8 + st.len
-        var kind = gbU32(buf, p)
+        var kind = kind0
         p = p + 4
         var intVal = 0
         var strVal = ""
@@ -127,7 +198,18 @@ ggufBinOpen(String path): GgufBinModel {
         } else if (kind == 9) {                // array: skip (type u32 + len u64 + elems)
             var etype = gbU32(buf, p)
             var elen = gbU64Low(buf, p + 4)
-            p = p + 12 + gbArrayElemSize(etype) * elen
+            p = p + 12
+            if (etype == 8) {
+                // array de strings: cada elem é u64-len + bytes (tamanho variável)
+                var si = 0
+                while (si < elen) {
+                    var sst = gbReadStr(buf, p)
+                    p = p + 8 + sst.len
+                    si = si + 1
+                }
+            } else {
+                p = p + gbArrayElemSize(etype) * elen
+            }
         } else {
             p = p + gbArrayElemSize(kind)
         }
@@ -150,7 +232,7 @@ fn ggufBinReadTensorDir(String path, Int version, Int tensorCount, Int kvCount,
     var dir = f.readRange(dirStart, 65536)
     if (dir == null || dir.length < 8) {
         return GgufBinModel(GgufBinHeader(version, tensorCount, kvCount, align),
-            kv, listOf<GgufBinTensor>(), 1, "E_DIR")
+            kv, listOf<GgufBinTensor>(), 1, "E_DIR", 0)
     }
     var tensors = listOf<GgufBinTensor>()
     var p = 0
@@ -188,7 +270,7 @@ fn ggufBinReadTensorDir(String path, Int version, Int tensorCount, Int kvCount,
         dataOff = dataOff + (align - rem)
     }
     return GgufBinModel(GgufBinHeader(version, tensorCount, kvCount, align),
-        kv, tensors, 0, "")
+        kv, tensors, 0, "", dataOff)
 }
 
 // ── acesso a tensor ─────────────────────────────────────────────────────
@@ -231,7 +313,7 @@ gbFindTensor(GgufBinModel m, String name): GgufBinTensor {
 
 // tensor dataOffset absoluto (t.offset é relativo ao início do data section)
 fn gbTensorAbsOff(GgufBinModel m, GgufBinTensor t): Long {
-    return t.offsetLo + t.offsetHi * 4294967296
+    return m.dataOff + t.offsetLo + t.offsetHi * 4294967296
 }
 
 // bytes totais do tensor
