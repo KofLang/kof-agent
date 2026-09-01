@@ -421,21 +421,25 @@ gbQ4KDecodeTensor(String path, GgufBinModel m, String name, Int maxElems): Int[]
 // Bloco de 256 elems = 210 bytes: f16 d (2B) + ql[128] + qh[64] + sc i8[16]
 // q = ((ql&0xF)|((qh>>s)&3)<<4) - 32; y = d * sc[is] * q (sc é int8)
 fn gbQ6KDecodeBlock(Int[] b, Int off, Int[] out) {
-    var d = f16ToMicro(b[off] + b[off + 1] * 256)
-    var ql = off + 2
+    // layout block_q6_K (ggml-common.h): ql[128] qh[64] scales[16] d f16 —
+    // o d é o ÚLTIMO campo (não o primeiro!)
+    var ql = off
     var qh = ql + 128
     var scB = qh + 64
+    var d = f16ToMicro(b[off + 208] + b[off + 209] * 256)
     var n = 0
     var outPos = 0
     while (n < 256) {
         var l = 0
         while (l < 32) {
-            var qhB = b[qh + n / 4 + l]
+            // ggml dequantize_row_q6_K: q1..q4 extraem 2 bits de qh[l]:
+            // shifts 0, 2, 4, 6 (4 quads por byte de qh)
+            var qhB = b[qh + l]
             var scIdx = l / 16
-            var q1 = (b[ql + l] % 16) + ((qhB % 4) * 16) - 32
+            var q1 = (b[ql + l] % 16) + (((qhB / 1) % 4) * 16) - 32
             var q2 = (b[ql + 32 + l] % 16) + (((qhB / 4) % 4) * 16) - 32
             var q3 = (b[ql + l] / 16) + (((qhB / 16) % 4) * 16) - 32
-            var q4 = (b[ql + 32 + l] / 16) + ((qhB / 64) * 16) - 32
+            var q4 = (b[ql + 32 + l] / 16) + (((qhB / 64) % 4) * 16) - 32
             var s0 = b[scB + scIdx]
             var s1 = b[scB + scIdx + 2]
             var s2 = b[scB + scIdx + 4]
@@ -605,6 +609,179 @@ gbDecodeRows(String path, GgufBinModel m, String name, Int rowStart,
         return out
     }
     return new Int[0]
+}
+
+// ── decoders NANO (pesos p/ matmul do forward M34; estados ficam MICRO) ─
+// bloco Q4_K → nano em Long[256]
+fn gbQ4KDecodeBlockN(Int[] b, Int off, Long[] out) {
+    var d: Long = f16ToNano(b[off] + b[off + 1] * 256)
+    var dmin: Long = f16ToNano(b[off + 2] + b[off + 3] * 256)
+    var sc = new Int[12]
+    var i = 0
+    while (i < 12) {
+        sc[i] = b[off + 4 + i]
+        i = i + 1
+    }
+    var qs = off + 16
+    var is = 0
+    var outPos = 0
+    var chunk = 0
+    while (chunk < 4) {
+        var sc0 = gbK4Sc(sc, is)
+        var mn0 = gbK4Mn(sc, is)
+        var sc1 = gbK4Sc(sc, is + 1)
+        var mn1 = gbK4Mn(sc, is + 1)
+        var d1 = d * sc0
+        var m1 = dmin * mn0
+        var d2 = d * sc1
+        var m2 = dmin * mn1
+        var l = 0
+        while (l < 32) {
+            var oct = b[qs + chunk * 32 + l]
+            out[outPos + l] = d1 * (oct % 16) - m1
+            out[outPos + 32 + l] = d2 * (oct / 16) - m2
+            l = l + 1
+        }
+        outPos = outPos + 64
+        is = is + 2
+        chunk = chunk + 1
+    }
+}
+
+// bloco Q6_K → nano em Long[256]
+fn gbQ6KDecodeBlockN(Int[] b, Int off, Long[] out) {
+    var ql = off
+    var qh = ql + 128
+    var scB = qh + 64
+    var d: Long = f16ToNano(b[off + 208] + b[off + 209] * 256)
+    var n = 0
+    var outPos = 0
+    while (n < 256) {
+        var l = 0
+        while (l < 32) {
+            var qhB = b[qh + l]
+            var scIdx = l / 16
+            var q1 = (b[ql + l] % 16) + (((qhB / 1) % 4) * 16) - 32
+            var q2 = (b[ql + 32 + l] % 16) + (((qhB / 4) % 4) * 16) - 32
+            var q3 = (b[ql + l] / 16) + (((qhB / 16) % 4) * 16) - 32
+            var q4 = (b[ql + 32 + l] / 16) + (((qhB / 64) % 4) * 16) - 32
+            var s0 = b[scB + scIdx]
+            var s1 = b[scB + scIdx + 2]
+            var s2 = b[scB + scIdx + 4]
+            var s3 = b[scB + scIdx + 6]
+            if (s0 > 127) { s0 = s0 - 256 }
+            if (s1 > 127) { s1 = s1 - 256 }
+            if (s2 > 127) { s2 = s2 - 256 }
+            if (s3 > 127) { s3 = s3 - 256 }
+            out[outPos + l] = d * s0 * q1
+            out[outPos + 32 + l] = d * s1 * q2
+            out[outPos + 64 + l] = d * s2 * q3
+            out[outPos + 96 + l] = d * s3 * q4
+            l = l + 1
+        }
+        outPos = outPos + 128
+        ql = ql + 64
+        qh = qh + 32
+        scB = scB + 8
+        n = n + 128
+    }
+}
+
+// nRows linhas de um tensor quantizado → Long[] NANO (novo; p/ matvec)
+gbDecodeRowsN(String path, GgufBinModel m, String name, Int rowStart,
+              Int nRows, Int kdim): Long[] {
+    var t = gbFindTensor(m, name)
+    if (t == null) { return new Long[0] }
+    var out = new Long[nRows * kdim]
+    var f = File(path)
+    var tmp = new Long[256]
+    if (t.quant == 12) {
+        var blocksPerRow = kdim / 256
+        var r = 0
+        while (r < nRows) {
+            var block0 = (rowStart + r) * blocksPerRow
+            var bytes = f.readRange(gbTensorAbsOff(m, t) + block0 * 144, blocksPerRow * 144)
+            if (bytes == null) { return out }
+            var k = 0
+            while (k < blocksPerRow) {
+                gbQ4KDecodeBlockN(bytes, k * 144, tmp)
+                var e = 0
+                while (e < 256) {
+                    out[r * kdim + k * 256 + e] = tmp[e]
+                    e = e + 1
+                }
+                k = k + 1
+            }
+            r = r + 1
+        }
+        return out
+    }
+    if (t.quant == 14) {
+        var blocksPerRow = kdim / 256
+        var r = 0
+        while (r < nRows) {
+            var block0 = (rowStart + r) * blocksPerRow
+            var bytes = f.readRange(gbTensorAbsOff(m, t) + block0 * 210, blocksPerRow * 210)
+            if (bytes == null) { return out }
+            var k = 0
+            while (k < blocksPerRow) {
+                gbQ6KDecodeBlockN(bytes, k * 210, tmp)
+                var e = 0
+                while (e < 256) {
+                    out[r * kdim + k * 256 + e] = tmp[e]
+                    e = e + 1
+                }
+                k = k + 1
+            }
+            r = r + 1
+        }
+        return out
+    }
+    return out
+}
+
+// ── F32 direto (norms do TinyLlama são F32) ────────────────────────────
+gbF32DecodeRows(String path, GgufBinModel m, String name, Int rowStart,
+                Int nRows, Int k): Int[] {
+    var t = gbFindTensor(m, name)
+    if (t == null) { return new Int[0] }
+    var out = new Int[nRows * k]
+    var f = File(path)
+    var bytes = f.readRange(gbTensorAbsOff(m, t) + rowStart * k * 4, nRows * k * 4)
+    if (bytes == null) { return out }
+    var i = 0
+    while (i < nRows * k) {
+        var bits: Long = bytes[i * 4] + bytes[i * 4 + 1] * 256
+            + bytes[i * 4 + 2] * 65536 + bytes[i * 4 + 3] * 16777216
+        out[i] = f32ToMicro(bits)
+        i = i + 1
+    }
+    return out
+}
+
+// f32 bits → micro (1e-6). IEEE754: sign 1, exp 8 (bias 127), man 23
+fn f32ToMicro(Long bits): Int {
+    var sign = 0
+    if (bits < 0) { sign = 1; bits = bits + 2147483648 }
+    var exp = (bits / 8388608) % 256
+    var man = bits % 8388608
+    if (exp == 255) { return 0 }
+    if (exp == 0 && man == 0) { return 0 }
+    var mant = 8388608 + man
+    var e = exp - 127
+    var micro = mant * 1000000 / 8388608
+    if (e >= 0) {
+        var k2 = 0
+        while (k2 < e) { micro = micro * 2; k2 = k2 + 1 }
+    } else {
+        var k3 = 0
+        while (k3 < 0 - e) { micro = micro / 2; k3 = k3 + 1 }
+    }
+    if (sign == 1) { micro = 0 - micro }
+    if (micro > 2000000000) { return 2000000000 }
+    if (micro < 0 - 2000000000) { return 0 - 2000000000 }
+    var outv: Int = micro as Int
+    return outv
 }
 
 // ── smoke de validação ──────────────────────────────────────────────────

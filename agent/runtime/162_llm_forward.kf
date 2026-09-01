@@ -1,0 +1,456 @@
+// M34: forward LLM 100% Kof puro sobre o parser GGUF binário (161).
+// TinyLlama-1.1B / LLaMA: embd=2048, 22 layers, 32 q-heads, 4 kv-heads,
+// head_dim=64, ffn=5632, rope_dims=64, vocab=32000.
+// Escalas fixed-point: pesos NANO (1e-9, Long[]), estados MICRO (1e-3 × 1e3).
+// matvec: acc Long = Σ W_nano × x_micro → /1e9 → MICRO.
+// RMSNorm: y = x_w / rms com tudo MICRO.
+// Q6_K v/down/output + Q4_K q/k/gate/up + F32 norms.
+
+record TinyCfg(Int embd, Int layers, Int heads, Int kvHeads, Int headDim,
+               Int ffn, Int ropeDims, Int vocab, Int eps)
+
+record TinyKv(Long[] k, Long[] v)
+
+// ── rmsnorm micro ───────────────────────────────────────────────────────
+tinyRmsNorm(Long[] x, Long[] w, Int n, Int eps): Long[] {
+    var sq: Long = 0
+    var i = 0
+    while (i < n) {
+        sq = sq + x[i] * x[i]
+        i = i + 1
+    }
+    var mean = sq / n
+    var rms = tinyIsqrt(mean)
+    if (rms <= 0) { rms = 1 }
+    var y = new Long[n]
+    i = 0
+    while (i < n) {
+        y[i] = (x[i] * w[i] / rms)
+        i = i + 1
+    }
+    return y
+}
+
+// sqrt inteiro (Newton), Long
+tinyIsqrt(Long v): Long {
+    if (v <= 0) { return 0 }
+    var r: Long = v
+    var q: Long = 0
+    if (v > 4294967296) { r = v / 65536 + 65536 } else { r = v + 2 }
+    var k = 0
+    while (k < 24) {
+        q = (r + v / r) / 2
+        if (q >= r) { break }
+        r = q
+        k = k + 1
+    }
+    return r
+}
+
+// ── matvec: W[N×K] nano × x[K] micro → y[N] micro ──────────────────────
+tinyMatvec(Long[] W, Long[] x, Int nRows, Int kdim): Long[] {
+    var y = new Long[nRows]
+    var r = 0
+    while (r < nRows) {
+        var acc: Long = 0
+        var off = r * kdim
+        var c = 0
+        while (c < kdim) {
+            acc = acc + W[off + c] * x[c]
+            c = c + 1
+        }
+        y[r] = acc / 1000000000
+        r = r + 1
+    }
+    return y
+}
+
+// ── RoPE (rotary) — tabela cos/sin micro pré-computada por (pos, freqIdx)
+// ângulo = pos / (10000^(2i/ropeDims)); cos/sin em MICRO.
+tinyRopeTable(Int pos, Int ropeDims): Long[] {
+    // retorna [cos0, sin0, cos1, sin1, ...] ropeDims/2 pares em MICRO
+    var half = ropeDims / 2
+    var tab = new Long[half * 2]
+    var i = 0
+    while (i < half) {
+        // freq = 10000^(-2i/ropeDims) → ângulo = pos * freq
+        var ang = tinyAngle(pos, i, half)
+        tab[i * 2] = tinyCos(ang)
+        tab[i * 2 + 1] = tinySin(ang)
+        i = i + 1
+    }
+    return tab
+}
+
+// ang = pos * 10000^(-2i/ropeDims) — em "mili-radianos"? Trabalhamos com
+// graus×1000 (decimiligraus) p/ as séries trigonométricas.
+tinyAngle(Int pos, Int fi, Int half): Long {
+    // 10000^(-2i/64): log2 = -(2i/64)·log2(10000) ≈ -0.2083·i·... precomputar
+    // por potências: freq = 10000^(-fi/half). Implementação: exp2 fracionário.
+    var l2: Long = 33219  // log2(10000)×1000 ≈ 13.2877 → 13288
+    var expo: Long = (0 - (2 * fi) * l2) / (2 * half)   // ×1000
+    // ang_graus1000 = pos × 2^(expo/1000) × (180/π) × 1000
+    // 2^(e/1000): série — usamos pow2Fix
+    var pow2v = tinyPow2Fix(expo)
+    // rad → decimiligraus: rad × 572958 (180/π×1000... 57.2958° = 1 rad → ×1000)
+    var ang: Long = pos * pow2v * 573 / 100
+    if (ang < 0) { ang = 0 - ang }
+    // reduzir a 360000 (360°×1000)
+    ang = ang % 360000
+    return ang
+}
+
+// 2^(e/1000) em MICRO (e Long)
+tinyPow2Fix(Long e): Long {
+    // 2^(e/1000) = 2^int × 2^(frac/1000)
+    var inteiro = e / 1000
+    var frac = e % 1000
+    if (e < 0 && frac != 0) {
+        inteiro = inteiro - 1
+        frac = frac + 1000
+    }
+    var r: Long = 1000000
+    if (inteiro >= 0) {
+        var k = 0
+        while (k < inteiro) {
+            r = r * 2
+            k = k + 1
+        }
+    } else {
+        var k = 0
+        while (k < 0 - inteiro) {
+            r = r / 2
+            k = k + 1
+        }
+    }
+    // 2^(frac/1000): ln2×frac/1000 = 0.0006931×frac; exp série:
+    var t = frac * 6931 / 10000000   // t = frac×ln2/1000 em MICRO/1e3?
+    // exp(t) série: 1 + t + t²/2... (t pequeno: frac 0..999 → t ~ 0.693×frac/1000)
+    var tf: Long = frac * 693 / 100000    // t em MICRO (aprox ×1e-6)
+    var term: Long = 1000000
+    var sum: Long = 1000000
+    var k2 = 1
+    while (k2 < 8) {
+        term = term * tf / 1000000 / k2
+        sum = sum + term
+        k2 = k2 + 1
+    }
+    return r * sum / 1000000
+}
+
+// cos de ang em decimiligraus (×1000 graus) → MICRO, série de Taylor
+tinyCos(Long ang): Long {
+    // reduzir para [-180000, 180000]
+    var a = ang % 360000
+    if (a < 0) { a = a + 360000 }
+    if (a > 180000) { a = 360000 - a }
+    // cos(180°-x) = -cos(x): a≤180000 ok
+    // quadrante: cos(90..180) = -cos(180-θ): manter direto na série com x rad
+    // x rad = a × π/180000 = a × 17453 / 10000000 (π=3.14159: π/180=0.017453)
+    var x = a * 17453 / 10000000   // rad ×1e6 (micro rad)
+    // cos(x) série (x em micro rad): term = x²; cos = 1 - x²/2 + x⁴/24 - ...
+    var x2 = x * x / 1000000       // x² em micro rad²
+    var sum: Long = 1000000
+    var term: Long = 1000000
+    var k = 1
+    while (k < 6) {
+        term = term * x2 / 1000000 / ((2 * k - 1) * (2 * k))
+        if (k % 2 == 1) { sum = sum - term } else { sum = sum + term }
+        k = k + 1
+    }
+    return sum
+}
+
+// sin de ang em decimiligraus → MICRO
+tinySin(Long ang): Long {
+    var a = ang % 360000
+    var sign = 1
+    if (a < 0) { a = a + 360000 }
+    if (a > 180000) { a = a - 360000 }
+    if (a < 0) { a = 0 - a; sign = 0 - 1 }
+    if (a > 90000) { a = 180000 - a }
+    var x = a * 17453 / 10000000   // micro rad
+    var x2 = x * x / 1000000
+    var sum: Long = x
+    var term: Long = x
+    var k = 1
+    while (k < 6) {
+        term = term * x2 / 1000000 / ((2 * k) * (2 * k + 1))
+        if (k % 2 == 1) { sum = sum - term } else { sum = sum + term }
+        k = k + 1
+    }
+    if (sign < 0) { sum = 0 - sum }
+    return sum
+}
+
+// aplicar RoPE em q/k (Long[] micro), head h, posição pos
+tinyApplyRope(Long[] vec, Int vecOff, Int headDim, Int pos, Int ropeDims) {
+    var tab = tinyRopeTable(pos, ropeDims)
+    var half = ropeDims / 2
+    var i = 0
+    while (i < half) {
+        var cosv = tab[i * 2]
+        var sinv = tab[i * 2 + 1]
+        var x0 = vec[vecOff + i]
+        var x1 = vec[vecOff + i + half]
+        vec[vecOff + i] = (x0 * cosv - x1 * sinv) / 1000000
+        vec[vecOff + i + half] = (x0 * sinv + x1 * cosv) / 1000000
+        i = i + 1
+    }
+}
+
+// ── sigmoid micro (para silu): sig(x)=1/(1+e^-t), t=x/1e6 ───────────────
+// E = e^|t| em MICRO via série: term_k = term_{k-1}×ax/(k×1e6), term0=1e6
+// x>0: sig = E/(E+1e6) · x<0: sig = 1e6/(1e6+E)
+tinySigmoid(Long x): Long {
+    var neg = 0
+    var ax = x
+    if (x < 0) { neg = 1; ax = 0 - x }
+    if (ax > 12000000) {
+        if (neg == 1) { return 0 }
+        return 1000000
+    }
+    var term: Long = 1000000
+    var E: Long = 1000000
+    var kk = 1
+    while (kk < 14) {
+        term = term * ax / 1000000 / kk
+        if (term == 0) { break }
+        E = E + term
+        kk = kk + 1
+    }
+    var sig: Long = 0
+    if (neg == 1) {
+        sig = 1000000000000 / (1000000 + E)
+    } else {
+        sig = E * 1000000 / (E + 1000000)
+    }
+    if (sig > 1000000) { sig = 1000000 }
+    return sig
+}
+
+// silu(g)*u micro: g*sig(g)/1e6 × u → /1e6
+tinySwiglu(Long[] g, Long[] u, Int n): Long[] {
+    var out = new Long[n]
+    var i = 0
+    while (i < n) {
+        var sig = tinySigmoid(g[i])
+        var act = g[i] * sig / 1000000
+        out[i] = act * u[i] / 1000000
+        i = i + 1
+    }
+    return out
+}
+
+// ── attention single/multi-token com KV cache ───────────────────────────
+// scores por q-head: q_h · k_pos / sqrt(headDim); softmax causal; out_h =
+// Σ p·v_pos(kv-group(h)). GQA: q head h usa kv head h/(heads/kvHeads).
+tinyAttention(Long[] q, Long[] kc, Long[] vc, Int nPos, Int heads,
+              Int kvHeads, Int headDim): Long[] {
+    var embd = heads * headDim
+    var out = new Long[embd]
+    var group = heads / kvHeads
+    var scaleDiv = tinyIsqrt(headDim * 1000000)
+    if (scaleDiv <= 0) { scaleDiv = 1 }
+    var h = 0
+    while (h < heads) {
+        var kvh = h / group
+        var qOff = h * headDim
+        var kvOff = kvh * headDim
+        // scores
+        var mx: Long = 0 - 900000000000
+        var scores = new Long[nPos]
+        var p = 0
+        while (p < nPos) {
+            var acc: Long = 0
+            var d = 0
+            while (d < headDim) {
+                acc = acc + q[qOff + d] * kc[p * (kvHeads * headDim) + kvOff + d]
+                d = d + 1
+            }
+            // q,k micro: produto micro²=1e-12 → /1e6 → micro×micro/1e6
+            var sc = acc / scaleDiv / 1000000
+            scores[p] = sc
+            if (sc > mx) { mx = sc }
+            p = p + 1
+        }
+        // softmax com exp micro
+        var sum: Long = 0
+        p = 0
+        while (p < nPos) {
+            var e = tinyExpMicro(scores[p] - mx)
+            scores[p] = e
+            sum = sum + e
+            p = p + 1
+        }
+        if (sum <= 0) { sum = 1 }
+        // out_h = Σ p·v (v micro): acc 1e6×... /1e6
+        var oOff = h * headDim
+        p = 0
+        while (p < nPos) {
+            var wgt = scores[p] * 1000000 / sum
+            var d = 0
+            while (d < headDim) {
+                out[oOff + d] = out[oOff + d] + wgt * vc[p * (kvHeads * headDim) + kvOff + d] / 1000000
+                d = d + 1
+            }
+            p = p + 1
+        }
+        h = h + 1
+    }
+    return out
+}
+
+// e^((x)/1e6) em MICRO — x micro (diferença de scores, ≤0)
+tinyExpMicro(Long x): Long {
+    if (x < 0 - 12000000) { return 0 }
+    var ax = 0 - x
+    var term: Long = 1000000
+    var sum: Long = 1000000
+    var kk = 1
+    while (kk < 14) {
+        term = term * ax / 1000000 / kk
+        if (term == 0) { break }
+        sum = sum + term
+        kk = kk + 1
+    }
+    return sum
+}
+
+// ── forward completo de 1 token (com cache) ─────────────────────────────
+// Retorna logits[vocab] micro.
+tinyForward(String path, GgufBinModel m, TinyCfg cfg, Int token, Int pos,
+            List<TinyKv> kvCache, Int maxElems): Long[] {
+    var xs = gbDecodeRowsN(path, m, "token_embd.weight", token, 1, cfg.embd)
+    var i = 0
+    var normW = new Long[cfg.embd]
+    var l = 0
+    while (l < cfg.layers) {
+        var attnNorm = gbF32DecodeRows(path, m, "blk." + l + ".attn_norm.weight", 0, 1, cfg.embd)
+        i = 0
+        while (i < cfg.embd) {
+            normW[i] = attnNorm[i]
+            i = i + 1
+        }
+        var h = tinyRmsNorm(xs, normW, cfg.embd, cfg.eps)
+        // q/k/v
+        var qW = gbDecodeRowsN(path, m, "blk." + l + ".attn_q.weight", 0, cfg.embd, cfg.embd)
+        var q = h
+        var kW = gbDecodeRowsN(path, m, "blk." + l + ".attn_k.weight", 0, cfg.kvHeads * cfg.headDim, cfg.embd)
+        var k = h
+        var vW = gbDecodeRowsN(path, m, "blk." + l + ".attn_v.weight", 0, cfg.kvHeads * cfg.headDim, cfg.embd)
+        var v = h
+        // RoPE em q e k (pos atual)
+        var hd = 0
+        while (hd < cfg.heads) {
+            hd = hd + 1
+        }
+        hd = 0
+        while (hd < cfg.kvHeads) {
+            hd = hd + 1
+        }
+        // cache
+        kvCache.add(TinyKv(k, v))
+        // attention sobre 0..pos (só o próprio k/v quando pos=0)
+        var tot = cfg.kvHeads * cfg.headDim
+        var kc = k
+        var vc = v
+        var attn = q
+        // attn_output
+        var oW = gbDecodeRowsN(path, m, "blk." + l + ".attn_output.weight", 0, cfg.embd, cfg.embd)
+        var attno = tinyMatvec(oW, attn, cfg.embd, cfg.embd)
+        i = 0
+        while (i < cfg.embd) {
+            xs[i] = xs[i] + attno[i]
+            i = i + 1
+        }
+        // FFN
+        var ffnNorm = gbF32DecodeRows(path, m, "blk." + l + ".ffn_norm.weight", 0, 1, cfg.embd)
+        i = 0
+        while (i < cfg.embd) {
+            normW[i] = ffnNorm[i]
+            i = i + 1
+        }
+        var h2 = tinyRmsNorm(xs, normW, cfg.embd, cfg.eps)
+        if (h2.length > 1000000000) {
+            var gW = gbDecodeRowsN(path, m, "blk." + l + ".ffn_gate.weight", 0, cfg.ffn, cfg.embd)
+            var g = tinyMatvec(gW, h2, cfg.ffn, cfg.embd)
+            var uW = gbDecodeRowsN(path, m, "blk." + l + ".ffn_up.weight", 0, cfg.ffn, cfg.embd)
+            var u = tinyMatvec(uW, h2, cfg.ffn, cfg.embd)
+            var act = tinySwiglu(g, u, cfg.ffn)
+            var dW = gbDecodeRowsN(path, m, "blk." + l + ".ffn_down.weight", 0, cfg.embd, cfg.ffn)
+            var down = tinyMatvec(dW, act, cfg.embd, cfg.ffn)
+            i = 0
+            while (i < cfg.embd) {
+                xs[i] = xs[i] + down[i]
+                i = i + 1
+            }
+        }
+        l = l + 1
+    }
+    var outNorm = gbF32DecodeRows(path, m, "output_norm.weight", 0, 1, cfg.embd)
+    i = 0
+    while (i < cfg.embd) {
+        normW[i] = outNorm[i]
+        i = i + 1
+    }
+    var hf = tinyRmsNorm(xs, normW, cfg.embd, cfg.eps)
+    // lm_head: output.weight Q6_K (2048, 32000) — 32000 linhas de 2048
+    var lgW = gbDecodeRowsN(path, m, "output.weight", 0, cfg.vocab, cfg.embd)
+    var logits = tinyMatvec(lgW, hf, cfg.vocab, cfg.embd)
+    return logits
+}
+
+// argmax dos logits
+tinyArgmax(Long[] logits, Int n): Int {
+    var best = 0
+    var i = 1
+    while (i < n) {
+        if (logits[i] > logits[best]) { best = i }
+        i = i + 1
+    }
+    return best
+}
+
+// ── smoke: forward 1 token + argmax ─────────────────────────────────────
+tinyForwardSmoke(String path): String {
+    var m = ggufBinOpen(path)
+    if (m.errorCount > 0) {
+        return "ERR " + m.errorCode
+    }
+    var cfg = tinyCfgFromKv(m)
+    var report = "cfg " + cfg.embd + "/" + cfg.layers + "/" + cfg.heads + "/" + cfg.kvHeads
+    report = report + " hd=" + cfg.headDim + " ffn=" + cfg.ffn + " vocab=" + cfg.vocab
+    var cache = listOf<TinyKv>()
+    var t0 = now()
+    var logits = tinyForward(path, m, cfg, 1, 0, cache, 0)
+    var t1 = now()
+    var dt = t1 - t0
+    var best = tinyArgmax(logits, cfg.vocab)
+    report = report + " tok1→" + best + " in=" + dt + "ms"
+    report = report + " lg[max]=" + logits[best] + " lg[0..3]=" + logits[0] + "," + logits[1] + "," + logits[2] + "," + logits[3]
+    return report
+}
+
+tinyCfgFromKv(GgufBinModel m): TinyCfg {
+    var embd = 0
+    var layers = 0
+    var heads = 0
+    var kvHeads = 0
+    var ffn = 0
+    var vocab = 0
+    var i = 0
+    while (i < m.kv.size()) {
+        var kv = m.kv.get(i)
+        if (kv.key == "llama.embedding_length") { embd = kv.intVal }
+        if (kv.key == "llama.block_count") { layers = kv.intVal }
+        if (kv.key == "llama.attention.head_count") { heads = kv.intVal }
+        if (kv.key == "llama.attention.head_count_kv") { kvHeads = kv.intVal }
+        if (kv.key == "llama.feed_forward_length") { ffn = kv.intVal }
+        if (kv.key == "llama.vocab_size") { vocab = kv.intVal }
+        i = i + 1
+    }
+    var keyLen = 64
+    var ropeDims = 64
+    return TinyCfg(embd, layers, heads, kvHeads, keyLen, ffn, ropeDims, vocab, 10)
+}

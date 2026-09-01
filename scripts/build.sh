@@ -55,6 +55,7 @@ PARTS=(
   agent/runtime/131_ai_engine.kf
   agent/runtime/133_model_manager.kf
   agent/runtime/161_gguf_binary.kf
+  agent/runtime/162_llm_forward.kf
 )
 
 # usage: build.sh <entry.kf> <out.kf> [--with-gateway]
