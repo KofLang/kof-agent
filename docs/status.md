@@ -31,9 +31,9 @@
 **Próxima fila:**
 1. ~~N22-SUSPECT~~ ✅ **FECHADO** (9df8f72: GC mark transitivo + sweep no-op + cdq; regressions/N22-SUSPECT/README.md)
 2. ~~Reportar N21/N22/N18/N19 upstream~~ ✅ re-test vs 0.2.6-beta: todos passam (repros em regressions/; N23 fixado 2b09aa1)
-3. Rodar `train_koflm.py` (dias) → merge → KofLM-Q4.gguf oficial (PLANO 002)
+3. PLANO 002 DESBLOQUEADO: KOF_DATA=/home/mel/Downloads/kof-data (430G livres) — stack ML + TinyLlama + checkpoints cabem; treino via CPU (RX 550 4GB é insuficiente p/ QLoRA CUDA; usar llama.cpp/train CPU)
 4. ~~M31 continuação: kernels completos no GraphExecutor + QuantDecoder F16/K~~ ✅ M31.8 K-quants (q4k/q6kDecodeBlock + kqDecodeTensor, unit_kq 5/5 jvm+native)
-5. Instalar mesa-vulkan-drivers → benchmark RX 6600
+5. ~~Instalar mesa-vulkan-drivers~~ ✅ M32.3 dispatch real RADV RX 550 (dispatchMatmul GPU verde jvm+native; benchmark de escala é fila do M32.4)
 6. Test suites do agente: **16/16 verdes** (scripts/test.sh, jvm+native) — manter hermeticidade nos testes novos
 | Bugs p/ upstream | ~~N18 CONFIRMED + N10/N11/N12/N4~~ ✅ fechados vs 0.2.6-beta · J4-residual monitorado (repro exit 0) · SC3/SC4 sem repro | (fechar 9 testes, bench real) (RoPE/KV Cache/Quantização/Sampler V3) |
 
