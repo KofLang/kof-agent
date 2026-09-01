@@ -1,0 +1,5 @@
+test "llm chat via llama.cpp vulkan (or cpu fallback)" {
+    var rt = KoflmRuntime()
+    var out = llmChatPrompt(rt, "diga apenas: ok", 6)
+    assert(out != null)
+}

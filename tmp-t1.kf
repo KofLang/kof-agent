@@ -1,0 +1,4 @@
+fn main() {
+    var r = ggufBinSmoke("/home/mel/Downloads/kof-data/models/TinyLlama-Q4_K_M.gguf")
+    println(r)
+}

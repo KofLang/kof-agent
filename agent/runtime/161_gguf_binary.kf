@@ -1,0 +1,487 @@
+// M33: GGUF binário REAL (v2/v3) — parser em Kof puro, sem libc/externo.
+// Leitura por readRange (offset+len): nunca carrega o arquivo inteiro —
+// o TinyLlama-Q4 é 660MB e só o header/kvs/tensor dir passam por aqui.
+// Os blobs de tensor são lidos sob demanda e dequantizados (Q4_K/Q6_K/F16)
+// para Int[] em ponto fixo de MILÉSIMOS (padrão do projeto).
+// Fórmulas de dequant espelham ggml-quants.c (get_scale_min_k4,
+// dequantize_row_q4_K, dequantize_row_q6_K).
+
+record GgufBinHeader(Int version, Int tensorCount, Int kvCount, Int alignment)
+record GgufBinKv(String key, Int kind, Int intVal, String strVal)
+record GgufBinTensor(String name, Int nDims, Int d0, Int d1, Int quant, Int offsetLo, Int offsetHi, Int nElems)
+record GgufBinModel(GgufBinHeader header, List<GgufBinKv> kv, List<GgufBinTensor> tensors, Int errorCount, String errorCode)
+record GgufBinStr(Int len, Int[] chars)
+
+// ── leitura little-endian de um Int[] de bytes ──────────────────────────
+fn gbU32(Int[] b, Int off): Int {
+    return b[off] + b[off + 1] * 256 + b[off + 2] * 65536 + b[off + 3] * 16777216
+}
+
+fn gbU64Low(Int[] b, Int off): Int {
+    return b[off] + b[off + 1] * 256 + b[off + 2] * 65536 + b[off + 3] * 16777216
+}
+
+fn gbU64High(Int[] b, Int off): Int {
+    return b[off + 4] + b[off + 5] * 256 + b[off + 6] * 65536 + b[off + 7] * 16777216
+}
+
+// u64→Long p/ offsets de tensor (GGUF até 4G+ usa hi*2^32)
+fn gbU64ToLong(Int[] b, Int off): Long {
+    var hi = gbU64High(b, off)
+    if (hi == 0) {
+        var lo = gbU64Low(b, off)
+        return lo + 0
+    }
+    return gbU64Low(b, off) + hi * 4294967296
+}
+
+fn gbReadStr(Int[] b, Int off): GgufBinStr {
+    var len = gbU64Low(b, off)
+    var chars = new Int[len]
+    var i = 0
+    while (i < len) {
+        chars[i] = b[off + 8 + i]
+        i = i + 1
+    }
+    return GgufBinStr(len, chars)
+}
+
+fn gbStr(Int[] b, Int off): String {
+    var s = ""
+    var st = gbReadStr(b, off)
+    var i = 0
+    while (i < st.len) {
+        s = s + String.valueOf(st.chars[i])
+        i = i + 1
+    }
+    return s
+}
+
+fn gbArrayElemSize(Int kind): Int {
+    if (kind == 0 || kind == 1 || kind == 7) { return 1 }   // u8/i8/bool
+    if (kind == 2 || kind == 3) { return 2 }                 // u16/i16
+    if (kind == 4 || kind == 5 || kind == 6) { return 4 }    // u32/i32/f32
+    if (kind == 10 || kind == 11 || kind == 12) { return 8 } // u64/i64/f64
+    return 0
+}
+
+// ── parser do header + metadata kv + tensor directory ───────────────────
+// Lê em janelas de 4KB (o header do TinyLlama tem ~2KB de kvs).
+ggufBinOpen(String path): GgufBinModel {
+    var f = File(path)
+    if (!f.exists() || !f.isFile()) {
+        return GgufBinModel(GgufBinHeader(0, 0, 0, 0), listOf<GgufBinKv>(),
+            listOf<GgufBinTensor>(), 1, "E_FILE")
+    }
+    var head = f.readRange(0, 24)
+    if (head == null || head.length < 24) {
+        return GgufBinModel(GgufBinHeader(0, 0, 0, 0), listOf<GgufBinKv>(),
+            listOf<GgufBinTensor>(), 1, "E_READ")
+    }
+    var magic = gbU32(head, 0)
+    if (magic != 1179993927) { // "GGUF" LE
+        return GgufBinModel(GgufBinHeader(0, 0, 0, 0), listOf<GgufBinKv>(),
+            listOf<GgufBinTensor>(), 1, "E_MAGIC")
+    }
+    var version = gbU32(head, 4)
+    if (version != 2 && version != 3) {
+        return GgufBinModel(GgufBinHeader(version, 0, 0, 0), listOf<GgufBinKv>(),
+            listOf<GgufBinTensor>(), 1, "E_VERSION")
+    }
+    var tensorCount = gbU64Low(head, 8)
+    var kvCount = gbU64Low(head, 16)
+    var kv = listOf<GgufBinKv>()
+    var align = 32
+    var pos: Long = 24
+    var win: Long = 4096
+    var i = 0
+    while (i < kvCount) {
+        var buf = f.readRange(pos, win)
+        if (buf == null || buf.length < 16) {
+            return GgufBinModel(GgufBinHeader(version, tensorCount, kvCount, align),
+                kv, listOf<GgufBinTensor>(), 1, "E_KV")
+        }
+        var st = gbReadStr(buf, 0)
+        var key = gbStr(buf, 0)
+        var p = 8 + st.len
+        var kind = gbU32(buf, p)
+        p = p + 4
+        var intVal = 0
+        var strVal = ""
+        if (kind == 4 || kind == 5) {          // u32/i32
+            intVal = gbU32(buf, p)
+            p = p + 4
+        } else if (kind == 10 || kind == 11) { // u64/i64
+            intVal = gbU64Low(buf, p)
+            p = p + 8
+        } else if (kind == 8) {                // string
+            var vs = gbReadStr(buf, p)
+            strVal = gbStr(buf, p)
+            p = p + 8 + vs.len
+        } else if (kind == 7) {                // bool
+            intVal = buf[p]
+            p = p + 1
+        } else if (kind == 6) {                // f32 (guarda os bits)
+            intVal = gbU32(buf, p)
+            p = p + 4
+        } else if (kind == 9) {                // array: skip (type u32 + len u64 + elems)
+            var etype = gbU32(buf, p)
+            var elen = gbU64Low(buf, p + 4)
+            p = p + 12 + gbArrayElemSize(etype) * elen
+        } else {
+            p = p + gbArrayElemSize(kind)
+        }
+        if (key == "general.alignment") {
+            align = intVal
+        }
+        kv.add(GgufBinKv(key, kind, intVal, strVal))
+        pos = pos + p
+        i = i + 1
+    }
+    return ggufBinReadTensorDir(path, version, tensorCount, kvCount, kv, align, pos)
+}
+
+// tensor dir: logo após os kvs. Cada entry: name(str) + n_dims u32 +
+// dims u64*n + type u32 + offset u64. Janela de 64KB (TinyLlama:
+// 201 tensors × ~70B ≈ 14KB — cabe).
+fn ggufBinReadTensorDir(String path, Int version, Int tensorCount, Int kvCount,
+                        List<GgufBinKv> kv, Int align, Long dirStart): GgufBinModel {
+    var f = File(path)
+    var dir = f.readRange(dirStart, 65536)
+    if (dir == null || dir.length < 8) {
+        return GgufBinModel(GgufBinHeader(version, tensorCount, kvCount, align),
+            kv, listOf<GgufBinTensor>(), 1, "E_DIR")
+    }
+    var tensors = listOf<GgufBinTensor>()
+    var p = 0
+    var i = 0
+    while (i < tensorCount) {
+        var st = gbReadStr(dir, p)
+        var name = gbStr(dir, p)
+        p = p + 8 + st.len
+        var nDims = gbU32(dir, p)
+        p = p + 4
+        var d0 = 1
+        var d1 = 1
+        var elems = 1
+        var j = 0
+        while (j < nDims) {
+            var dim = gbU64Low(dir, p)
+            if (j == 0) { d0 = dim }
+            if (j == 1) { d1 = dim }
+            elems = elems * dim
+            p = p + 8
+            j = j + 1
+        }
+        var quant = gbU32(dir, p)
+        p = p + 4
+        var offLo = gbU64Low(dir, p)
+        var offHi = gbU64High(dir, p)
+        p = p + 8
+        tensors.add(GgufBinTensor(name, nDims, d0, d1, quant, offLo, offHi, elems))
+        i = i + 1
+    }
+    // data começa no fim do dir alinhado
+    var dataOff = dirStart + p
+    var rem = dataOff % align
+    if (rem != 0) {
+        dataOff = dataOff + (align - rem)
+    }
+    return GgufBinModel(GgufBinHeader(version, tensorCount, kvCount, align),
+        kv, tensors, 0, "")
+}
+
+// ── acesso a tensor ─────────────────────────────────────────────────────
+// GGUF quant types: 0 F32, 1 F16, 8 Q8_0 (32→34B), 12 Q4_K (256→144B), 14 Q6_K (256→210B)
+fn gbQuantBlockElems(Int quant): Int {
+    if (quant == 12) { return 256 }
+    if (quant == 14) { return 256 }
+    if (quant == 8) { return 32 }
+    return 1
+}
+
+fn gbQuantBlockSize(Int quant): Int {
+    if (quant == 12) { return 144 }
+    if (quant == 14) { return 210 }
+    if (quant == 8) { return 34 }
+    if (quant == 1) { return 2 }
+    return 4
+}
+
+fn gbQuantName(Int quant): String {
+    if (quant == 0) { return "F32" }
+    if (quant == 1) { return "F16" }
+    if (quant == 8) { return "Q8_0" }
+    if (quant == 12) { return "Q4_K" }
+    if (quant == 14) { return "Q6_K" }
+    return "Q" + quant
+}
+
+gbFindTensor(GgufBinModel m, String name): GgufBinTensor {
+    var i = 0
+    while (i < m.tensors.size()) {
+        var t = m.tensors.get(i)
+        if (t.name == name) {
+            return t
+        }
+        i = i + 1
+    }
+    return null
+}
+
+// tensor dataOffset absoluto (t.offset é relativo ao início do data section)
+fn gbTensorAbsOff(GgufBinModel m, GgufBinTensor t): Long {
+    return t.offsetLo + t.offsetHi * 4294967296
+}
+
+// bytes totais do tensor
+fn gbTensorBytes(GgufBinTensor t): Int {
+    if (t.quant == 1) { return t.nElems * 2 }
+    if (t.quant == 0) { return t.nElems * 4 }
+    return t.nElems / gbQuantBlockElems(t.quant) * gbQuantBlockSize(t.quant)
+}
+
+// ── dequantização Q4_K (formato ggml REAL) ──────────────────────────────
+// Bloco de 256 elems = 144 bytes: f16 d + f16 dmin + scales[12] + qs[128]
+// get_scale_min_k4(j, q, &d, &m):
+//   j<4:  d = q[j] & 63;                    m = q[j+4] & 63
+//   j>=4: d = (q[j+4] & 0xF)|((q[j-4]>>6)<<4); m = (q[j+4]>>4)|((q[j]>>6)<<4)
+// dequant: a cada 64 elems (is += 2):
+//   d1 = d*sc(is); m1 = dmin*mn(is); d2 = d*sc(is+1); m2 = dmin*mn(is+1)
+//   32 low-nibble: y = d1*(q&0xF) - m1
+//   32 high-nibble: y = d2*(q>>4) - m2
+fn gbK4Sc(Int[] sc, Int j): Int {
+    if (j < 4) {
+        return sc[j] % 64
+    }
+    return (sc[j + 4] % 16) + (sc[j - 4] / 64) * 16
+}
+
+fn gbK4Mn(Int[] sc, Int j): Int {
+    if (j < 4) {
+        return sc[j + 4] % 64
+    }
+    return (sc[j + 4] / 16) + (sc[j] / 64) * 16
+}
+
+fn gbQ4KDecodeBlock(Int[] b, Int off, Int[] out) {
+    var d = f16ToMilli(b[off] + b[off + 1] * 256)
+    var dmin = f16ToMilli(b[off + 2] + b[off + 3] * 256)
+    var sc = new Int[12]
+    var i = 0
+    while (i < 12) {
+        sc[i] = b[off + 4 + i]
+        i = i + 1
+    }
+    var qs = off + 16
+    var is = 0
+    var outPos = 0
+    var chunk = 0
+    while (chunk < 4) {
+        var sc0 = gbK4Sc(sc, is)
+        var mn0 = gbK4Mn(sc, is)
+        var sc1 = gbK4Sc(sc, is + 1)
+        var mn1 = gbK4Mn(sc, is + 1)
+        var d1 = d * sc0
+        var m1 = dmin * mn0
+        var d2 = d * sc1
+        var m2 = dmin * mn1
+        var l = 0
+        while (l < 32) {
+            var oct = b[qs + chunk * 32 + l]
+            out[outPos + l] = d1 * (oct % 16) - m1
+            out[outPos + 32 + l] = d2 * (oct / 16) - m2
+            l = l + 1
+        }
+        outPos = outPos + 64
+        is = is + 2
+        chunk = chunk + 1
+    }
+}
+
+// dequantiza tensor Q4_K inteiro → Int[] (milésimos), em janelas de 512 blocos
+gbQ4KDecodeTensor(String path, GgufBinModel m, String name, Int maxElems): Int[] {
+    var t = gbFindTensor(m, name)
+    if (t == null) {
+        return new Int[0]
+    }
+    var nBlocks = t.nElems / 256
+    var out = new Int[t.nElems]
+    var blockBytes = 144
+    var winBlocks = 512
+    var bi = 0
+    var f = File(path)
+    var tmp = new Int[256]
+    while (bi < nBlocks && bi * 256 < maxElems) {
+        var n = winBlocks
+        if (bi + n > nBlocks) { n = nBlocks - bi }
+        var bytes = f.readRange(gbTensorAbsOff(m, t) + bi * blockBytes, n * blockBytes)
+        if (bytes == null) { break }
+        var k = 0
+        while (k < n) {
+            gbQ4KDecodeBlock(bytes, k * blockBytes, tmp)
+            var e = 0
+            while (e < 256) {
+                out[bi * 256 + k * 256 + e] = tmp[e]
+                e = e + 1
+            }
+            k = k + 1
+        }
+        bi = bi + n
+    }
+    return out
+}
+
+// ── dequantização Q6_K (formato ggml REAL) ──────────────────────────────
+// Bloco de 256 elems = 210 bytes: f16 d (2B) + ql[128] + qh[64] + sc i8[16]
+// q = ((ql&0xF)|((qh>>s)&3)<<4) - 32; y = d * sc[is] * q (sc é int8)
+fn gbQ6KDecodeBlock(Int[] b, Int off, Int[] out) {
+    var d = f16ToMilli(b[off] + b[off + 1] * 256)
+    var ql = off + 2
+    var qh = ql + 128
+    var scB = qh + 64
+    var n = 0
+    var outPos = 0
+    while (n < 256) {
+        var l = 0
+        while (l < 32) {
+            var qhB = b[qh + n / 4 + l]
+            var scIdx = l / 16
+            var q1 = (b[ql + l] % 16) + ((qhB % 4) * 16) - 32
+            var q2 = (b[ql + 32 + l] % 16) + (((qhB / 4) % 4) * 16) - 32
+            var q3 = (b[ql + l] / 16) + (((qhB / 16) % 4) * 16) - 32
+            var q4 = (b[ql + 32 + l] / 16) + ((qhB / 64) * 16) - 32
+            var s0 = b[scB + scIdx]
+            var s1 = b[scB + scIdx + 2]
+            var s2 = b[scB + scIdx + 4]
+            var s3 = b[scB + scIdx + 6]
+            if (s0 > 127) { s0 = s0 - 256 }
+            if (s1 > 127) { s1 = s1 - 256 }
+            if (s2 > 127) { s2 = s2 - 256 }
+            if (s3 > 127) { s3 = s3 - 256 }
+            out[outPos + l] = d * s0 * q1
+            out[outPos + 32 + l] = d * s1 * q2
+            out[outPos + 64 + l] = d * s2 * q3
+            out[outPos + 96 + l] = d * s3 * q4
+            l = l + 1
+        }
+        outPos = outPos + 128
+        ql = ql + 64
+        qh = qh + 32
+        scB = scB + 8
+        n = n + 128
+    }
+}
+
+gbQ6KDecodeTensor(String path, GgufBinModel m, String name, Int maxElems): Int[] {
+    var t = gbFindTensor(m, name)
+    if (t == null) {
+        return new Int[0]
+    }
+    var nBlocks = t.nElems / 256
+    var out = new Int[t.nElems]
+    var blockBytes = 210
+    var winBlocks = 512
+    var bi = 0
+    var f = File(path)
+    var tmp = new Int[256]
+    while (bi < nBlocks && bi * 256 < maxElems) {
+        var n = winBlocks
+        if (bi + n > nBlocks) { n = nBlocks - bi }
+        var bytes = f.readRange(gbTensorAbsOff(m, t) + bi * blockBytes, n * blockBytes)
+        if (bytes == null) { break }
+        var k = 0
+        while (k < n) {
+            gbQ6KDecodeBlock(bytes, k * blockBytes, tmp)
+            var e = 0
+            while (e < 256) {
+                out[bi * 256 + k * 256 + e] = tmp[e]
+                e = e + 1
+            }
+            k = k + 1
+        }
+        bi = bi + n
+    }
+    return out
+}
+
+// ── F16 direto ──────────────────────────────────────────────────────────
+gbF16DecodeTensor(String path, GgufBinModel m, String name, Int maxElems): Int[] {
+    var t = gbFindTensor(m, name)
+    if (t == null) {
+        return new Int[0]
+    }
+    var total = t.nElems
+    if (total > maxElems) { total = maxElems }
+    var f = File(path)
+    var bytes = f.readRange(gbTensorAbsOff(m, t), total * 2)
+    if (bytes == null) { return new Int[0] }
+    var out = new Int[total]
+    var i = 0
+    while (i < total) {
+        out[i] = f16ToMilli(bytes[i * 2] + bytes[i * 2 + 1] * 256)
+        i = i + 1
+    }
+    return out
+}
+
+// dispatch pelo quant do tensor
+gbDecodeTensor(String path, GgufBinModel m, String name, Int maxElems): Int[] {
+    var t = gbFindTensor(m, name)
+    if (t == null) { return new Int[0] }
+    if (t.quant == 12) { return gbQ4KDecodeTensor(path, m, name, maxElems) }
+    if (t.quant == 14) { return gbQ6KDecodeTensor(path, m, name, maxElems) }
+    if (t.quant == 1) { return gbF16DecodeTensor(path, m, name, maxElems) }
+    return new Int[0]
+}
+
+// ── smoke de validação ──────────────────────────────────────────────────
+// Abre o GGUF, imprime arquitetura, dequantiza os primeiros valores de
+// token_embd — números plausíveis (|v| < ~500000 mili, mix de sinais)
+// provam parse + dequant.
+ggufBinSmoke(String path): String {
+    var m = ggufBinOpen(path)
+    if (m.errorCount > 0) {
+        return "ERR " + m.errorCode
+    }
+    var arch = ""
+    var nLayers = 0
+    var nHead = 0
+    var nKvHead = 0
+    var embd = 0
+    var vocab = 0
+    var i = 0
+    while (i < m.kv.size()) {
+        var kv = m.kv.get(i)
+        if (kv.key == "general.architecture") { arch = kv.strVal }
+        if (kv.key == "llama.block_count") { nLayers = kv.intVal }
+        if (kv.key == "llama.attention.head_count") { nHead = kv.intVal }
+        if (kv.key == "llama.attention.head_count_kv") { nKvHead = kv.intVal }
+        if (kv.key == "llama.embedding_length") { embd = kv.intVal }
+        if (kv.key == "llama.vocab_size") { vocab = kv.intVal }
+        i = i + 1
+    }
+    var report = arch + " layers=" + nLayers + " heads=" + nHead
+    report = report + " kvheads=" + nKvHead + " embd=" + embd + " vocab=" + vocab
+    report = report + " tensors=" + m.tensors.size() + " align=" + m.header.alignment
+    var emb = gbQ4KDecodeTensor(path, m, "token_embd.weight", 256)
+    var sum = 0
+    var absmax = 0
+    var neg = 0
+    i = 0
+    while (i < emb.length) {
+        var v = emb[i]
+        if (v < 0) {
+            neg = neg + 1
+            v = 0 - v
+        }
+        sum = sum + emb[i]
+        if (v > absmax) { absmax = v }
+        i = i + 1
+    }
+    report = report + " embd_sum=" + sum + " absmax=" + absmax + " neg=" + neg
+    if (absmax == 0 || absmax > 500000 || neg == 0 || neg == emb.length) {
+        report = report + " DEQUANT-SUSPECT"
+    }
+    return report
+}

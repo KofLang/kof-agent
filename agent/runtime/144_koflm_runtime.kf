@@ -46,7 +46,7 @@ class KoflmRuntime {
         runner.cancelGeneration()
     }
 
-kvDepthNow(): Int {
-    return runner.kv.size
-}
+    kvDepthNow(): Int {
+        return runner.kv.size
+    }
 }

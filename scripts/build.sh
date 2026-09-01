@@ -54,6 +54,7 @@ PARTS=(
   agent/runtime/85_model_runner.kf
   agent/runtime/131_ai_engine.kf
   agent/runtime/133_model_manager.kf
+  agent/runtime/161_gguf_binary.kf
 )
 
 # usage: build.sh <entry.kf> <out.kf> [--with-gateway]
@@ -67,6 +68,7 @@ for flag in "${@:3}"; do
     --with-gateway) SELECTED+=("agent/runtime/95_gateway.kf") ;;
     --only=*) SELECTED=(); for f in $(echo "$flag" | cut -d= -f2 | tr ',' ' '); do SELECTED+=("agent/runtime/$f"); done ;;
     --native-clock) SELECTED+=("agent/runtime/98_native_clock.kf") ;;
+    --with-llm) SELECTED+=("agent/runtime/160_llm_subprocess.kf") ;;
     --no-native-clock) ;;
     *) echo "unknown flag $flag" >&2 ;;
   esac

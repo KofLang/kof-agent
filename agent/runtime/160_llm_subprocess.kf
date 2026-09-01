@@ -1,0 +1,15 @@
+// M32-llm: inference universal via llama.cpp Vulkan (AMD/Intel/NVIDIA/llvmpipe).
+// PART OPCIONAL (JVM): usa process.run — PROC001 no native (o native usa o
+// ModelRunner CPU interno do Kof, sem subprocess). Build: build.sh --with-llm
+fn llmChatPrompt(rt: KoflmRuntime, prompt: String, maxTokens: Int): String {
+    var bin = secrets.get("KOF_LLM_BIN")
+    if (bin == null || bin == "") {
+        return rt.chat(0, maxTokens)
+    }
+    var model = secrets.get("KOF_LLM_MODEL")
+    if (model == null || model == "") {
+        model = "/home/mel/Downloads/kof-data/models/TinyLlama-Q4_K_M.gguf"
+    }
+    var r = process.run(bin, "-m", model, "-p", prompt, "-n", "" + maxTokens, "--no-display-prompt")
+    return r.stdout
+}
