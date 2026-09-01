@@ -60,6 +60,6 @@ test "gpu matmul dispatch com fallback golden" {
     assert(tensorGet(c, 0, 1) == 64)
     assert(tensorGet(c, 1, 0) == 139)
     assert(tensorGet(c, 1, 1) == 154)
-    // sem device vulkan ativo, gpuAvailable() retorna false → golden usado
-    assert(gpuAvailable() == false)
+    // M32.3: dispatch real ativo (libvkchain + ICD) — os asserts acima cobrem
+    // o matmul GPU; sem GPU o HAL cai pros goldens CPU e o teste também passa.
 }

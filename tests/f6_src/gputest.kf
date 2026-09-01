@@ -1,0 +1,7 @@
+test "gpu available+reason" {
+    var ok = gpu.available()
+    var r = gpu.failReason()
+    var tag = "no"
+    if (ok) { tag = "yes" }
+    println("available=" + tag + " reason=" + r)
+}

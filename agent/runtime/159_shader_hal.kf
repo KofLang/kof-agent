@@ -107,7 +107,7 @@ gpuMatmul(TensorR a, TensorR b): TensorR {
 }
 
 gpuAvailable(): Bool {
-    return false
+    return gpu.available()
 }
 
 // valida todos os 7 módulos SPIR-V do HAL
