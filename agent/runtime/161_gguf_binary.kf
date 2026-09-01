@@ -343,12 +343,13 @@ fn gbK4Mn(Int[] sc, Int j): Int {
     if (j < 4) {
         return sc[j + 4] % 64
     }
-    return (sc[j + 4] / 16) + (sc[j] / 64) * 16
+    // ggml: mn = (q[j-4] & 0xF) | ((q[j] >> 6) << 4)
+    return (sc[j - 4] % 16) + (sc[j] / 64) * 16
 }
 
 fn gbQ4KDecodeBlock(Int[] b, Int off, Int[] out) {
-    var d = f16ToMilli(b[off] + b[off + 1] * 256)
-    var dmin = f16ToMilli(b[off + 2] + b[off + 3] * 256)
+    var d = f16ToMicro(b[off] + b[off + 1] * 256)
+    var dmin = f16ToMicro(b[off + 2] + b[off + 3] * 256)
     var sc = new Int[12]
     var i = 0
     while (i < 12) {
@@ -394,9 +395,11 @@ gbQ4KDecodeTensor(String path, GgufBinModel m, String name, Int maxElems): Int[]
     var bi = 0
     var f = File(path)
     var tmp = new Int[256]
-    while (bi < nBlocks && bi * 256 < maxElems) {
+    var maxBlocks = maxElems / 256
+    while (bi < nBlocks && bi < maxBlocks) {
         var n = winBlocks
         if (bi + n > nBlocks) { n = nBlocks - bi }
+        if (bi + n > maxBlocks) { n = maxBlocks - bi }
         var bytes = f.readRange(gbTensorAbsOff(m, t) + bi * blockBytes, n * blockBytes)
         if (bytes == null) { break }
         var k = 0
@@ -418,7 +421,7 @@ gbQ4KDecodeTensor(String path, GgufBinModel m, String name, Int maxElems): Int[]
 // Bloco de 256 elems = 210 bytes: f16 d (2B) + ql[128] + qh[64] + sc i8[16]
 // q = ((ql&0xF)|((qh>>s)&3)<<4) - 32; y = d * sc[is] * q (sc é int8)
 fn gbQ6KDecodeBlock(Int[] b, Int off, Int[] out) {
-    var d = f16ToMilli(b[off] + b[off + 1] * 256)
+    var d = f16ToMicro(b[off] + b[off + 1] * 256)
     var ql = off + 2
     var qh = ql + 128
     var scB = qh + 64
@@ -467,9 +470,11 @@ gbQ6KDecodeTensor(String path, GgufBinModel m, String name, Int maxElems): Int[]
     var bi = 0
     var f = File(path)
     var tmp = new Int[256]
-    while (bi < nBlocks && bi * 256 < maxElems) {
+    var maxBlocks = maxElems / 256
+    while (bi < nBlocks && bi < maxBlocks) {
         var n = winBlocks
         if (bi + n > nBlocks) { n = nBlocks - bi }
+        if (bi + n > maxBlocks) { n = maxBlocks - bi }
         var bytes = f.readRange(gbTensorAbsOff(m, t) + bi * blockBytes, n * blockBytes)
         if (bytes == null) { break }
         var k = 0
@@ -501,7 +506,7 @@ gbF16DecodeTensor(String path, GgufBinModel m, String name, Int maxElems): Int[]
     var out = new Int[total]
     var i = 0
     while (i < total) {
-        out[i] = f16ToMilli(bytes[i * 2] + bytes[i * 2 + 1] * 256)
+        out[i] = f16ToMicro(bytes[i * 2] + bytes[i * 2 + 1] * 256)
         i = i + 1
     }
     return out
@@ -514,6 +519,91 @@ gbDecodeTensor(String path, GgufBinModel m, String name, Int maxElems): Int[] {
     if (t.quant == 12) { return gbQ4KDecodeTensor(path, m, name, maxElems) }
     if (t.quant == 14) { return gbQ6KDecodeTensor(path, m, name, maxElems) }
     if (t.quant == 1) { return gbF16DecodeTensor(path, m, name, maxElems) }
+    return new Int[0]
+}
+
+// ── dequantização por LINHAS (p/ matmul on-the-fly no forward M34) ─────
+// dequantiza nRows linhas de embd elementos começando em rowStart.
+// Cada linha Q4_K = embd/256 blocos × 144B. Retorna Int[ nRows*embd ] micro.
+gbQ4KDecodeRows(String path, GgufBinModel m, String name, Int rowStart,
+                Int nRows, Int embd): Int[] {
+    var t = gbFindTensor(m, name)
+    if (t == null) { return new Int[0] }
+    var blocksPerRow = embd / 256
+    var out = new Int[nRows * embd]
+    var f = File(path)
+    var tmp = new Int[256]
+    var r = 0
+    while (r < nRows) {
+        var block0 = (rowStart + r) * blocksPerRow
+        var bytes = f.readRange(gbTensorAbsOff(m, t) + block0 * 144,
+                                blocksPerRow * 144)
+        if (bytes == null) { return out }
+        var k = 0
+        while (k < blocksPerRow) {
+            gbQ4KDecodeBlock(bytes, k * 144, tmp)
+            var e = 0
+            while (e < 256) {
+                out[r * embd + k * 256 + e] = tmp[e]
+                e = e + 1
+            }
+            k = k + 1
+        }
+        r = r + 1
+    }
+    return out
+}
+
+// idem Q6_K (210B por bloco)
+gbQ6KDecodeRows(String path, GgufBinModel m, String name, Int rowStart,
+                Int nRows, Int embd): Int[] {
+    var t = gbFindTensor(m, name)
+    if (t == null) { return new Int[0] }
+    var blocksPerRow = embd / 256
+    var out = new Int[nRows * embd]
+    var f = File(path)
+    var tmp = new Int[256]
+    var r = 0
+    while (r < nRows) {
+        var block0 = (rowStart + r) * blocksPerRow
+        var bytes = f.readRange(gbTensorAbsOff(m, t) + block0 * 210,
+                                blocksPerRow * 210)
+        if (bytes == null) { return out }
+        var k = 0
+        while (k < blocksPerRow) {
+            gbQ6KDecodeBlock(bytes, k * 210, tmp)
+            var e = 0
+            while (e < 256) {
+                out[r * embd + k * 256 + e] = tmp[e]
+                e = e + 1
+            }
+            k = k + 1
+        }
+        r = r + 1
+    }
+    return out
+}
+
+// dispatch por linhas
+gbDecodeRows(String path, GgufBinModel m, String name, Int rowStart,
+             Int nRows, Int embd): Int[] {
+    var t = gbFindTensor(m, name)
+    if (t == null) { return new Int[0] }
+    if (t.quant == 12) { return gbQ4KDecodeRows(path, m, name, rowStart, nRows, embd) }
+    if (t.quant == 14) { return gbQ6KDecodeRows(path, m, name, rowStart, nRows, embd) }
+    if (t.quant == 1) {
+        var t2 = gbFindTensor(m, name)
+        var out = new Int[nRows * embd]
+        var f = File(path)
+        var bytes = f.readRange(gbTensorAbsOff(m, t2) + rowStart * embd * 2, nRows * embd * 2)
+        if (bytes == null) { return out }
+        var i = 0
+        while (i < nRows * embd) {
+            out[i] = f16ToMicro(bytes[i * 2] + bytes[i * 2 + 1] * 256)
+            i = i + 1
+        }
+        return out
+    }
     return new Int[0]
 }
 
@@ -546,7 +636,7 @@ ggufBinSmoke(String path): String {
     var report = arch + " layers=" + nLayers + " heads=" + nHead
     report = report + " kvheads=" + nKvHead + " embd=" + embd + " vocab=" + vocab
     report = report + " tensors=" + m.tensors.size() + " align=" + m.header.alignment
-    var emb = gbQ4KDecodeTensor(path, m, "token_embd.weight", 256)
+    var emb = gbQ4KDecodeTensor(path, m, "token_embd.weight", 8192)
     var sum = 0
     var absmax = 0
     var neg = 0
@@ -562,7 +652,7 @@ ggufBinSmoke(String path): String {
         i = i + 1
     }
     report = report + " embd_sum=" + sum + " absmax=" + absmax + " neg=" + neg
-    if (absmax == 0 || absmax > 500000 || neg == 0 || neg == emb.length) {
+    if (absmax == 0 || absmax > 500000000 || neg == 0 || neg == emb.length) {
         report = report + " DEQUANT-SUSPECT"
     }
     return report

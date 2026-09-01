@@ -34,6 +34,47 @@ fn f16ToMilli(Int bits): Int {
     return milli
 }
 
+// f16 → MICRO (1e-6): precisão p/ pesos dequantizados do GGUF
+// (d típico 0.01 → 10000 micro; milli perdia d subnormais/pequenos)
+fn f16ToMicro(Int bits): Int {
+    var u = bits % 65536
+    if (u < 0) {
+        u = u + 65536
+    }
+    var signBit = u / 32768
+    var v = u - signBit * 32768
+    var exp = v / 1024
+    var man = v % 1024
+    var micro = 0
+    if (exp == 31) {
+        micro = 1000000000
+    } else if (exp == 0) {
+        micro = man * 1000000 / 1024 / 16384
+    } else {
+        var mant = 1024 + man
+        var e = exp - 15
+        if (e >= 0) {
+            micro = mant * 1000000 / 1024
+            var k = 0
+            while (k < e) {
+                micro = micro * 2
+                k = k + 1
+            }
+        } else {
+            micro = mant * 1000000 / 1024
+            var k = 0
+            while (k < 0 - e) {
+                micro = micro / 2
+                k = k + 1
+            }
+        }
+    }
+    if (signBit == 1) {
+        micro = 0 - micro
+    }
+    return micro
+}
+
 pow2(Int n): Int {
     var r = 1
     var k = 0
