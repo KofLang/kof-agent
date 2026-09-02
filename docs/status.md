@@ -37,7 +37,7 @@
 4. ~~M31 continuação: kernels completos no GraphExecutor + QuantDecoder F16/K~~ ✅ M31.8 K-quants (q4k/q6kDecodeBlock + kqDecodeTensor, unit_kq 5/5 jvm+native)
 5. ~~Instalar mesa-vulkan-drivers~~ ✅ M32.3 dispatch real RADV RX 550 (dispatchMatmul GPU verde jvm+native; benchmark de escala é fila do M32.4)
 6. Test suites do agente: **16/16 verdes** (scripts/test.sh, jvm+native) — manter hermeticidade nos testes novos
-7. ~~M34 FASE B/C — forward + tokenizer 100% Kof (koflama)~~ ✅ **FASE C FECHADA** (token exato 29958 vs gt float; encode/decode exatos vs llama-cli; geração end-to-end coerente). Próximo: precisão do multi-token (primeiro token diverge ~0.5% acumulado), integração ao GraphExecutor/GPU
+7. ~~M34 FASE B/C — forward + tokenizer 100% Kof (koflama)~~ ✅ **M34 COMPLETO** (token exato 29958 vs gt float; encode/decode exatos vs llama-cli; geração end-to-end 100% Kof — M35: GPU dispatchMatmul + precisão sub-micro do multi-token)
 | Bugs p/ upstream | ~~N18 CONFIRMED + N10/N11/N12/N4~~ ✅ fechados vs 0.2.6-beta · J4-residual monitorado (repro exit 0) · SC3/SC4 sem repro | (fechar 9 testes, bench real) (RoPE/KV Cache/Quantização/Sampler V3) |
 
 ## Bloqueios ativos
