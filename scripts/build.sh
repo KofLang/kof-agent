@@ -56,6 +56,7 @@ PARTS=(
   agent/runtime/133_model_manager.kf
   agent/runtime/koflama_gguf.kf
   agent/runtime/koflama_forward.kf
+  agent/runtime/koflama_tokenizer.kf
 )
 
 # usage: build.sh <entry.kf> <out.kf> [--with-gateway]

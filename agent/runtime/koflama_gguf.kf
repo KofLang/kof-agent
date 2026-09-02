@@ -61,12 +61,30 @@ fn kofGgufReadStr(Int[] b, Int off): GgufBinStr {
     return GgufBinStr(len, chars)
 }
 
+// byte → String com decode UTF-8 (ASCII 1B, cont 2B/3B/4B). O Kof
+// String é UTF-16; o vocab SPM tem ▁ (E2 96 81) e <0xXX> ASCII.
 fn kofGgufStr(Int[] b, Int off): String {
     var s = ""
     var st = kofGgufReadStr(b, off)
     var i = 0
     while (i < st.len) {
-        s = s + String.valueOf(st.chars[i] as Char)
+        var c = st.chars[i]
+        var cp = 0
+        if (c < 0x80) {
+            cp = c
+        } else if (c >= 0xC0 && c < 0xE0 && i + 1 < st.len) {
+            cp = (c - 0xC0) * 64 + (st.chars[i + 1] - 0x80)
+            i = i + 1
+        } else if (c >= 0xE0 && c < 0xF0 && i + 2 < st.len) {
+            cp = (c - 0xE0) * 4096 + (st.chars[i + 1] - 0x80) * 64 + (st.chars[i + 2] - 0x80)
+            i = i + 2
+        } else if (c >= 0xF0 && i + 3 < st.len) {
+            cp = (c - 0xF0) * 262144 + (st.chars[i + 1] - 0x80) * 4096 + (st.chars[i + 2] - 0x80) * 64 + (st.chars[i + 3] - 0x80)
+            i = i + 3
+        } else {
+            cp = 0xFFFD
+        }
+        s = s + String.valueOf(cp as Char)
         i = i + 1
     }
     return s
@@ -761,6 +779,28 @@ kofGgufF32DecodeRows(String path, KofGgufBinModel m, String name, Int rowStart,
 }
 
 // f32 bits → micro (1e-6). IEEE754: sign 1, exp 8 (bias 127), man 23
+// f32 → MICRO em Long (sem clamp — p/ SPM scores que chegam a -29613)
+fn f32ToMicroLong(Long bits): Long {
+    var sign = 0
+    if (bits < 0) { sign = 1; bits = bits + 2147483648 }
+    var exp = (bits / 8388608) % 256
+    var man = bits % 8388608
+    if (exp == 255) { return 0 }
+    if (exp == 0 && man == 0) { return 0 }
+    var mant = 8388608 + man
+    var e = exp - 127
+    var micro: Long = mant * 1000000 / 8388608
+    if (e >= 0) {
+        var k2 = 0
+        while (k2 < e) { micro = micro * 2; k2 = k2 + 1 }
+    } else {
+        var k3 = 0
+        while (k3 < 0 - e) { micro = micro / 2; k3 = k3 + 1 }
+    }
+    if (sign == 1) { micro = 0 - micro }
+    return micro
+}
+
 fn f32ToMicro(Long bits): Int {
     var sign = 0
     if (bits < 0) { sign = 1; bits = bits + 2147483648 }

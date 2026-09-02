@@ -1,0 +1,193 @@
+// koflama — tokenizer/detokenizer SentencePiece (vocab do GGUF).
+// Encoder: Viterbi unigram (max Σ score) sobre o texto com ' '→'▁'.
+// Decoder: id → piece; '▁'→' '; '<0xXX>'→byte.
+// Vocab carregado do KV array "tokenizer.ggml.tokens" (janela dinâmica).
+record KofLmTokVocab(String[] tokens, Long[] scores)
+
+// lê o vocab: tokens String[32000] + scores Int[] (f32→micro).
+kofLmTokLoadVocab(String path, KofGgufBinModel m): KofLmTokVocab {
+    var f = File(path)
+    var head = f.readRange(0, 24)
+    if (head == null || head.length < 24) {
+        return KofLmTokVocab(new String[0], new Long[0])
+    }
+    var magic = head[0] + head[1] * 256 + head[2] * 65536 + head[3] * 16777216
+    if (magic != 1179993927) { // "GGUF" LE
+        return KofLmTokVocab(new String[0], new Long[0])
+    }
+    var tensorCount = kofGgufU64Low(head, 8)
+    var kvCount = kofGgufU64Low(head, 16)
+    // header + kvs do TinyLlama ~ 700KB (tokens 32000 × ~7B + scores 128KB)
+    var buf = f.readRange(24, 1048576)
+    if (buf == null || buf.length < 64) {
+        return KofLmTokVocab(new String[0], new Long[0])
+    }
+    var outTokens = new String[32000]
+    var outScores = new Long[32000]
+    var haveTokens = 0
+    var haveScores = 0
+    var pos = 0
+    var i = 0
+    while (i < kvCount && (haveTokens == 0 || haveScores == 0)) {
+        var st = kofGgufReadStr(buf, pos)
+        var key = kofGgufStr(buf, pos)
+        var p = pos + 8 + st.len
+        var kind = kofGgufU32(buf, p)
+        p = p + 4
+        if (kind == 9 && key == "tokenizer.ggml.tokens") {
+            var elen = kofGgufU64Low(buf, p + 4)
+            var q = p + 12
+            var si = 0
+            while (si < elen && si < 32000) {
+                var sst = kofGgufReadStr(buf, q)
+                outTokens[si] = kofGgufStr(buf, q)
+                q = q + 8 + sst.len
+                si = si + 1
+            }
+            p = q
+            haveTokens = 1
+        } else if (kind == 9 && key == "tokenizer.ggml.scores") {
+            var elen = kofGgufU64Low(buf, p + 4)
+            var q = p + 12
+            var si = 0
+            while (si < elen && si < 32000) {
+                var bits: Long = buf[q] + buf[q + 1] * 256 + buf[q + 2] * 65536 + buf[q + 3] * 16777216
+                outScores[si] = f32ToMicroLong(bits)
+                q = q + 4
+                si = si + 1
+            }
+            p = q
+            haveScores = 1
+        } else if (kind == 8) {
+            var vs = kofGgufReadStr(buf, p)
+            p = p + 8 + vs.len
+        } else if (kind == 9) {
+            var etype = kofGgufU32(buf, p)
+            var elen = kofGgufU64Low(buf, p + 4)
+            var q = p + 12
+            if (etype == 8) {
+                var si = 0
+                while (si < elen) {
+                    var sst = kofGgufReadStr(buf, q)
+                    q = q + 8 + sst.len
+                    si = si + 1
+                }
+            } else {
+                q = q + kofGgufArrayElemSize(etype) * elen
+            }
+            p = q
+        } else if (kind == 4 || kind == 5 || kind == 6) {
+            p = p + 4
+        } else if (kind == 10 || kind == 11) {
+            p = p + 8
+        } else if (kind == 7) {
+            p = p + 1
+        } else {
+            p = p + 4
+        }
+        pos = p
+        i = i + 1
+    }
+    return KofLmTokVocab(outTokens, outScores)
+}
+
+// encode: greedy longest match (llama.cpp SPM). Retorna ids (com BOS).
+kofLmTokEncode(String[] vocab, Long[] scores, String text, Int bosId): Int[] {
+    var idx = mapOf<String, Int>()
+    var vi0 = 0
+    while (vi0 < vocab.length) {
+        if (vocab[vi0] != null) { idx.put(vocab[vi0], vi0) }
+        vi0 = vi0 + 1
+    }
+    var t = text
+    // ' ' → '▁'
+    var sb = ""
+    var ci = 0
+    while (ci < t.length()) {
+        var ch = t.charAt(ci)
+        if (ch == ' ') {
+            sb = sb + "▁"
+        } else {
+            sb = sb + String.valueOf(ch)
+        }
+        ci = ci + 1
+    }
+    var n = sb.length()
+    var ids = new Int[n + 1]
+    var nIds = 0
+    var pos = 0
+    while (pos < n) {
+        var bestLen = 0
+        var bestId = 0 - 1
+        var len = 24
+        while (len >= 1) {
+            if (pos + len <= n) {
+                var sub = sb.substring(pos, pos + len)
+                if (idx.contains(sub)) {
+                    var r = idx.get(sub)
+                    if (r != null) {
+                        bestLen = len
+                        bestId = r
+                        len = 0
+                    }
+                }
+            }
+            len = len - 1
+        }
+        if (bestLen == 0) {
+            // char desconhecido → unk
+            ids[nIds] = 0
+            nIds = nIds + 1
+            pos = pos + 1
+        } else {
+            ids[nIds] = bestId
+            nIds = nIds + 1
+            pos = pos + bestLen
+        }
+    }
+    var out = new Int[nIds + 1]
+    out[0] = bosId
+    var k = 0
+    while (k < nIds) {
+        out[k + 1] = ids[k]
+        k = k + 1
+    }
+    return out
+}
+
+// find via Map (O(1); índice build uma vez em kofLmTokEncode)
+kofLmTokFind2(Map<String, Int> idx, String sub): Int {
+    if (idx.contains(sub)) {
+        var r = idx.get(sub)
+        if (r == null) { return 0 - 1 }
+        return r
+    }
+    return 0 - 1
+}
+
+// decode: ids → texto ('▁'→' ', <0xNN>→byte)
+kofLmTokDecode(String[] vocab, Int[] ids): String {
+    var out = ""
+    var i = 0
+    while (i < ids.length) {
+        var id = ids[i]
+        if (id >= 0 && id < vocab.length) {
+            var piece = vocab[id]
+            if (piece.startsWith("<0x") && piece.endsWith(">") && piece.length() == 6) {
+                out = out + "?"
+            } else {
+                var pi = 0
+                while (pi < piece.length()) {
+                    if (piece.charAt(pi) == 0x2581) {
+                        out = out + " "
+                    } else {
+                        out = out + String.valueOf(piece.charAt(pi))
+                    }
+                    pi = pi + 1
+                }
+            }
+        }
+        i = i + 1
+    }
+    return out
+}
