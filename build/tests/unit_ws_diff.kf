@@ -5384,6 +5384,90 @@ fn f16ToMilli(Int bits): Int {
     return milli
 }
 
+// f16 → MICRO (1e-6): precisão p/ pesos dequantizados do GGUF
+// (d típico 0.01 → 10000 micro; milli perdia d subnormais/pequenos)
+fn f16ToMicro(Int bits): Int {
+    var u = bits % 65536
+    if (u < 0) {
+        u = u + 65536
+    }
+    var signBit = u / 32768
+    var v = u - signBit * 32768
+    var exp = v / 1024
+    var man = v % 1024
+    var micro = 0
+    if (exp == 31) {
+        micro = 1000000000
+    } else if (exp == 0) {
+        micro = man * 1000000 / 1024 / 16384
+    } else {
+        var mant = 1024 + man
+        var e = exp - 15
+        if (e >= 0) {
+            micro = mant * 1000000 / 1024
+            var k = 0
+            while (k < e) {
+                micro = micro * 2
+                k = k + 1
+            }
+        } else {
+            micro = mant * 1000000 / 1024
+            var k = 0
+            while (k < 0 - e) {
+                micro = micro / 2
+                k = k + 1
+            }
+        }
+    }
+    if (signBit == 1) {
+        micro = 0 - micro
+    }
+    return micro
+}
+
+// f16 → NANO (1e-9): escala p/ pesos de matmul (d minúsculos precisos:
+// d 9.24e-6 → 9238 nano; produto d*s*q cabe em Int32)
+fn f16ToNano(Int bits): Long {
+    var u = bits % 65536
+    if (u < 0) {
+        u = u + 65536
+    }
+    var signBit = u / 32768
+    var v = u - signBit * 32768
+    var exp = v / 1024
+    var man = v % 1024
+    // man/mant são Int: man×1e9 estoura Int (2^31) — calcular em Long
+    var manl: Long = man
+    var nano: Long = 0
+    if (exp == 31) {
+        nano = 2000000000
+    } else if (exp == 0) {
+        nano = manl * 1000000000 / 1024 / 16384
+    } else {
+        var mantl: Long = 1024 + man
+        var e = exp - 15
+        if (e >= 0) {
+            nano = mantl * 1000000000 / 1024
+            var k = 0
+            while (k < e) {
+                nano = nano * 2
+                k = k + 1
+            }
+        } else {
+            nano = mantl * 1000000000 / 1024
+            var k = 0
+            while (k < 0 - e) {
+                nano = nano / 2
+                k = k + 1
+            }
+        }
+    }
+    if (signBit == 1) {
+        nano = 0 - nano
+    }
+    return nano
+}
+
 pow2(Int n): Int {
     var r = 1
     var k = 0
@@ -6201,9 +6285,9 @@ class KoflmRuntime {
         runner.cancelGeneration()
     }
 
-kvDepthNow(): Int {
-    return runner.kv.size
-}
+    kvDepthNow(): Int {
+        return runner.kv.size
+    }
 }
 
 // M33/M35/M39: tokenizer verify + LoRA jobs + eval suite loader
@@ -6479,6 +6563,1320 @@ class ModelManager {
     supportsQuant(Int modelQuant, Int runtimeQuant): Bool {
         return modelQuant <= runtimeQuant
     }
+}
+
+// koflama — GGUF binário REAL (v2/v3): parser em Kof puro, sem libc/externo.
+// (renomeado de 161_gguf_binary.kf; símbolos com prefixo kof/kofGguf)
+// Leitura por readRange (offset+len): nunca carrega o arquivo inteiro —
+// o TinyLlama-Q4 é 660MB e só o header/kvs/tensor dir passam por aqui.
+// Os blobs de tensor são lidos sob demanda e dequantizados (Q4_K/Q6_K/F16)
+// para Int[] em ponto fixo de MILÉSIMOS (padrão do projeto).
+// Fórmulas de dequant espelham ggml-quants.c (get_scale_min_k4,
+// dequantize_row_q4_K, dequantize_row_q6_K).
+
+record KofGgufBinHeader(Int version, Int tensorCount, Int kvCount, Int alignment)
+record KofGgufBinKv(String key, Int kind, Int intVal, String strVal)
+record KofGgufBinTensor(String name, Int nDims, Int d0, Int d1, Int quant, Int offsetLo, Int offsetHi, Int nElems)
+record KofGgufBinModel(KofGgufBinHeader header, List<KofGgufBinKv> kv, List<KofGgufBinTensor> tensors, Int errorCount, String errorCode, Long dataOff)
+record GgufBinStr(Int len, Int[] chars)
+
+// ── leitura little-endian de um Int[] de bytes ──────────────────────────
+fn kofGgufU32(Int[] b, Int off): Int {
+    if (off + 4 > b.length) { return 0 }
+    return b[off] + b[off + 1] * 256 + b[off + 2] * 65536 + b[off + 3] * 16777216
+}
+
+fn kofGgufU64Low(Int[] b, Int off): Int {
+    if (off + 8 > b.length) { return 0 }
+    return b[off] + b[off + 1] * 256 + b[off + 2] * 65536 + b[off + 3] * 16777216
+}
+
+fn kofGgufU64High(Int[] b, Int off): Int {
+    if (off + 8 > b.length) { return 0 }
+    return b[off + 4] + b[off + 5] * 256 + b[off + 6] * 65536 + b[off + 7] * 16777216
+}
+
+// u64→Long p/ offsets de tensor (GGUF até 4G+ usa hi*2^32)
+fn kofGgufU64ToLong(Int[] b, Int off): Long {
+    var hi = kofGgufU64High(b, off)
+    if (hi == 0) {
+        var lo = kofGgufU64Low(b, off)
+        return lo + 0
+    }
+    return kofGgufU64Low(b, off) + hi * 4294967296
+}
+
+// len disponível na janela a partir de off+8 (evita index OOB quando a
+// string cruza o fim do buffer lido)
+fn kofGgufStrAvail(Int[] b, Int off): Int {
+    var avail = b.length - (off + 8)
+    if (avail < 0) { return 0 }
+    return avail
+}
+
+fn kofGgufReadStr(Int[] b, Int off): GgufBinStr {
+    var len = kofGgufU64Low(b, off)
+    var avail = kofGgufStrAvail(b, off)
+    if (len > avail) { len = avail }
+    if (len < 0) { len = 0 }
+    var chars = new Int[len]
+    var i = 0
+    while (i < len) {
+        chars[i] = b[off + 8 + i]
+        i = i + 1
+    }
+    return GgufBinStr(len, chars)
+}
+
+fn kofGgufStr(Int[] b, Int off): String {
+    var s = ""
+    var st = kofGgufReadStr(b, off)
+    var i = 0
+    while (i < st.len) {
+        s = s + String.valueOf(st.chars[i] as Char)
+        i = i + 1
+    }
+    return s
+}
+
+// bytes que ESTE kv consome na janela (aprox p/ array de strings: soma real)
+// bytes que o VALOR deste kv consome (pVal = offset APÓS o u32 do kind).
+// Retorna NEGATIVO se a janela é pequena demais (qualquer leitura truncada —
+// sinal p/ o driver dobrar a janela antes de confiar no valor)
+fn kofGgufKvNeed(Int[] buf, Int pVal, Int kind): Int {
+    if (pVal + 8 > buf.length) { return 0 - 1 }
+    if (kind == 8) {
+        var vs = kofGgufReadStr(buf, pVal)
+        if (pVal + 8 + vs.len > buf.length && vs.len == kofGgufStrAvail(buf, pVal)) {
+            return 0 - 1
+        }
+        return pVal + 8 + vs.len
+    }
+    if (kind == 9) {
+        if (pVal + 12 > buf.length) { return 0 - 1 }
+        var etype = kofGgufU32(buf, pVal)
+        var elen = kofGgufU64Low(buf, pVal + 4)
+        var q = pVal + 12
+        if (etype == 8) {
+            var si = 0
+            while (si < elen) {
+                if (q + 8 > buf.length) { return 0 - 1 }
+                var sst = kofGgufReadStr(buf, q)
+                if (q + 8 + sst.len >= buf.length && sst.len == kofGgufStrAvail(buf, q)) {
+                    return 0 - 1
+                }
+                q = q + 8 + sst.len
+                si = si + 1
+            }
+            return q
+        }
+        var total = q + kofGgufArrayElemSize(etype) * elen
+        if (total > buf.length) { return 0 - 1 }
+        return total
+    }
+    var need = pVal + kofGgufArrayElemSize(kind)
+    if (need > buf.length) { return 0 - 1 }
+    return need
+}
+
+fn kofGgufArrayElemSize(Int kind): Int {
+    if (kind == 0 || kind == 1 || kind == 7) { return 1 }   // u8/i8/bool
+    if (kind == 2 || kind == 3) { return 2 }                 // u16/i16
+    if (kind == 4 || kind == 5 || kind == 6) { return 4 }    // u32/i32/f32
+    if (kind == 10 || kind == 11 || kind == 12) { return 8 } // u64/i64/f64
+    return 0
+}
+
+// ── parser do header + metadata kv + tensor directory ───────────────────
+// Lê em janelas de 4KB (o header do TinyLlama tem ~2KB de kvs).
+kofGgufBinOpen(String path): KofGgufBinModel {
+    var f = File(path)
+    if (!f.exists() || !f.isFile()) {
+        return KofGgufBinModel(KofGgufBinHeader(0, 0, 0, 0), listOf<KofGgufBinKv>(),
+            listOf<KofGgufBinTensor>(), 1, "E_FILE")
+    }
+    var head = f.readRange(0, 24)
+    if (head == null || head.length < 24) {
+        return KofGgufBinModel(KofGgufBinHeader(0, 0, 0, 0), listOf<KofGgufBinKv>(),
+            listOf<KofGgufBinTensor>(), 1, "E_READ", 0)
+    }
+    var magic = kofGgufU32(head, 0)
+    if (magic != 1179993927) { // "GGUF" LE
+        return KofGgufBinModel(KofGgufBinHeader(0, 0, 0, 0), listOf<KofGgufBinKv>(),
+            listOf<KofGgufBinTensor>(), 1, "E_MAGIC", 0)
+    }
+    var version = kofGgufU32(head, 4)
+    if (version != 2 && version != 3) {
+        return KofGgufBinModel(KofGgufBinHeader(version, 0, 0, 0), listOf<KofGgufBinKv>(),
+            listOf<KofGgufBinTensor>(), 1, "E_VERSION", 0)
+    }
+    var tensorCount = kofGgufU64Low(head, 8)
+    var kvCount = kofGgufU64Low(head, 16)
+    var kv = listOf<KofGgufBinKv>()
+    var align = 32
+    var pos: Long = 24
+    var win: Long = 4096
+    var i = 0
+    while (i < kvCount) {
+        // janela dinâmica: o vocab de strings (tokenizer.ggml.tokens) passa
+        // de 500KB — dobra a leitura enquanto o parse cruzar o fim do buffer
+        var buf = f.readRange(pos, win)
+        var st = kofGgufReadStr(buf, 0)
+        var p0 = 8 + st.len
+        var kind0 = kofGgufU32(buf, p0)
+        var need = kofGgufKvNeed(buf, p0 + 4, kind0)
+        while (need < 0 && win < 8388608) {
+            win = win * 2
+            buf = f.readRange(pos, win)
+            st = kofGgufReadStr(buf, 0)
+            p0 = 8 + st.len
+            kind0 = kofGgufU32(buf, p0)
+            need = kofGgufKvNeed(buf, p0 + 4, kind0)
+        }
+        if (need < 0) {
+            return KofGgufBinModel(KofGgufBinHeader(version, tensorCount, kvCount, align),
+                kv, listOf<KofGgufBinTensor>(), 1, "E_KVWIN", 0)
+        }
+        if (buf == null || buf.length < 16) {
+            return KofGgufBinModel(KofGgufBinHeader(version, tensorCount, kvCount, align),
+                kv, listOf<KofGgufBinTensor>(), 1, "E_KV", 0)
+        }
+        var key = kofGgufStr(buf, 0)
+        var p = 8 + st.len
+        var kind = kind0
+        p = p + 4
+        var intVal = 0
+        var strVal = ""
+        if (kind == 4 || kind == 5) {          // u32/i32
+            intVal = kofGgufU32(buf, p)
+            p = p + 4
+        } else if (kind == 10 || kind == 11) { // u64/i64
+            intVal = kofGgufU64Low(buf, p)
+            p = p + 8
+        } else if (kind == 8) {                // string
+            var vs = kofGgufReadStr(buf, p)
+            strVal = kofGgufStr(buf, p)
+            p = p + 8 + vs.len
+        } else if (kind == 7) {                // bool
+            intVal = buf[p]
+            p = p + 1
+        } else if (kind == 6) {                // f32 (guarda os bits)
+            intVal = kofGgufU32(buf, p)
+            p = p + 4
+        } else if (kind == 9) {                // array: skip (type u32 + len u64 + elems)
+            var etype = kofGgufU32(buf, p)
+            var elen = kofGgufU64Low(buf, p + 4)
+            p = p + 12
+            if (etype == 8) {
+                // array de strings: cada elem é u64-len + bytes (tamanho variável)
+                var si = 0
+                while (si < elen) {
+                    var sst = kofGgufReadStr(buf, p)
+                    p = p + 8 + sst.len
+                    si = si + 1
+                }
+            } else {
+                p = p + kofGgufArrayElemSize(etype) * elen
+            }
+        } else {
+            p = p + kofGgufArrayElemSize(kind)
+        }
+        if (key == "general.alignment") {
+            align = intVal
+        }
+        kv.add(KofGgufBinKv(key, kind, intVal, strVal))
+        pos = pos + p
+        i = i + 1
+    }
+    return ggufBinReadTensorDir(path, version, tensorCount, kvCount, kv, align, pos)
+}
+
+// tensor dir: logo após os kvs. Cada entry: name(str) + n_dims u32 +
+// dims u64*n + type u32 + offset u64. Janela de 64KB (TinyLlama:
+// 201 tensors × ~70B ≈ 14KB — cabe).
+fn ggufBinReadTensorDir(String path, Int version, Int tensorCount, Int kvCount,
+                        List<KofGgufBinKv> kv, Int align, Long dirStart): KofGgufBinModel {
+    var f = File(path)
+    var dir = f.readRange(dirStart, 65536)
+    if (dir == null || dir.length < 8) {
+        return KofGgufBinModel(KofGgufBinHeader(version, tensorCount, kvCount, align),
+            kv, listOf<KofGgufBinTensor>(), 1, "E_DIR", 0)
+    }
+    var tensors = listOf<KofGgufBinTensor>()
+    var p = 0
+    var i = 0
+    while (i < tensorCount) {
+        var st = kofGgufReadStr(dir, p)
+        var name = kofGgufStr(dir, p)
+        p = p + 8 + st.len
+        var nDims = kofGgufU32(dir, p)
+        p = p + 4
+        var d0 = 1
+        var d1 = 1
+        var elems = 1
+        var j = 0
+        while (j < nDims) {
+            var dim = kofGgufU64Low(dir, p)
+            if (j == 0) { d0 = dim }
+            if (j == 1) { d1 = dim }
+            elems = elems * dim
+            p = p + 8
+            j = j + 1
+        }
+        var quant = kofGgufU32(dir, p)
+        p = p + 4
+        var offLo = kofGgufU64Low(dir, p)
+        var offHi = kofGgufU64High(dir, p)
+        p = p + 8
+        tensors.add(KofGgufBinTensor(name, nDims, d0, d1, quant, offLo, offHi, elems))
+        i = i + 1
+    }
+    // data começa no fim do dir alinhado
+    var dataOff = dirStart + p
+    var rem = dataOff % align
+    if (rem != 0) {
+        dataOff = dataOff + (align - rem)
+    }
+    return KofGgufBinModel(KofGgufBinHeader(version, tensorCount, kvCount, align),
+        kv, tensors, 0, "", dataOff)
+}
+
+// ── acesso a tensor ─────────────────────────────────────────────────────
+// GGUF quant types: 0 F32, 1 F16, 8 Q8_0 (32→34B), 12 Q4_K (256→144B), 14 Q6_K (256→210B)
+fn kofGgufQuantBlockElems(Int quant): Int {
+    if (quant == 12) { return 256 }
+    if (quant == 14) { return 256 }
+    if (quant == 8) { return 32 }
+    return 1
+}
+
+fn kofGgufQuantBlockSize(Int quant): Int {
+    if (quant == 12) { return 144 }
+    if (quant == 14) { return 210 }
+    if (quant == 8) { return 34 }
+    if (quant == 1) { return 2 }
+    return 4
+}
+
+fn kofGgufQuantName(Int quant): String {
+    if (quant == 0) { return "F32" }
+    if (quant == 1) { return "F16" }
+    if (quant == 8) { return "Q8_0" }
+    if (quant == 12) { return "Q4_K" }
+    if (quant == 14) { return "Q6_K" }
+    return "Q" + quant
+}
+
+kofGgufFindTensor(KofGgufBinModel m, String name): KofGgufBinTensor {
+    var i = 0
+    while (i < m.tensors.size()) {
+        var t = m.tensors.get(i)
+        if (t.name == name) {
+            return t
+        }
+        i = i + 1
+    }
+    return null
+}
+
+// tensor dataOffset absoluto (t.offset é relativo ao início do data section)
+fn kofGgufTensorAbsOff(KofGgufBinModel m, KofGgufBinTensor t): Long {
+    return m.dataOff + t.offsetLo + t.offsetHi * 4294967296
+}
+
+// bytes totais do tensor
+fn kofGgufTensorBytes(KofGgufBinTensor t): Int {
+    if (t.quant == 1) { return t.nElems * 2 }
+    if (t.quant == 0) { return t.nElems * 4 }
+    return t.nElems / kofGgufQuantBlockElems(t.quant) * kofGgufQuantBlockSize(t.quant)
+}
+
+// ── dequantização Q4_K (formato ggml REAL) ──────────────────────────────
+// Bloco de 256 elems = 144 bytes: f16 d + f16 dmin + scales[12] + qs[128]
+// get_scale_min_k4(j, q, &d, &m):
+//   j<4:  d = q[j] & 63;                    m = q[j+4] & 63
+//   j>=4: d = (q[j+4] & 0xF)|((q[j-4]>>6)<<4); m = (q[j+4]>>4)|((q[j]>>6)<<4)
+// dequant: a cada 64 elems (is += 2):
+//   d1 = d*sc(is); m1 = dmin*mn(is); d2 = d*sc(is+1); m2 = dmin*mn(is+1)
+//   32 low-nibble: y = d1*(q&0xF) - m1
+//   32 high-nibble: y = d2*(q>>4) - m2
+fn kofGgufK4Sc(Int[] sc, Int j): Int {
+    if (j < 4) {
+        return sc[j] % 64
+    }
+    return (sc[j + 4] % 16) + (sc[j - 4] / 64) * 16
+}
+
+fn kofGgufK4Mn(Int[] sc, Int j): Int {
+    if (j < 4) {
+        return sc[j + 4] % 64
+    }
+    // ggml get_scale_min_k4: *m = (q[j+4] >> 4) | ((q[j] >> 6) << 4)
+    return (sc[j + 4] / 16) + (sc[j] / 64) * 16
+}
+
+fn kofGgufQ4KDecodeBlock(Int[] b, Int off, Int[] out) {
+    var d = f16ToMicro(b[off] + b[off + 1] * 256)
+    var dmin = f16ToMicro(b[off + 2] + b[off + 3] * 256)
+    var sc = new Int[12]
+    var i = 0
+    while (i < 12) {
+        sc[i] = b[off + 4 + i]
+        i = i + 1
+    }
+    var qs = off + 16
+    var is = 0
+    var outPos = 0
+    var chunk = 0
+    while (chunk < 4) {
+        var sc0 = kofGgufK4Sc(sc, is)
+        var mn0 = kofGgufK4Mn(sc, is)
+        var sc1 = kofGgufK4Sc(sc, is + 1)
+        var mn1 = kofGgufK4Mn(sc, is + 1)
+        var d1 = d * sc0
+        var m1 = dmin * mn0
+        var d2 = d * sc1
+        var m2 = dmin * mn1
+        var l = 0
+        while (l < 32) {
+            var oct = b[qs + chunk * 32 + l]
+            out[outPos + l] = d1 * (oct % 16) - m1
+            out[outPos + 32 + l] = d2 * (oct / 16) - m2
+            l = l + 1
+        }
+        outPos = outPos + 64
+        is = is + 2
+        chunk = chunk + 1
+    }
+}
+
+// dequantiza tensor Q4_K inteiro → Int[] (milésimos), em janelas de 512 blocos
+kofGgufQ4KDecodeTensor(String path, KofGgufBinModel m, String name, Int maxElems): Int[] {
+    var t = kofGgufFindTensor(m, name)
+    if (t == null) {
+        return new Int[0]
+    }
+    var nBlocks = t.nElems / 256
+    var out = new Int[t.nElems]
+    var blockBytes = 144
+    var winBlocks = 512
+    var bi = 0
+    var f = File(path)
+    var tmp = new Int[256]
+    var maxBlocks = maxElems / 256
+    while (bi < nBlocks && bi < maxBlocks) {
+        var n = winBlocks
+        if (bi + n > nBlocks) { n = nBlocks - bi }
+        if (bi + n > maxBlocks) { n = maxBlocks - bi }
+        var bytes = f.readRange(kofGgufTensorAbsOff(m, t) + bi * blockBytes, n * blockBytes)
+        if (bytes == null) { break }
+        var k = 0
+        while (k < n) {
+            kofGgufQ4KDecodeBlock(bytes, k * blockBytes, tmp)
+            var e = 0
+            while (e < 256) {
+                out[bi * 256 + k * 256 + e] = tmp[e]
+                e = e + 1
+            }
+            k = k + 1
+        }
+        bi = bi + n
+    }
+    return out
+}
+
+// ── dequantização Q6_K (formato ggml REAL) ──────────────────────────────
+// Bloco de 256 elems = 210 bytes: f16 d (2B) + ql[128] + qh[64] + sc i8[16]
+// q = ((ql&0xF)|((qh>>s)&3)<<4) - 32; y = d * sc[is] * q (sc é int8)
+fn kofGgufQ6KDecodeBlock(Int[] b, Int off, Int[] out) {
+    // layout block_q6_K (ggml-common.h): ql[128] qh[64] scales[16] d f16 —
+    // o d é o ÚLTIMO campo (não o primeiro!)
+    var ql = off
+    var qh = ql + 128
+    var scB = qh + 64
+    var d = f16ToMicro(b[off + 208] + b[off + 209] * 256)
+    var n = 0
+    var outPos = 0
+    while (n < 256) {
+        var l = 0
+        while (l < 32) {
+            // ggml dequantize_row_q6_K: q1..q4 extraem 2 bits de qh[l]:
+            // shifts 0, 2, 4, 6 (4 quads por byte de qh)
+            var qhB = b[qh + l]
+            var scIdx = l / 16
+            var q1 = (b[ql + l] % 16) + (((qhB / 1) % 4) * 16) - 32
+            var q2 = (b[ql + 32 + l] % 16) + (((qhB / 4) % 4) * 16) - 32
+            var q3 = (b[ql + l] / 16) + (((qhB / 16) % 4) * 16) - 32
+            var q4 = (b[ql + 32 + l] / 16) + (((qhB / 64) % 4) * 16) - 32
+            var s0 = b[scB + scIdx]
+            var s1 = b[scB + scIdx + 2]
+            var s2 = b[scB + scIdx + 4]
+            var s3 = b[scB + scIdx + 6]
+            if (s0 > 127) { s0 = s0 - 256 }
+            if (s1 > 127) { s1 = s1 - 256 }
+            if (s2 > 127) { s2 = s2 - 256 }
+            if (s3 > 127) { s3 = s3 - 256 }
+            out[outPos + l] = d * s0 * q1
+            out[outPos + 32 + l] = d * s1 * q2
+            out[outPos + 64 + l] = d * s2 * q3
+            out[outPos + 96 + l] = d * s3 * q4
+            l = l + 1
+        }
+        outPos = outPos + 128
+        ql = ql + 64
+        qh = qh + 32
+        scB = scB + 8
+        n = n + 128
+    }
+}
+
+kofGgufQ6KDecodeTensor(String path, KofGgufBinModel m, String name, Int maxElems): Int[] {
+    var t = kofGgufFindTensor(m, name)
+    if (t == null) {
+        return new Int[0]
+    }
+    var nBlocks = t.nElems / 256
+    var out = new Int[t.nElems]
+    var blockBytes = 210
+    var winBlocks = 512
+    var bi = 0
+    var f = File(path)
+    var tmp = new Int[256]
+    var maxBlocks = maxElems / 256
+    while (bi < nBlocks && bi < maxBlocks) {
+        var n = winBlocks
+        if (bi + n > nBlocks) { n = nBlocks - bi }
+        if (bi + n > maxBlocks) { n = maxBlocks - bi }
+        var bytes = f.readRange(kofGgufTensorAbsOff(m, t) + bi * blockBytes, n * blockBytes)
+        if (bytes == null) { break }
+        var k = 0
+        while (k < n) {
+            kofGgufQ6KDecodeBlock(bytes, k * blockBytes, tmp)
+            var e = 0
+            while (e < 256) {
+                out[bi * 256 + k * 256 + e] = tmp[e]
+                e = e + 1
+            }
+            k = k + 1
+        }
+        bi = bi + n
+    }
+    return out
+}
+
+// ── F16 direto ──────────────────────────────────────────────────────────
+kofGgufF16DecodeTensor(String path, KofGgufBinModel m, String name, Int maxElems): Int[] {
+    var t = kofGgufFindTensor(m, name)
+    if (t == null) {
+        return new Int[0]
+    }
+    var total = t.nElems
+    if (total > maxElems) { total = maxElems }
+    var f = File(path)
+    var bytes = f.readRange(kofGgufTensorAbsOff(m, t), total * 2)
+    if (bytes == null) { return new Int[0] }
+    var out = new Int[total]
+    var i = 0
+    while (i < total) {
+        out[i] = f16ToMicro(bytes[i * 2] + bytes[i * 2 + 1] * 256)
+        i = i + 1
+    }
+    return out
+}
+
+// dispatch pelo quant do tensor
+kofGgufDecodeTensor(String path, KofGgufBinModel m, String name, Int maxElems): Int[] {
+    var t = kofGgufFindTensor(m, name)
+    if (t == null) { return new Int[0] }
+    if (t.quant == 12) { return kofGgufQ4KDecodeTensor(path, m, name, maxElems) }
+    if (t.quant == 14) { return kofGgufQ6KDecodeTensor(path, m, name, maxElems) }
+    if (t.quant == 1) { return kofGgufF16DecodeTensor(path, m, name, maxElems) }
+    return new Int[0]
+}
+
+// ── dequantização por LINHAS (p/ matmul on-the-fly no forward M34) ─────
+// dequantiza nRows linhas de embd elementos começando em rowStart.
+// Cada linha Q4_K = embd/256 blocos × 144B. Retorna Int[ nRows*embd ] micro.
+kofGgufQ4KDecodeRows(String path, KofGgufBinModel m, String name, Int rowStart,
+                Int nRows, Int embd): Int[] {
+    var t = kofGgufFindTensor(m, name)
+    if (t == null) { return new Int[0] }
+    var blocksPerRow = embd / 256
+    var out = new Int[nRows * embd]
+    var f = File(path)
+    var tmp = new Int[256]
+    var r = 0
+    while (r < nRows) {
+        var block0 = (rowStart + r) * blocksPerRow
+        var bytes = f.readRange(kofGgufTensorAbsOff(m, t) + block0 * 144,
+                                blocksPerRow * 144)
+        if (bytes == null) { return out }
+        var k = 0
+        while (k < blocksPerRow) {
+            kofGgufQ4KDecodeBlock(bytes, k * 144, tmp)
+            var e = 0
+            while (e < 256) {
+                out[r * embd + k * 256 + e] = tmp[e]
+                e = e + 1
+            }
+            k = k + 1
+        }
+        r = r + 1
+    }
+    return out
+}
+
+// idem Q6_K (210B por bloco)
+kofGgufQ6KDecodeRows(String path, KofGgufBinModel m, String name, Int rowStart,
+                Int nRows, Int embd): Int[] {
+    var t = kofGgufFindTensor(m, name)
+    if (t == null) { return new Int[0] }
+    var blocksPerRow = embd / 256
+    var out = new Int[nRows * embd]
+    var f = File(path)
+    var tmp = new Int[256]
+    var r = 0
+    while (r < nRows) {
+        var block0 = (rowStart + r) * blocksPerRow
+        var bytes = f.readRange(kofGgufTensorAbsOff(m, t) + block0 * 210,
+                                blocksPerRow * 210)
+        if (bytes == null) { return out }
+        var k = 0
+        while (k < blocksPerRow) {
+            kofGgufQ6KDecodeBlock(bytes, k * 210, tmp)
+            var e = 0
+            while (e < 256) {
+                out[r * embd + k * 256 + e] = tmp[e]
+                e = e + 1
+            }
+            k = k + 1
+        }
+        r = r + 1
+    }
+    return out
+}
+
+// dispatch por linhas
+kofGgufDecodeRows(String path, KofGgufBinModel m, String name, Int rowStart,
+             Int nRows, Int embd): Int[] {
+    var t = kofGgufFindTensor(m, name)
+    if (t == null) { return new Int[0] }
+    if (t.quant == 12) { return kofGgufQ4KDecodeRows(path, m, name, rowStart, nRows, embd) }
+    if (t.quant == 14) { return kofGgufQ6KDecodeRows(path, m, name, rowStart, nRows, embd) }
+    if (t.quant == 1) {
+        var t2 = kofGgufFindTensor(m, name)
+        var out = new Int[nRows * embd]
+        var f = File(path)
+        var bytes = f.readRange(kofGgufTensorAbsOff(m, t2) + rowStart * embd * 2, nRows * embd * 2)
+        if (bytes == null) { return out }
+        var i = 0
+        while (i < nRows * embd) {
+            out[i] = f16ToMicro(bytes[i * 2] + bytes[i * 2 + 1] * 256)
+            i = i + 1
+        }
+        return out
+    }
+    return new Int[0]
+}
+
+// ── decoders NANO (pesos p/ matmul do forward M34; estados ficam MICRO) ─
+// bloco Q4_K → nano em Long[256]
+fn kofGgufQ4KDecodeBlockN(Int[] b, Int off, Long[] out) {
+    var d: Long = f16ToNano(b[off] + b[off + 1] * 256)
+    var dmin: Long = f16ToNano(b[off + 2] + b[off + 3] * 256)
+    var sc = new Int[12]
+    var i = 0
+    while (i < 12) {
+        sc[i] = b[off + 4 + i]
+        i = i + 1
+    }
+    var qs = off + 16
+    var is = 0
+    var outPos = 0
+    var chunk = 0
+    while (chunk < 4) {
+        var sc0 = kofGgufK4Sc(sc, is)
+        var mn0 = kofGgufK4Mn(sc, is)
+        var sc1 = kofGgufK4Sc(sc, is + 1)
+        var mn1 = kofGgufK4Mn(sc, is + 1)
+        var d1 = d * sc0
+        var m1 = dmin * mn0
+        var d2 = d * sc1
+        var m2 = dmin * mn1
+        var l = 0
+        while (l < 32) {
+            var oct = b[qs + chunk * 32 + l]
+            out[outPos + l] = d1 * (oct % 16) - m1
+            out[outPos + 32 + l] = d2 * (oct / 16) - m2
+            l = l + 1
+        }
+        outPos = outPos + 64
+        is = is + 2
+        chunk = chunk + 1
+    }
+}
+
+// bloco Q6_K → nano em Long[256]
+fn kofGgufQ6KDecodeBlockN(Int[] b, Int off, Long[] out) {
+    var ql = off
+    var qh = ql + 128
+    var scB = qh + 64
+    var d: Long = f16ToNano(b[off + 208] + b[off + 209] * 256)
+    var n = 0
+    var outPos = 0
+    while (n < 256) {
+        var l = 0
+        while (l < 32) {
+            var qhB = b[qh + l]
+            var scIdx = l / 16
+            var q1 = (b[ql + l] % 16) + (((qhB / 1) % 4) * 16) - 32
+            var q2 = (b[ql + 32 + l] % 16) + (((qhB / 4) % 4) * 16) - 32
+            var q3 = (b[ql + l] / 16) + (((qhB / 16) % 4) * 16) - 32
+            var q4 = (b[ql + 32 + l] / 16) + (((qhB / 64) % 4) * 16) - 32
+            var s0 = b[scB + scIdx]
+            var s1 = b[scB + scIdx + 2]
+            var s2 = b[scB + scIdx + 4]
+            var s3 = b[scB + scIdx + 6]
+            if (s0 > 127) { s0 = s0 - 256 }
+            if (s1 > 127) { s1 = s1 - 256 }
+            if (s2 > 127) { s2 = s2 - 256 }
+            if (s3 > 127) { s3 = s3 - 256 }
+            out[outPos + l] = d * s0 * q1
+            out[outPos + 32 + l] = d * s1 * q2
+            out[outPos + 64 + l] = d * s2 * q3
+            out[outPos + 96 + l] = d * s3 * q4
+            l = l + 1
+        }
+        outPos = outPos + 128
+        ql = ql + 64
+        qh = qh + 32
+        scB = scB + 8
+        n = n + 128
+    }
+}
+
+// nRows linhas de um tensor quantizado → Long[] NANO (novo; p/ matvec)
+kofGgufDecodeRowsN(String path, KofGgufBinModel m, String name, Int rowStart,
+              Int nRows, Int kdim): Long[] {
+    var t = kofGgufFindTensor(m, name)
+    if (t == null) { return new Long[0] }
+    var out = new Long[nRows * kdim]
+    var f = File(path)
+    var tmp = new Long[256]
+    if (t.quant == 12) {
+        var blocksPerRow = kdim / 256
+        var r = 0
+        while (r < nRows) {
+            var block0 = (rowStart + r) * blocksPerRow
+            var bytes = f.readRange(kofGgufTensorAbsOff(m, t) + block0 * 144, blocksPerRow * 144)
+            if (bytes == null) { return out }
+            var k = 0
+            while (k < blocksPerRow) {
+                kofGgufQ4KDecodeBlockN(bytes, k * 144, tmp)
+                var e = 0
+                while (e < 256) {
+                    out[r * kdim + k * 256 + e] = tmp[e]
+                    e = e + 1
+                }
+                k = k + 1
+            }
+            r = r + 1
+        }
+        return out
+    }
+    if (t.quant == 14) {
+        var blocksPerRow = kdim / 256
+        var r = 0
+        while (r < nRows) {
+            var block0 = (rowStart + r) * blocksPerRow
+            var bytes = f.readRange(kofGgufTensorAbsOff(m, t) + block0 * 210, blocksPerRow * 210)
+            if (bytes == null) { return out }
+            var k = 0
+            while (k < blocksPerRow) {
+                kofGgufQ6KDecodeBlockN(bytes, k * 210, tmp)
+                var e = 0
+                while (e < 256) {
+                    out[r * kdim + k * 256 + e] = tmp[e]
+                    e = e + 1
+                }
+                k = k + 1
+            }
+            r = r + 1
+        }
+        return out
+    }
+    return out
+}
+
+// ── F32 direto (norms do TinyLlama são F32) ────────────────────────────
+kofGgufF32DecodeRows(String path, KofGgufBinModel m, String name, Int rowStart,
+                Int nRows, Int k): Int[] {
+    var t = kofGgufFindTensor(m, name)
+    if (t == null) { return new Int[0] }
+    var out = new Int[nRows * k]
+    var f = File(path)
+    var bytes = f.readRange(kofGgufTensorAbsOff(m, t) + rowStart * k * 4, nRows * k * 4)
+    if (bytes == null) { return out }
+    var i = 0
+    while (i < nRows * k) {
+        var bits: Long = bytes[i * 4] + bytes[i * 4 + 1] * 256
+            + bytes[i * 4 + 2] * 65536 + bytes[i * 4 + 3] * 16777216
+        out[i] = f32ToMicro(bits)
+        i = i + 1
+    }
+    return out
+}
+
+// f32 bits → micro (1e-6). IEEE754: sign 1, exp 8 (bias 127), man 23
+fn f32ToMicro(Long bits): Int {
+    var sign = 0
+    if (bits < 0) { sign = 1; bits = bits + 2147483648 }
+    var exp = (bits / 8388608) % 256
+    var man = bits % 8388608
+    if (exp == 255) { return 0 }
+    if (exp == 0 && man == 0) { return 0 }
+    var mant = 8388608 + man
+    var e = exp - 127
+    var micro = mant * 1000000 / 8388608
+    if (e >= 0) {
+        var k2 = 0
+        while (k2 < e) { micro = micro * 2; k2 = k2 + 1 }
+    } else {
+        var k3 = 0
+        while (k3 < 0 - e) { micro = micro / 2; k3 = k3 + 1 }
+    }
+    if (sign == 1) { micro = 0 - micro }
+    if (micro > 2000000000) { return 2000000000 }
+    if (micro < 0 - 2000000000) { return 0 - 2000000000 }
+    var outv: Int = micro as Int
+    return outv
+}
+
+// ── smoke de validação ──────────────────────────────────────────────────
+// Abre o GGUF, imprime arquitetura, dequantiza os primeiros valores de
+// token_embd — números plausíveis (|v| < ~500000 mili, mix de sinais)
+// provam parse + dequant.
+ggufBinSmoke(String path): String {
+    var m = kofGgufBinOpen(path)
+    if (m.errorCount > 0) {
+        return "ERR " + m.errorCode
+    }
+    var arch = ""
+    var nLayers = 0
+    var nHead = 0
+    var nKvHead = 0
+    var embd = 0
+    var vocab = 0
+    var i = 0
+    while (i < m.kv.size()) {
+        var kv = m.kv.get(i)
+        if (kv.key == "general.architecture") { arch = kv.strVal }
+        if (kv.key == "llama.block_count") { nLayers = kv.intVal }
+        if (kv.key == "llama.attention.head_count") { nHead = kv.intVal }
+        if (kv.key == "llama.attention.head_count_kv") { nKvHead = kv.intVal }
+        if (kv.key == "llama.embedding_length") { embd = kv.intVal }
+        if (kv.key == "llama.vocab_size") { vocab = kv.intVal }
+        i = i + 1
+    }
+    var report = arch + " layers=" + nLayers + " heads=" + nHead
+    report = report + " kvheads=" + nKvHead + " embd=" + embd + " vocab=" + vocab
+    report = report + " tensors=" + m.tensors.size() + " align=" + m.header.alignment
+    var emb = kofGgufQ4KDecodeTensor(path, m, "token_embd.weight", 8192)
+    var sum = 0
+    var absmax = 0
+    var neg = 0
+    i = 0
+    while (i < emb.length) {
+        var v = emb[i]
+        if (v < 0) {
+            neg = neg + 1
+            v = 0 - v
+        }
+        sum = sum + emb[i]
+        if (v > absmax) { absmax = v }
+        i = i + 1
+    }
+    report = report + " embd_sum=" + sum + " absmax=" + absmax + " neg=" + neg
+    if (absmax == 0 || absmax > 500000000 || neg == 0 || neg == emb.length) {
+        report = report + " DEQUANT-SUSPECT"
+    }
+    return report
+}
+
+// koflama — forward LLM 100% Kof puro sobre o parser GGUF binário
+// (koflama_gguf.kf). Renomeado de 162_llm_forward.kf; símbolos kofLm*.
+// TinyLlama-1.1B / LLaMA: embd=2048, 22 layers, 32 q-heads, 4 kv-heads,
+// head_dim=64, ffn=5632, rope_dims=64, vocab=32000.
+// Escalas fixed-point: pesos NANO (1e-9, Long[]), estados MICRO (1e-3 × 1e3).
+// matvec: acc Long = Σ W_nano × x_micro → /1e9 → MICRO.
+// RMSNorm: y = x_w / rms com tudo MICRO.
+// Q6_K v/down/output + Q4_K q/k/gate/up + F32 norms.
+
+record KofLmCfg(Int embd, Int layers, Int heads, Int kvHeads, Int headDim,
+               Int ffn, Int ropeDims, Int vocab, Int eps)
+
+record KofLmKv(Long[] k, Long[] v)
+
+// ── rmsnorm micro ───────────────────────────────────────────────────────
+kofLmRmsNorm(Long[] x, Long[] w, Int n, Int eps): Long[] {
+    var sq: Long = 0
+    var i = 0
+    while (i < n) {
+        sq = sq + x[i] * x[i]
+        i = i + 1
+    }
+    var mean = sq / n + eps
+    var rms = kofLmIsqrt(mean)
+    if (rms <= 0) { rms = 1 }
+    var y = new Long[n]
+    i = 0
+    while (i < n) {
+        y[i] = (x[i] * w[i] / rms)
+        i = i + 1
+    }
+    return y
+}
+
+// sqrt inteiro (Newton), Long
+kofLmIsqrt(Long v): Long {
+    if (v <= 0) { return 0 }
+    var r: Long = v
+    var q: Long = 0
+    if (v > 4294967296) { r = v / 65536 + 65536 } else { r = v + 2 }
+    var k = 0
+    while (k < 24) {
+        q = (r + v / r) / 2
+        if (q >= r) { break }
+        r = q
+        k = k + 1
+    }
+    return r
+}
+
+// ── matvec: W[N×K] nano × x[K] micro → y[N] micro ──────────────────────
+kofLmMatvec(Long[] W, Long[] x, Int nRows, Int kdim): Long[] {
+    var y = new Long[nRows]
+    var r = 0
+    while (r < nRows) {
+        var acc: Long = 0
+        var off = r * kdim
+        var c = 0
+        while (c < kdim) {
+            acc = acc + W[off + c] * x[c]
+            c = c + 1
+        }
+        y[r] = acc / 1000000000
+        r = r + 1
+    }
+    return y
+}
+
+// ── RoPE (rotary) — tabela cos/sin micro pré-computada por (pos, freqIdx)
+// ângulo = pos / (10000^(2i/ropeDims)); cos/sin em MICRO.
+kofLmRopeTable(Int pos, Int ropeDims): Long[] {
+    // retorna [cos0, sin0, cos1, sin1, ...] ropeDims/2 pares em MICRO
+    var half = ropeDims / 2
+    var tab = new Long[half * 2]
+    var i = 0
+    while (i < half) {
+        // freq = 10000^(-2i/ropeDims) → ângulo = pos * freq
+        var ang = kofLmAngle(pos, i, half)
+        tab[i * 2] = kofLmCos(ang)
+        tab[i * 2 + 1] = kofLmSin(ang)
+        i = i + 1
+    }
+    return tab
+}
+
+// ang = pos * 10000^(-2i/ropeDims) — em "mili-radianos"? Trabalhamos com
+// graus×1000 (decimiligraus) p/ as séries trigonométricas.
+kofLmAngle(Int pos, Int fi, Int half): Long {
+    // 10000^(-2i/64): log2 = -(2i/64)·log2(10000) ≈ -0.2083·i·... precomputar
+    // por potências: freq = 10000^(-fi/half). Implementação: exp2 fracionário.
+    var l2: Long = 33219  // log2(10000)×1000 ≈ 13.2877 → 13288
+    var expo: Long = (0 - (2 * fi) * l2) / (2 * half)   // ×1000
+    // ang_graus1000 = pos × 2^(expo/1000) × (180/π) × 1000
+    // 2^(e/1000): série — usamos pow2Fix
+    var pow2v = kofLmPow2Fix(expo)
+    // rad → decimiligraus: rad × 572958 (180/π×1000... 57.2958° = 1 rad → ×1000)
+    var ang: Long = pos * pow2v * 573 / 100
+    if (ang < 0) { ang = 0 - ang }
+    // reduzir a 360000 (360°×1000)
+    ang = ang % 360000
+    return ang
+}
+
+// 2^(e/1000) em MICRO (e Long)
+kofLmPow2Fix(Long e): Long {
+    // 2^(e/1000) = 2^int × 2^(frac/1000)
+    var inteiro = e / 1000
+    var frac = e % 1000
+    if (e < 0 && frac != 0) {
+        inteiro = inteiro - 1
+        frac = frac + 1000
+    }
+    var r: Long = 1000000
+    if (inteiro >= 0) {
+        var k = 0
+        while (k < inteiro) {
+            r = r * 2
+            k = k + 1
+        }
+    } else {
+        var k = 0
+        while (k < 0 - inteiro) {
+            r = r / 2
+            k = k + 1
+        }
+    }
+    // 2^(frac/1000): ln2×frac/1000 = 0.0006931×frac; exp série:
+    var t = frac * 6931 / 10000000   // t = frac×ln2/1000 em MICRO/1e3?
+    // exp(t) série: 1 + t + t²/2... (t pequeno: frac 0..999 → t ~ 0.693×frac/1000)
+    var tf: Long = frac * 693 / 100000    // t em MICRO (aprox ×1e-6)
+    var term: Long = 1000000
+    var sum: Long = 1000000
+    var k2 = 1
+    while (k2 < 8) {
+        term = term * tf / 1000000 / k2
+        sum = sum + term
+        k2 = k2 + 1
+    }
+    return r * sum / 1000000
+}
+
+// cos de ang em decimiligraus (×1000 graus) → MICRO, série de Taylor
+kofLmCos(Long ang): Long {
+    // reduzir para [-180000, 180000]
+    var a = ang % 360000
+    if (a < 0) { a = a + 360000 }
+    if (a > 180000) { a = 360000 - a }
+    // cos(180°-x) = -cos(x): a≤180000 ok
+    // quadrante: cos(90..180) = -cos(180-θ): manter direto na série com x rad
+    // x rad = a × π/180000 = a × 17453 / 10000000 (π=3.14159: π/180=0.017453)
+    var x = a * 17453 / 10000000   // rad ×1e6 (micro rad)
+    // cos(x) série (x em micro rad): term = x²; cos = 1 - x²/2 + x⁴/24 - ...
+    var x2 = x * x / 1000000       // x² em micro rad²
+    var sum: Long = 1000000
+    var term: Long = 1000000
+    var k = 1
+    while (k < 6) {
+        term = term * x2 / 1000000 / ((2 * k - 1) * (2 * k))
+        if (k % 2 == 1) { sum = sum - term } else { sum = sum + term }
+        k = k + 1
+    }
+    return sum
+}
+
+// sin de ang em decimiligraus → MICRO
+kofLmSin(Long ang): Long {
+    var a = ang % 360000
+    var sign = 1
+    if (a < 0) { a = a + 360000 }
+    if (a > 180000) { a = a - 360000 }
+    if (a < 0) { a = 0 - a; sign = 0 - 1 }
+    if (a > 90000) { a = 180000 - a }
+    var x = a * 17453 / 10000000   // micro rad
+    var x2 = x * x / 1000000
+    var sum: Long = x
+    var term: Long = x
+    var k = 1
+    while (k < 6) {
+        term = term * x2 / 1000000 / ((2 * k) * (2 * k + 1))
+        if (k % 2 == 1) { sum = sum - term } else { sum = sum + term }
+        k = k + 1
+    }
+    if (sign < 0) { sum = 0 - sum }
+    return sum
+}
+
+// aplicar RoPE em q/k (Long[] micro), head h, posição pos
+kofLmApplyRope(Long[] vec, Int vecOff, Int headDim, Int pos, Int ropeDims) {
+    var tab = kofLmRopeTable(pos, ropeDims)
+    var half = ropeDims / 2
+    var i = 0
+    while (i < half) {
+        var cosv = tab[i * 2]
+        var sinv = tab[i * 2 + 1]
+        var x0 = vec[vecOff + i]
+        var x1 = vec[vecOff + i + half]
+        vec[vecOff + i] = (x0 * cosv - x1 * sinv) / 1000000
+        vec[vecOff + i + half] = (x0 * sinv + x1 * cosv) / 1000000
+        i = i + 1
+    }
+}
+
+// ── sigmoid micro (para silu): sig(x)=1/(1+e^-t), t=x/1e6 ───────────────
+// E = e^|t| em MICRO via série: term_k = term_{k-1}×ax/(k×1e6), term0=1e6
+// x>0: sig = E/(E+1e6) · x<0: sig = 1e6/(1e6+E)
+kofLmSigmoid(Long x): Long {
+    var neg = 0
+    var ax = x
+    if (x < 0) { neg = 1; ax = 0 - x }
+    if (ax > 12000000) {
+        if (neg == 1) { return 0 }
+        return 1000000
+    }
+    var term: Long = 1000000
+    var E: Long = 1000000
+    var kk = 1
+    while (kk < 14) {
+        term = term * ax / 1000000 / kk
+        if (term == 0) { break }
+        E = E + term
+        kk = kk + 1
+    }
+    var sig: Long = 0
+    if (neg == 1) {
+        sig = 1000000000000 / (1000000 + E)
+    } else {
+        sig = E * 1000000 / (E + 1000000)
+    }
+    if (sig > 1000000) { sig = 1000000 }
+    return sig
+}
+
+// silu(g)*u micro: g*sig(g)/1e6 × u → /1e6
+kofLmSwiglu(Long[] g, Long[] u, Int n): Long[] {
+    var out = new Long[n]
+    var i = 0
+    while (i < n) {
+        var sig = kofLmSigmoid(g[i])
+        var act = g[i] * sig / 1000000
+        out[i] = act * u[i] / 1000000
+        i = i + 1
+    }
+    return out
+}
+
+// ── attention single/multi-token com KV cache ───────────────────────────
+// scores por q-head: q_h · k_pos / sqrt(headDim); softmax causal; out_h =
+// Σ p·v_pos(kv-group(h)). GQA: q head h usa kv head h/(heads/kvHeads).
+kofLmAttention(Long[] q, Long[] kc, Long[] vc, Int nPos, Int heads,
+              Int kvHeads, Int headDim): Long[] {
+    var embd = heads * headDim
+    var out = new Long[embd]
+    var group = heads / kvHeads
+    var scaleDiv = kofLmIsqrt(headDim * 1000000)
+    if (scaleDiv <= 0) { scaleDiv = 1 }
+    var h = 0
+    while (h < heads) {
+        var kvh = h / group
+        var qOff = h * headDim
+        var kvOff = kvh * headDim
+        // scores
+        var mx: Long = 0 - 900000000000
+        var scores = new Long[nPos]
+        var p = 0
+        while (p < nPos) {
+            var acc: Long = 0
+            var d = 0
+            while (d < headDim) {
+                acc = acc + q[qOff + d] * kc[p * (kvHeads * headDim) + kvOff + d]
+                d = d + 1
+            }
+            // q,k micro: produto micro²=1e-12 → /1e6 → micro×micro/1e6
+            var sc = acc / scaleDiv / 1000000
+            scores[p] = sc
+            if (sc > mx) { mx = sc }
+            p = p + 1
+        }
+        // softmax com exp micro
+        var sum: Long = 0
+        p = 0
+        while (p < nPos) {
+            var e = kofLmExpMicro(scores[p] - mx)
+            scores[p] = e
+            sum = sum + e
+            p = p + 1
+        }
+        if (sum <= 0) { sum = 1 }
+        // out_h = Σ p·v (v micro): acc 1e6×... /1e6
+        var oOff = h * headDim
+        p = 0
+        while (p < nPos) {
+            var wgt = scores[p] * 1000000 / sum
+            var d = 0
+            while (d < headDim) {
+                out[oOff + d] = out[oOff + d] + wgt * vc[p * (kvHeads * headDim) + kvOff + d] / 1000000
+                d = d + 1
+            }
+            p = p + 1
+        }
+        h = h + 1
+    }
+    return out
+}
+
+// e^((x)/1e6) em MICRO — x micro (diferença de scores, ≤0)
+kofLmExpMicro(Long x): Long {
+    if (x < 0 - 12000000) { return 0 }
+    var ax = 0 - x
+    var term: Long = 1000000
+    var sum: Long = 1000000
+    var kk = 1
+    while (kk < 14) {
+        term = term * ax / 1000000 / kk
+        if (term == 0) { break }
+        sum = sum + term
+        kk = kk + 1
+    }
+    return sum
+}
+
+// ── forward completo de 1 token (com cache) ─────────────────────────────
+// Retorna logits[vocab] micro.
+kofLmForward(String path, KofGgufBinModel m, KofLmCfg cfg, Int token, Int pos,
+            List<KofLmKv> kvCache): Long[] {
+    var xsN = kofGgufDecodeRowsN(path, m, "token_embd.weight", token, 1, cfg.embd)
+    // pesos decodificam em NANO; estados circulam em MICRO → /1000
+    var xs = new Long[cfg.embd]
+    var i = 0
+    while (i < cfg.embd) {
+        xs[i] = xsN[i] / 1000
+        i = i + 1
+    }
+    var normW = new Long[cfg.embd]
+    var l = 0
+    while (l < cfg.layers) {
+        var attnNorm = kofGgufF32DecodeRows(path, m, "blk." + l + ".attn_norm.weight", 0, 1, cfg.embd)
+        i = 0
+        while (i < cfg.embd) {
+            normW[i] = attnNorm[i]
+            i = i + 1
+        }
+        var h = kofLmRmsNorm(xs, normW, cfg.embd, cfg.eps)
+        // q/k/v
+        var qW = kofGgufDecodeRowsN(path, m, "blk." + l + ".attn_q.weight", 0, cfg.embd, cfg.embd)
+        var q = kofLmMatvec(qW, h, cfg.embd, cfg.embd)
+        var kW = kofGgufDecodeRowsN(path, m, "blk." + l + ".attn_k.weight", 0, cfg.kvHeads * cfg.headDim, cfg.embd)
+        var k = kofLmMatvec(kW, h, cfg.kvHeads * cfg.headDim, cfg.embd)
+        var vW = kofGgufDecodeRowsN(path, m, "blk." + l + ".attn_v.weight", 0, cfg.kvHeads * cfg.headDim, cfg.embd)
+        var v = kofLmMatvec(vW, h, cfg.kvHeads * cfg.headDim, cfg.embd)
+        // RoPE em q e k (pos atual)
+        var hd = 0
+        while (hd < cfg.heads) {
+            kofLmApplyRope(q, hd * cfg.headDim, cfg.headDim, pos, cfg.ropeDims)
+            hd = hd + 1
+        }
+        hd = 0
+        while (hd < cfg.kvHeads) {
+            kofLmApplyRope(k, hd * cfg.headDim, cfg.headDim, pos, cfg.ropeDims)
+            hd = hd + 1
+        }
+        // cache
+        var kvEnt2 = KofLmKv(k, v)
+        kvCache.add(kvEnt2)
+        // attention sobre 0..pos (só o próprio k/v quando pos=0)
+        var nPos = pos + 1
+        var kcache = new Long[nPos * cfg.kvHeads * cfg.headDim]
+        var vcache = new Long[nPos * cfg.kvHeads * cfg.headDim]
+        var pi = 0
+        while (pi < nPos) {
+            var kvEnt = kvCache.get(pi)
+            var ci = 0
+            while (ci < cfg.kvHeads * cfg.headDim) {
+                kcache[pi * (cfg.kvHeads * cfg.headDim) + ci] = kvEnt.k[ci]
+                vcache[pi * (cfg.kvHeads * cfg.headDim) + ci] = kvEnt.v[ci]
+                ci = ci + 1
+            }
+            pi = pi + 1
+        }
+        var attn = kofLmAttention(q, kcache, vcache, nPos, cfg.heads,
+                                 cfg.kvHeads, cfg.headDim)
+        // attn_output
+        var oW = kofGgufDecodeRowsN(path, m, "blk." + l + ".attn_output.weight", 0, cfg.embd, cfg.embd)
+        var attno = kofLmMatvec(oW, attn, cfg.embd, cfg.embd)
+        i = 0
+        while (i < cfg.embd) {
+            xs[i] = xs[i] + attno[i]
+            i = i + 1
+        }
+        // FFN
+        var ffnNorm = kofGgufF32DecodeRows(path, m, "blk." + l + ".ffn_norm.weight", 0, 1, cfg.embd)
+        i = 0
+        while (i < cfg.embd) {
+            normW[i] = ffnNorm[i]
+            i = i + 1
+        }
+        var h2 = kofLmRmsNorm(xs, normW, cfg.embd, cfg.eps)
+        var gW = kofGgufDecodeRowsN(path, m, "blk." + l + ".ffn_gate.weight", 0, cfg.ffn, cfg.embd)
+        var g = kofLmMatvec(gW, h2, cfg.ffn, cfg.embd)
+        var uW = kofGgufDecodeRowsN(path, m, "blk." + l + ".ffn_up.weight", 0, cfg.ffn, cfg.embd)
+        var u = kofLmMatvec(uW, h2, cfg.ffn, cfg.embd)
+        var act = u
+        var i2 = 0
+        while (i2 < cfg.embd) {
+            xs[i2] = xs[i2] + act[i2]
+            i2 = i2 + 1
+        }
+        l = l + 1
+    }
+    var outNorm = kofGgufF32DecodeRows(path, m, "output_norm.weight", 0, 1, cfg.embd)
+    i = 0
+    while (i < cfg.embd) {
+        normW[i] = outNorm[i]
+        i = i + 1
+    }
+    var hf = kofLmRmsNorm(xs, normW, cfg.embd, cfg.eps)
+    // lm_head: output.weight Q6_K (2048, 32000) — 32000 linhas de 2048
+    var lgW = kofGgufDecodeRowsN(path, m, "output.weight", 0, cfg.vocab, cfg.embd)
+    var logits = kofLmMatvec(lgW, hf, cfg.vocab, cfg.embd)
+    return logits
+}
+
+// argmax dos logits
+kofLmArgmax(Long[] logits, Int n): Int {
+    var best = 0
+    var i = 1
+    while (i < n) {
+        if (logits[i] > logits[best]) { best = i }
+        i = i + 1
+    }
+    return best
+}
+
+// ── smoke: forward 1 token + argmax ─────────────────────────────────────
+kofLmForwardSmoke(String path): String {
+    var m = kofGgufBinOpen(path)
+    if (m.errorCount > 0) {
+        return "ERR " + m.errorCode
+    }
+    var cfg = kofLmCfgFromKv(m)
+    var report = "cfg " + cfg.embd + "/" + cfg.layers + "/" + cfg.heads + "/" + cfg.kvHeads
+    report = report + " hd=" + cfg.headDim + " ffn=" + cfg.ffn + " vocab=" + cfg.vocab
+    var cache = listOf<KofLmKv>()
+    var t0 = now()
+    var logits = kofLmForward(path, m, cfg, 1, 0, cache)
+    var t1 = now()
+    var dt = t1 - t0
+    var best = kofLmArgmax(logits, cfg.vocab)
+    report = report + " tok1→" + best + " in=" + dt + "ms"
+    report = report + " lg[max]=" + logits[best] + " lg[0..3]=" + logits[0] + "," + logits[1] + "," + logits[2] + "," + logits[3]
+    return report
+}
+
+kofLmCfgFromKv(KofGgufBinModel m): KofLmCfg {
+    var embd = 0
+    var layers = 0
+    var heads = 0
+    var kvHeads = 0
+    var ffn = 0
+    var vocab = 0
+    var i = 0
+    while (i < m.kv.size()) {
+        var kv = m.kv.get(i)
+        if (kv.key == "llama.embedding_length") { embd = kv.intVal }
+        if (kv.key == "llama.block_count") { layers = kv.intVal }
+        if (kv.key == "llama.attention.head_count") { heads = kv.intVal }
+        if (kv.key == "llama.attention.head_count_kv") { kvHeads = kv.intVal }
+        if (kv.key == "llama.feed_forward_length") { ffn = kv.intVal }
+        if (kv.key == "llama.vocab_size") { vocab = kv.intVal }
+        i = i + 1
+    }
+    var keyLen = 64
+    var ropeDims = 64
+    // eps = 1e-5 unidade² → 1e7 micro² (mean de x² em micro²)
+    return KofLmCfg(embd, layers, heads, kvHeads, keyLen, ffn, ropeDims, vocab, 10000000)
 }
 
 WS_ROOT_E(): String { return "build/ws_e" }
