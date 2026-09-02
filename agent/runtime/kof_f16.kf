@@ -77,7 +77,7 @@ fn f16ToMicro(Int bits): Int {
 
 // f16 → NANO (1e-9): escala p/ pesos de matmul (d minúsculos precisos:
 // d 9.24e-6 → 9238 nano; produto d*s*q cabe em Int32)
-fn f16ToNano(Int bits): Int {
+fn f16ToNano(Int bits): Long {
     var u = bits % 65536
     if (u < 0) {
         u = u + 65536
@@ -86,23 +86,25 @@ fn f16ToNano(Int bits): Int {
     var v = u - signBit * 32768
     var exp = v / 1024
     var man = v % 1024
-    var nano = 0
+    // man/mant são Int: man×1e9 estoura Int (2^31) — calcular em Long
+    var manl: Long = man
+    var nano: Long = 0
     if (exp == 31) {
         nano = 2000000000
     } else if (exp == 0) {
-        nano = man * 1000000000 / 1024 / 16384
+        nano = manl * 1000000000 / 1024 / 16384
     } else {
-        var mant = 1024 + man
+        var mantl: Long = 1024 + man
         var e = exp - 15
         if (e >= 0) {
-            nano = mant * 1000000000 / 1024
+            nano = mantl * 1000000000 / 1024
             var k = 0
             while (k < e) {
                 nano = nano * 2
                 k = k + 1
             }
         } else {
-            nano = mant * 1000000000 / 1024
+            nano = mantl * 1000000000 / 1024
             var k = 0
             while (k < 0 - e) {
                 nano = nano / 2
