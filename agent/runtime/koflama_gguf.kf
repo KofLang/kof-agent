@@ -126,7 +126,7 @@ kofGgufBinOpen(String path): KofGgufBinModel {
     var f = File(path)
     if (!f.exists() || !f.isFile()) {
         return KofGgufBinModel(KofGgufBinHeader(0, 0, 0, 0), listOf<KofGgufBinKv>(),
-            listOf<KofGgufBinTensor>(), 1, "E_FILE")
+            listOf<KofGgufBinTensor>(), 1, "E_FILE", 0)
     }
     var head = f.readRange(0, 24)
     if (head == null || head.length < 24) {
