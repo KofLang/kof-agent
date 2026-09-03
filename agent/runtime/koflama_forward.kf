@@ -81,11 +81,85 @@ kofLmIsqrt(Long v): Long {
 // y[r] = acc/div (os restos do split CPU estão dentro do acc — exatidão ≥ CPU).
 // Fallback CPU: split 4-acumuladores (A/B/C/D) + recomposição com remT.
 kofLmMatvec(Long[] W, Long[] x, Int nRows, Int kdim, Long div): Long[] {
+    return kofLmMatvecIdOld(0 - 1, W, x, nRows, kdim, div)
+}
+
+// wId >= 0: W residente (mvPutW na 1a vez via flag global de warm? não — o warm
+// do entry já fez mvPutW; aqui só mvRun). wId < 0: FASE B dispatch → CPU.
+// wId >= 0: residente (o W é ignorado — decode lazy só no fallback CPU).
+// wId < 0: decode-then-CPU (comportamento antigo do matvec).
+kofLmMatvecId(Int wId, String path, KofGgufBinModel gg, String tensor,
+              Long[] x, Int nRows, Int kdim, Long div): Long[] {
     var y = new Long[nRows]
+    // 0) residente rápido: sem decode, sem cópia de W
+    if (wId >= 0) {
+        var xRes = new Long[kdim]
+        var cRes = 0
+        while (cRes < kdim) {
+            xRes[cRes] = x[cRes]
+            cRes = cRes + 1
+        }
+        var outRes = new Long[nRows]
+        var rcRes: Int = gpu.mvRun(wId, xRes, outRes, nRows, kdim)
+        if (rcRes == 0) {
+            var rg0 = 0
+            while (rg0 < nRows) {
+                y[rg0] = outRes[rg0] / div
+                rg0 = rg0 + 1
+            }
+            return y
+        }
+        // fallback: decodifica aqui e cai no CPU abaixo
+        var W = kofGgufDecodeRowsN(path, gg, tensor, 0, nRows, kdim)
+        if (wId % 7 == 6) {
+            var iwz = 0
+            while (iwz < nRows * kdim) {
+                W[iwz] = W[iwz] / 1000
+                iwz = iwz + 1
+            }
+        }
+        return kofLmMatvec(W, x, nRows, kdim, div)
+    }
+    var W2 = kofGgufDecodeRowsN(path, gg, tensor, 0, nRows, kdim)
+    if (wId <= 0 - 2000) {
+        // ids negativos grandes (< -2000): down com W cru → divide p/ micro
+        var iwz2 = 0
+        while (iwz2 < nRows * kdim) {
+            W2[iwz2] = W2[iwz2] / 1000
+            iwz2 = iwz2 + 1
+        }
+    }
+    return kofLmMatvec(W2, x, nRows, kdim, div)
+}
+
+kofLmMatvecIdOld(Int wId, Long[] W, Long[] x, Int nRows, Int kdim, Long div): Long[] {
+    var y = new Long[nRows]
+    // 1) residente (wId >= 0): W já no device pelo warm; mvRun faz o init
+    // da lib64 internamente (independe do gpu.available() da lib32)
+    if (wId >= 0) {
+        var xCol = new Long[kdim]
+        var c0 = 0
+        while (c0 < kdim) {
+            xCol[c0] = x[c0]
+            c0 = c0 + 1
+        }
+        var out = new Long[nRows]
+        var rc: Int = gpu.mvRun(wId, xCol, out, nRows, kdim)
+        if (rc == 0) {
+            var rg = 0
+            while (rg < nRows) {
+                y[rg] = out[rg] / div
+                rg = rg + 1
+            }
+            return y
+        }
+        // rc != 0 (sem GPU/SPV): cai no CPU abaixo — mas o W local pode ser o
+        // cru (down) enquanto o residente era o dividido. O caller (forward)
+        // só usa wId p/ o down (dW cru) e os demais (iguais ao residente).
+    }
+    // 2) dispatch FASE B (gpu.available() da lib32 + set_shape/load_w)
     var gpuOk: Bool = gpu.available()
     if (gpuOk) {
-        // FASE C: API residente — W vai ao buffer mapeado uma vez por shape
-        // (set_shape re-aloca só quando cresce; a GPU lê via PCIe)
         var rcShape: Int = gpu.mvSetShape(nRows, kdim)
         if (rcShape == 0) {
             var rcW: Int = gpu.mvLoadW(W, nRows, kdim)
@@ -108,7 +182,6 @@ kofLmMatvec(Long[] W, Long[] x, Int nRows, Int kdim, Long div): Long[] {
                 }
             }
         }
-        // fallback FASE B: dispatch matmul N×1 (W copiado por call)
         var xCol2 = new Long[kdim]
         var c1 = 0
         while (c1 < kdim) {
@@ -126,6 +199,7 @@ kofLmMatvec(Long[] W, Long[] x, Int nRows, Int kdim, Long div): Long[] {
             return y
         }
     }
+    // 3) CPU split (sempre correto — W local cru OU dividido conforme div)
     var r = 0
     while (r < nRows) {
         var off = r * kdim
@@ -435,6 +509,50 @@ kofLmExpMicro(Long x): Long {
     return 1000000000000 / E
 }
 
+// ── M36 FASE C2b: warm — sobe TODOS os W residentes (uma vez no boot) ──
+// ids: layer l: q=7l, k=7l+1, v=7l+2, o=7l+3, gate=7l+4, up=7l+5, down=7l+6;
+// lm_head=190. down já sobe DIVIDIDO por 1000 (contrato do forward).
+// Retorna 0 ok / != 0 (nº do primeiro id que falhou + 1).
+kofLmWarmWeights(String path, KofGgufBinModel m, KofLmCfg cfg): Int {
+    // NÃO usa gpu.available() (gate da lib32 — falha independente):
+    // o mvPutW abaixo faz o init da lib64 (mv64_ready) internamente.
+    var l = 0
+    while (l < cfg.layers) {
+        var qW = kofGgufDecodeRowsN(path, m, "blk." + l + ".attn_q.weight", 0, cfg.embd, cfg.embd)
+        var rcq: Int = gpu.mvPutW(7 * l, qW, cfg.embd, cfg.embd)
+        if (rcq != 0) { return 7 * l + 1 }
+        var kW = kofGgufDecodeRowsN(path, m, "blk." + l + ".attn_k.weight", 0, cfg.kvHeads * cfg.headDim, cfg.embd)
+        var rck: Int = gpu.mvPutW(7 * l + 1, kW, cfg.kvHeads * cfg.headDim, cfg.embd)
+        if (rck != 0) { return 7 * l + 2 }
+        var vW = kofGgufDecodeRowsN(path, m, "blk." + l + ".attn_v.weight", 0, cfg.kvHeads * cfg.headDim, cfg.embd)
+        var rcv: Int = gpu.mvPutW(7 * l + 2, vW, cfg.kvHeads * cfg.headDim, cfg.embd)
+        if (rcv != 0) { return 7 * l + 3 }
+        var oW = kofGgufDecodeRowsN(path, m, "blk." + l + ".attn_output.weight", 0, cfg.embd, cfg.embd)
+        var rco: Int = gpu.mvPutW(7 * l + 3, oW, cfg.embd, cfg.embd)
+        if (rco != 0) { return 7 * l + 4 }
+        var gW = kofGgufDecodeRowsN(path, m, "blk." + l + ".ffn_gate.weight", 0, cfg.ffn, cfg.embd)
+        var rcg: Int = gpu.mvPutW(7 * l + 4, gW, cfg.ffn, cfg.embd)
+        if (rcg != 0) { return 7 * l + 5 }
+        var uW = kofGgufDecodeRowsN(path, m, "blk." + l + ".ffn_up.weight", 0, cfg.ffn, cfg.embd)
+        var rcu: Int = gpu.mvPutW(7 * l + 5, uW, cfg.ffn, cfg.embd)
+        if (rcu != 0) { return 7 * l + 6 }
+        var dW = kofGgufDecodeRowsN(path, m, "blk." + l + ".ffn_down.weight", 0, cfg.embd, cfg.ffn)
+        var iw = 0
+        while (iw < cfg.embd * cfg.ffn) {
+            dW[iw] = dW[iw] / 1000
+            iw = iw + 1
+        }
+        var rcd: Int = gpu.mvPutW(7 * l + 6, dW, cfg.embd, cfg.ffn)
+        if (rcd != 0) { return 7 * l + 7 }
+        println("warm L" + l + " ok")
+        l = l + 1
+    }
+    var lgW = kofGgufDecodeRowsN(path, m, "output.weight", 0, cfg.vocab, cfg.embd)
+    var rclm: Int = gpu.mvPutW(190, lgW, cfg.vocab, cfg.embd)
+    if (rclm != 0) { return 191 }
+    return 0
+}
+
 // ── forward completo de 1 token (com cache) ─────────────────────────────
 // Retorna logits[vocab] micro.
 kofLmForward(String path, KofGgufBinModel m, KofLmCfg cfg, Int token, Int pos,
@@ -454,12 +572,9 @@ kofLmForward(String path, KofGgufBinModel m, KofLmCfg cfg, Int token, Int pos,
         }
         var h = kofLmRmsNorm(xs, normW, cfg.embd, cfg.eps)
         // q/k/v
-        var qW = kofGgufDecodeRowsN(path, m, "blk." + l + ".attn_q.weight", 0, cfg.embd, cfg.embd)
-        var q = kofLmMatvec(qW, h, cfg.embd, cfg.embd, 1000000000)
-        var kW = kofGgufDecodeRowsN(path, m, "blk." + l + ".attn_k.weight", 0, cfg.kvHeads * cfg.headDim, cfg.embd)
-        var k = kofLmMatvec(kW, h, cfg.kvHeads * cfg.headDim, cfg.embd, 1000000000)
-        var vW = kofGgufDecodeRowsN(path, m, "blk." + l + ".attn_v.weight", 0, cfg.kvHeads * cfg.headDim, cfg.embd)
-        var v = kofLmMatvec(vW, h, cfg.kvHeads * cfg.headDim, cfg.embd, 1000000000)
+        var q = kofLmMatvecId(7 * l, path, m, "blk." + l + ".attn_q.weight", h, cfg.embd, cfg.embd, 1000000000)
+        var k = kofLmMatvecId(7 * l + 1, path, m, "blk." + l + ".attn_k.weight", h, cfg.kvHeads * cfg.headDim, cfg.embd, 1000000000)
+        var v = kofLmMatvecId(7 * l + 2, path, m, "blk." + l + ".attn_v.weight", h, cfg.kvHeads * cfg.headDim, cfg.embd, 1000000000)
         // RoPE em q e k (pos atual)
         var hd = 0
         while (hd < cfg.heads) {
@@ -496,8 +611,7 @@ kofLmForward(String path, KofGgufBinModel m, KofLmCfg cfg, Int token, Int pos,
         var attn = kofLmAttention(q, kcache, vcache, nPos, cfg.heads,
                                  cfg.kvHeads, cfg.headDim)
         // attn_output
-        var oW = kofGgufDecodeRowsN(path, m, "blk." + l + ".attn_output.weight", 0, cfg.embd, cfg.embd)
-        var attno = kofLmMatvec(oW, attn, cfg.embd, cfg.embd, 1000000000)
+        var attno = kofLmMatvecId(7 * l + 3, path, m, "blk." + l + ".attn_output.weight", attn, cfg.embd, cfg.embd, 1000000000)
         i = 0
         while (i < cfg.embd) {
             xs[i] = xs[i] + attno[i]
@@ -511,20 +625,14 @@ kofLmForward(String path, KofGgufBinModel m, KofLmCfg cfg, Int token, Int pos,
             i = i + 1
         }
         var h2 = kofLmRmsNorm(xs, normW, cfg.embd, cfg.eps)
-        var gW = kofGgufDecodeRowsN(path, m, "blk." + l + ".ffn_gate.weight", 0, cfg.ffn, cfg.embd)
-        var g = kofLmMatvec(gW, h2, cfg.ffn, cfg.embd, 1000000000)
-        var uW = kofGgufDecodeRowsN(path, m, "blk." + l + ".ffn_up.weight", 0, cfg.ffn, cfg.embd)
-        var u = kofLmMatvec(uW, h2, cfg.ffn, cfg.embd, 1000000000)
+        var g = kofLmMatvecId(7 * l + 4, path, m, "blk." + l + ".ffn_gate.weight", h2, cfg.ffn, cfg.embd, 1000000000)
+        var u = kofLmMatvecId(7 * l + 5, path, m, "blk." + l + ".ffn_up.weight", h2, cfg.ffn, cfg.embd, 1000000000)
         var act = kofLmSwiglu(g, u, cfg.ffn)
-        var dW = kofGgufDecodeRowsN(path, m, "blk." + l + ".ffn_down.weight", 0, cfg.embd, cfg.ffn)
         // W em MICRO (w_n/1000) × act NANO: acc = w×act real ×1e15;
-        // d NANO = acc/1e6 (exato p/ o cancelamento do outlier)
-        var iw = 0
-        while (iw < cfg.embd * cfg.ffn) {
-            dW[iw] = dW[iw] / 1000
-            iw = iw + 1
-        }
-        var d = kofLmMatvec(dW, act, cfg.embd, cfg.ffn, 1000000)
+        // d NANO = acc/1e6 (exato p/ o cancelamento do outlier).
+        // Residente: o warm já subiu o dW DIVIDIDO (mvRun ignora o local).
+        // O /1000 local abaixo serve so p/ o fallback CPU (split assume micro).
+        var d = kofLmMatvecId(7 * l + 6, path, m, "blk." + l + ".ffn_down.weight", act, cfg.embd, cfg.ffn, 1000000)
         var i2 = 0
         while (i2 < cfg.embd) {
             xs[i2] = xs[i2] + d[i2]
@@ -540,8 +648,7 @@ kofLmForward(String path, KofGgufBinModel m, KofLmCfg cfg, Int token, Int pos,
     }
     var hf = kofLmRmsNorm(xs, normW, cfg.embd, cfg.eps)
     // lm_head: output.weight Q6_K (2048, 32000) — 32000 linhas de 2048
-    var lgW = kofGgufDecodeRowsN(path, m, "output.weight", 0, cfg.vocab, cfg.embd)
-    var logits = kofLmMatvec(lgW, hf, cfg.vocab, cfg.embd, 1000000000000)
+    var logits = kofLmMatvecId(190, path, m, "output.weight", hf, cfg.vocab, cfg.embd, 1000000000000)
     return logits
 }
 

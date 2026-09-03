@@ -1,0 +1,125 @@
+// M36 FASE C2b — estresse do caminho residente em Kof puro.
+// Reproduz a sequência do forward koflama: mvPutW de 8 shapes (22 "layers"
+// simuladas) e depois mvRun alternado sequencial por 2 "tokens".
+// Cada y[0..3] é conferido contra o dot CPU (o split funcional do matvec).
+// Sai com "STRESS FAIL id=..." no primeiro desvio; "STRESS OK" se tudo bater.
+
+lcg(Int seed): Long {
+    // determinístico, evita rand nativo
+    var s: Long = seed
+    s = s * 6364136223846793005 + 1442695040888963407
+    return s / 65536 % 2000000 - 1000000
+}
+
+fillW(Long[] w, Int m, Int k, Int seed): Int {
+    var s: Long = seed
+    var i = 0
+    while (i < m * k) {
+        s = s * 1103515245 + 12345
+        w[i] = (s / 65536) % 2000000 - 1000000
+        i = i + 1
+    }
+    return 0
+}
+
+fillX(Long[] x, Int k, Int seed): Int {
+    var s: Long = seed
+    var j = 0
+    while (j < k) {
+        s = s * 1103515245 + 12345
+        x[j] = (s / 65536) % 4000000 - 2000000
+        j = j + 1
+    }
+    return 0
+}
+
+// gold do y[r] = Σ W[r*k+c]*x[c] — dot CPU simples (64-bit, valores pequenos
+// o bastante para não estourar: |w|<1e6, |x|<2e6, k≤32000 → |acc|<6.4e16 ✓)
+goldRow(Long[] w, Long[] x, Int k, Int r): Long {
+    var acc: Long = 0
+    var c = 0
+    while (c < k) {
+        acc = acc + w[r * k + c] * x[c]
+        c = c + 1
+    }
+    return acc
+}
+
+fn main() {
+    // shapes reais do koflama por id 7l+i (m,k): simula 22 layers × 7 Ws
+    // custo: 22×7 buffers ~ 3.4GB de RAM — OK na máquina
+    var layers = 4
+    var ids = layers * 7
+    // shapes: q(2048,2048) k(512,2048) v(512,2048) o(2048,2048) g(5632,2048) u(5632,2048) d(2048,5632)
+    var m0 = 2048
+    var m1 = 512
+    var m2 = 5632
+    var k0 = 2048
+    var k1 = 5632
+
+    // warm: put de todos os ids
+    var l = 0
+    while (l < layers) {
+        var i = 0
+        while (i < 7) {
+            var m = m0
+            var k = k0
+            if (i == 1 || i == 2) { m = m1 }
+            if (i == 4 || i == 5) { m = m2 }
+            if (i == 6) { k = k1 }
+            var w = new Long[m * k]
+            fillW(w, m, k, 1000 + 7 * l + i)
+            var rc: Int = gpu.mvPutW(7 * l + i, w, m, k)
+            if (rc != 0) {
+                println("STRESS FAIL put l=" + l + " i=" + i + " rc=" + rc)
+                return
+            }
+            i = i + 1
+        }
+        println("putL" + l + " ok")
+        l = l + 1
+    }
+    println("warm ok")
+
+    // 2 tokens × layers × 7 matvecs alternados, checando y[0] e y[1]
+    var tok = 0
+    var checked = 0
+    var fails = 0
+    while (tok < 2) {
+        l = 0
+        while (l < layers) {
+            var i = 0
+            while (i < 7) {
+                var m = m0
+                var k = k0
+                if (i == 1 || i == 2) { m = m1 }
+                if (i == 4 || i == 5) { m = m2 }
+                if (i == 6) { k = k1 }
+                var w = new Long[m * k]
+                fillW(w, m, k, 1000 + 7 * l + i)
+                var x = new Long[k]
+                fillX(x, k, 777 + 7 * l + i + 1000 * tok)
+                var y = new Long[m]
+                var rc: Int = gpu.mvRun(7 * l + i, x, y, m, k)
+                if (rc != 0) {
+                    println("STRESS FAIL run l=" + l + " i=" + i + " rc=" + rc)
+                    return
+                }
+                var g0 = goldRow(w, x, k, 0)
+                var g1 = goldRow(w, x, k, 1)
+                if (y[0] != g0 || y[1] != g1) {
+                    println("STRESS FAIL id=" + (7 * l + i) + " tok=" + tok +
+                            " y0=" + y[0] + " g0=" + g0 + " y1=" + y[1] + " g1=" + g1)
+                    fails = fails + 1
+                    if (fails > 3) { return }
+                }
+                checked = checked + 1
+                i = i + 1
+            }
+            l = l + 1
+        }
+        println("token" + tok + " ok")
+        tok = tok + 1
+    }
+    println("STRESS OK checked=" + checked)
+}
