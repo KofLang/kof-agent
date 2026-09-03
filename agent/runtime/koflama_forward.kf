@@ -24,7 +24,10 @@ kofLmRmsNorm(Long[] x, Long[] w, Int n, Long eps): Long[] {
         var acc: Long = 0
         var ce = 0
         while (ce < 8 && i < n) {
-            var m = x[i] / 1000
+            // m = x/1000 ARREDONDADO (não trunc): trunc p/ zero tem bias
+            // sistemático −|x| no sq (≈2% rel) que amplifica pela rede.
+            var m = (x[i] + 500) / 1000
+            if (x[i] < 0) { m = (x[i] - 500) / 1000 }
             acc = acc + m * m
             i = i + 1
             ce = ce + 1
@@ -66,34 +69,46 @@ kofLmIsqrt(Long v): Long {
     return r
 }
 
-// ── matvec: W[N×K] nano × x[K] (nano ou micro) → y[N] nano/micro ───────
-// termo nano×nano ~ 1e7×1e9 = 1e16; CHUNK 32 → acc ~ 3e18 seguro.
-// div = 1e9 (x nano → y nano) ou 1e6 (x micro → y nano) ou 1e12
-// (x nano → y micro, lm_head). resíduo acumulado entre chunks.
+// ── matvec: W[N×K] nano × x[K] nano → y[N] (nano ou micro) ─────────────
+// Produto W×x chega a 3.1e9×3e9 = 9.3e18 > Long.MAX (9.22e18) — estoura
+// mesmo por termo (bug k[174]: diff = 2^64/1e9). Split exato:
+// W = Wh×1e3 + Wl; x = xh×1e6 + xl →
+// W×x = A×1e9 + B×1e3 + C×1e6 + D com A=Σ Wh×xh (≤8e14), B=Σ Wh×xl
+// (≤6.3e15), C=Σ Wl×xh (≤4e11), D=Σ Wl×xl (≤5.6e12) — sem overflow.
+// div: 1e9 (y nano) · 1e6 (ffn_down, W pré-/1000) · 1e12 (lm_head, micro).
 kofLmMatvec(Long[] W, Long[] x, Int nRows, Int kdim, Long div): Long[] {
     var y = new Long[nRows]
     var r = 0
     while (r < nRows) {
         var off = r * kdim
-        var total: Long = 0
-        var rem: Long = 0
+        var accA: Long = 0
+        var accB: Long = 0
+        var accC: Long = 0
+        var accD: Long = 0
         var c = 0
         while (c < kdim) {
-            var acc: Long = 0
-            var ce = 0
-            while (ce < 32 && c < kdim) {
-                acc = acc + W[off + c] * x[c]
-                c = c + 1
-                ce = ce + 1
-            }
-            total = total + acc / div
-            rem = rem + acc % div
-            if (rem > div || rem < 0 - div) {
-                total = total + rem / div
-                rem = rem % div
-            }
+            var wv = W[off + c]
+            var xv = x[c]
+            var wh = wv / 1000
+            var wl = wv % 1000
+            var xh = xv / 1000000
+            var xl = xv % 1000000
+            accA = accA + wh * xh
+            accB = accB + wh * xl
+            accC = accC + wl * xh
+            accD = accD + wl * xl
+            c = c + 1
         }
-        y[r] = total + rem / div
+        if (div == 1000000000) {
+            var remT = (accB % 1000000) * 1000 + (accC % 1000) * 1000000 + accD
+            y[r] = accA + accB / 1000000 + accC / 1000 + remT / 1000000000
+        } else if (div == 1000000) {
+            var remT = (accB % 1000) * 1000000 + accD
+            y[r] = accA * 1000 + accB / 1000 + accC + remT / 1000000
+        } else {
+            var remT = (accA % 1000) * 1000000000 + (accB % 1000000000) * 1000 + (accC % 1000000) * 1000000 + accD
+            y[r] = accA / 1000 + accB / 1000000000 + accC / 1000000 + remT / 1000000000000
+        }
         r = r + 1
     }
     return y
@@ -300,10 +315,14 @@ kofLmAttention(Long[] q, Long[] kc, Long[] vc, Int nPos, Int heads,
         var scores = new Long[nPos]
         var p = 0
         while (p < nPos) {
-            // dot exato por split: q_n = q_hi×1e6 + q_lo (q_hi=milli,
-            // q_lo=residual nano); idem k. acc = Σ [qh×kh×1e12 +
-            // (qh×kl + ql×kh)×1e6 + ql×kl] = (q·k real)×1e18.
-            var acc: Long = 0
+            // dot exato por split: q_n = qh×1e6 + ql (qh=milli), idem k.
+            // q·k(nano²) = accHi×1e12 + accMid×1e6 + accLo — acumuladores
+            // separados (o acc combinado estoura p/ q·k real > 9: head 64d).
+            // sc micro = accHi×1000/scaleDiv + accMid/(scaleDiv×1000)
+            //          + accLo/(scaleDiv×1e9), scaleDiv = isqrt(hd×1e6).
+            var accHi: Long = 0
+            var accMid: Long = 0
+            var accLo: Long = 0
             var d = 0
             while (d < headDim) {
                 var qv = q[qOff + d]
@@ -312,13 +331,12 @@ kofLmAttention(Long[] q, Long[] kc, Long[] vc, Int nPos, Int heads,
                 var ql = qv % 1000000
                 var kh = kv / 1000000
                 var kl = kv % 1000000
-                acc = acc + (qh * kh) * 1000000000000
-                acc = acc + (qh * kl + ql * kh) * 1000000
-                acc = acc + ql * kl
+                accHi = accHi + qh * kh
+                accMid = accMid + qh * kl + ql * kh
+                accLo = accLo + ql * kl
                 d = d + 1
             }
-            // acc = q·k (nano²); sc MICRO = q·k/sqrt(hd) ×1e6
-            var sc = acc / scaleDiv / 1000000000
+            var sc = accHi * 1000 / scaleDiv + accMid / (scaleDiv * 1000) + accLo / (scaleDiv * 1000000000)
             scores[p] = sc
             if (sc > mx) { mx = sc }
             p = p + 1
