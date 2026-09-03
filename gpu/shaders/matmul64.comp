@@ -1,0 +1,51 @@
+#version 450
+#extension GL_EXT_shader_explicit_arithmetic_types_int64 : require
+// M36 — matmul int64: C[M×N] = A[M×K] × B[K×N] com acumulador int64_t.
+// Ponto fixo NANO×NANO do koflama: produto unitário até 9.3e18 (estoura
+// o int32 do matmul.comp M31 e o próprio int32 do buffer) — aqui tudo é
+// int64_t/ivec2, entrada e saída em pares (hi, lo) empacotados como ivec2:
+// valor = hi×2^32 + lo (lo sem sinal implícito: usamos split hi=|v|/2^32
+// com sinal separado? NÃO — convenção simples: v = hi×2^32 + lo, com lo
+// em [-2^31, 2^31) assinado e hi corrigido: hi = v >> 32, lo = v & 0xffffffff
+// (em GLSL: hi = v >> 32 ARITH, lo = int(v & 0x7fffffff) - ... simplificado
+// por unpack Lo/Hi helpers abaixo).
+// Entrada: A e B como ivec2 (hi, lo); saída C ivec2 (hi, lo).
+// Dispatch: local 16×16; push: M, N, K.
+
+layout(local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
+
+layout(set = 0, binding = 0) readonly buffer BufA { ivec2 a[]; };
+layout(set = 0, binding = 1) readonly buffer BufB { ivec2 b[]; };
+layout(set = 0, binding = 2) writeonly buffer BufC { ivec2 c[]; };
+
+layout(push_constant) uniform Push {
+    int M;
+    int N;
+    int K;
+} pc;
+
+// ivec2(x) direto: hi = x >> 32 (aritmético), lo = baixo 32 bits como int.
+// Convenção de memória: long[] Java é little-endian (bytes 0-3 = low half).
+// ivec2 componente .x fica nos bytes 0-3 do elemento → .x = lo, .y = hi.
+ivec2 pack64(int64_t v) {
+    int hi = int(v >> int64_t(32));
+    int lo = int(v & int64_t(0xfffffffful));
+    return ivec2(lo, hi);
+}
+
+int64_t unpack64(ivec2 p) {
+    return (int64_t(p.y) << int64_t(32)) | (int64_t(p.x) & int64_t(0xfffffffful));
+}
+
+void main() {
+    uint gx = gl_GlobalInvocationID.x;
+    uint gy = gl_GlobalInvocationID.y;
+    if (gx >= uint(pc.N) || gy >= uint(pc.M)) {
+        return;
+    }
+    int64_t acc = 0;
+    for (int k = 0; k < pc.K; k++) {
+        acc += unpack64(a[int(gy) * pc.K + k]) * unpack64(b[k * pc.N + int(gx)]);
+    }
+    c[int(gy) * pc.N + int(gx)] = pack64(acc);
+}

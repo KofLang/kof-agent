@@ -76,8 +76,31 @@ kofLmIsqrt(Long v): Long {
 // W×x = A×1e9 + B×1e3 + C×1e6 + D com A=Σ Wh×xh (≤8e14), B=Σ Wh×xl
 // (≤6.3e15), C=Σ Wl×xh (≤4e11), D=Σ Wl×xl (≤5.6e12) — sem overflow.
 // div: 1e9 (y nano) · 1e6 (ffn_down, W pré-/1000) · 1e12 (lm_head, micro).
+// M36 FASE B: GPU path — dispatchMatmul64 calcula acc TOTAL exato (produto
+// unitário nano×micro ~3.6e14, acc ~7e17 < 9.22e18 = Long.MAX ✓ sem split);
+// y[r] = acc/div (os restos do split CPU estão dentro do acc — exatidão ≥ CPU).
+// Fallback CPU: split 4-acumuladores (A/B/C/D) + recomposição com remT.
 kofLmMatvec(Long[] W, Long[] x, Int nRows, Int kdim, Long div): Long[] {
     var y = new Long[nRows]
+    var gpuOk: Bool = gpu.available()
+    if (gpuOk) {
+        var xCol = new Long[kdim]
+        var c0 = 0
+        while (c0 < kdim) {
+            xCol[c0] = x[c0]
+            c0 = c0 + 1
+        }
+        var out = new Long[nRows]
+        var rc: Int = gpu.dispatchMatmul64(W, xCol, out, nRows, 1, kdim)
+        if (rc == 0) {
+            var rg = 0
+            while (rg < nRows) {
+                y[rg] = out[rg] / div
+                rg = rg + 1
+            }
+            return y
+        }
+    }
     var r = 0
     while (r < nRows) {
         var off = r * kdim
