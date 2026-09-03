@@ -1,0 +1,46 @@
+#version 450
+#extension GL_EXT_shader_explicit_arithmetic_types_int64 : require
+// M36 FASE C - matvec64: y[M] = W[M x K] x x[K], W residente (big buffer
+// persistent-mapped, binding 0), x/y em buffers pequenos.
+// Um thread por row (v1 pragmatica: M threads em paralelo, loop K).
+// Ponto fixo NANO do koflama: produto ~3.6e14, acc ~7e17 < int64 max.
+
+layout(local_size_x = 64, local_size_y = 1, local_size_z = 1) in;
+// M+1 workgroups: wg 0..M-1 = 1 row cada, 64 threads strided + shared reduce
+
+layout(set = 0, binding = 0) readonly buffer BufW { int64_t w[]; };
+layout(set = 0, binding = 1) readonly buffer BufX { int64_t x[]; };
+layout(set = 0, binding = 2) writeonly buffer BufY { int64_t y[]; };
+
+layout(push_constant) uniform Push {
+    int m;  // rows de W
+    int k;  // cols de W
+} pc;
+
+shared int64_t red[64];
+
+void main() {
+    uint row = gl_WorkGroupID.x;
+    uint tid = gl_LocalInvocationID.x;
+    if (row >= uint(pc.m)) {
+        return;
+    }
+    uint off = row * uint(pc.k);
+    // cada thread soma k/64 termos (stride 64)
+    int64_t part = int64_t(0);
+    for (uint c = tid; c < uint(pc.k); c += 64u) {
+        part += w[off + c] * x[c];
+    }
+    // tree reduce em shared
+    red[tid] = part;
+    barrier();
+    for (uint s = 32u; s > 0u; s >>= 1u) {
+        if (tid < s) {
+            red[tid] += red[tid + s];
+        }
+        barrier();
+    }
+    if (tid == 0u) {
+        y[row] = red[0];
+    }
+}

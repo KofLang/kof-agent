@@ -84,19 +84,44 @@ kofLmMatvec(Long[] W, Long[] x, Int nRows, Int kdim, Long div): Long[] {
     var y = new Long[nRows]
     var gpuOk: Bool = gpu.available()
     if (gpuOk) {
-        var xCol = new Long[kdim]
-        var c0 = 0
-        while (c0 < kdim) {
-            xCol[c0] = x[c0]
-            c0 = c0 + 1
+        // FASE C: API residente — W vai ao buffer mapeado uma vez por shape
+        // (set_shape re-aloca só quando cresce; a GPU lê via PCIe)
+        var rcShape: Int = gpu.mvSetShape(nRows, kdim)
+        if (rcShape == 0) {
+            var rcW: Int = gpu.mvLoadW(W, nRows, kdim)
+            if (rcW == 0) {
+                var xCol = new Long[kdim]
+                var c0 = 0
+                while (c0 < kdim) {
+                    xCol[c0] = x[c0]
+                    c0 = c0 + 1
+                }
+                var out = new Long[nRows]
+                var rc: Int = gpu.mvMatvec(xCol, out, nRows, kdim)
+                if (rc == 0) {
+                    var rg = 0
+                    while (rg < nRows) {
+                        y[rg] = out[rg] / div
+                        rg = rg + 1
+                    }
+                    return y
+                }
+            }
         }
-        var out = new Long[nRows]
-        var rc: Int = gpu.dispatchMatmul64(W, xCol, out, nRows, 1, kdim)
-        if (rc == 0) {
-            var rg = 0
-            while (rg < nRows) {
-                y[rg] = out[rg] / div
-                rg = rg + 1
+        // fallback FASE B: dispatch matmul N×1 (W copiado por call)
+        var xCol2 = new Long[kdim]
+        var c1 = 0
+        while (c1 < kdim) {
+            xCol2[c1] = x[c1]
+            c1 = c1 + 1
+        }
+        var out2 = new Long[nRows]
+        var rc2: Int = gpu.dispatchMatmul64(W, xCol2, out2, nRows, 1, kdim)
+        if (rc2 == 0) {
+            var rg2 = 0
+            while (rg2 < nRows) {
+                y[rg2] = out2[rg2] / div
+                rg2 = rg2 + 1
             }
             return y
         }

@@ -1,0 +1,11 @@
+++ dirname training/RUN_OVERNIGHT.sh
++ cd training/..
++ mkdir -p training/logs
++ source scripts/gpu-env.sh
++ VENV=/home/mel/Downloads/kof-data/venv-ml
++ export HF_HOME=/home/mel/Downloads/kof-data/hf
++ HF_HOME=/home/mel/Downloads/kof-data/hf
++ export TOKENIZERS_PARALLELISM=false
++ TOKENIZERS_PARALLELISM=false
++ export OMP_NUM_THREADS=4
++ OMP_NUM_THREADS=4

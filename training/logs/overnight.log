@@ -30,3 +30,19 @@ ModuleNotFoundError: No module named 'torch'
 ++ date
 + echo '[KofLM] qua 26 ago 2026 00:36:28 -03 FIM'
 [KofLM] qua 26 ago 2026 00:36:28 -03 FIM
+++ date
++ echo '[KofLM] qua 02 set 2026 17:12:01 -03 venv=/home/mel/Downloads/kof-data/venv-ml hf=/home/mel/Downloads/kof-data/hf'
+[KofLM] qua 02 set 2026 17:12:01 -03 venv=/home/mel/Downloads/kof-data/venv-ml hf=/home/mel/Downloads/kof-data/hf
++ '[' '!' -x /home/mel/Downloads/kof-data/venv-ml/bin/python ']'
+++ date
++ echo '[KofLM] qua 02 set 2026 17:12:01 -03 iniciando treino (CPU/LoRA, resume-safe)...'
+[KofLM] qua 02 set 2026 17:12:01 -03 iniciando treino (CPU/LoRA, resume-safe)...
++ /home/mel/Downloads/kof-data/venv-ml/bin/python training/scripts/train_koflm.py
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+Map:   0%|          | 0/456 [00:00<?, ? examples/s]Map: 100%|██████████| 456/456 [00:00<00:00, 2883.35 examples/s]Map: 100%|██████████| 456/456 [00:00<00:00, 2830.81 examples/s]
+[transformers] `torch_dtype` is deprecated! Use `dtype` instead!
+Loading weights:   0%|          | 0/201 [00:00<?, ?it/s]Loading weights:   0%|          | 1/201 [00:00<00:37,  5.31it/s]Loading weights:  16%|█▋        | 33/201 [00:00<00:01, 140.06it/s]Loading weights:  29%|██▉       | 58/201 [00:00<00:00, 167.11it/s]Loading weights:  39%|███▉      | 78/201 [00:00<00:00, 175.11it/s]Loading weights:  49%|████▉     | 98/201 [00:00<00:00, 121.47it/s]Loading weights:  57%|█████▋    | 114/201 [00:00<00:00, 106.63it/s]Loading weights:  63%|██████▎   | 127/201 [00:01<00:00, 95.57it/s] Loading weights:  69%|██████▊   | 138/201 [00:01<00:00, 90.26it/s]Loading weights:  74%|███████▎  | 148/201 [00:01<00:00, 85.16it/s]Loading weights:  87%|████████▋ | 175/201 [00:01<00:00, 122.68it/s]Loading weights:  97%|█████████▋| 194/201 [00:01<00:00, 138.14it/s]Loading weights: 100%|██████████| 201/201 [00:01<00:00, 120.83it/s]
+[transformers] The new embeddings will be initialized from a multivariate normal distribution that has old embeddings' mean and covariance. As described in this article: https://nlp.stanford.edu/~johnhew/vocab-expansion.html. To disable this, use `mean_resizing=False`
+[transformers] The new lm_head weights will be initialized from a multivariate normal distribution that has old embeddings' mean and covariance. As described in this article: https://nlp.stanford.edu/~johnhew/vocab-expansion.html. To disable this, use `mean_resizing=False`
+trainable params: 50,462,720 || all params: 1,150,552,064 || trainable%: 4.3860
+  0%|          | 0/87 [00:00<?, ?it/s]
