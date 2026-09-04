@@ -69,7 +69,7 @@ fn main() {
             if (i == 6) { k = k1 }
             var w = new Long[m * k]
             fillW(w, m, k, 1000 + 7 * l + i)
-            var rc: Int = gpu.mvPutW(7 * l + i, w, m, k)
+            var rc: Int = gpu.mvPut32(7 * l + i, kofLmToI32(w, m * k), m, k)
             if (rc != 0) {
                 println("STRESS FAIL put l=" + l + " i=" + i + " rc=" + rc)
                 return
@@ -100,7 +100,8 @@ fn main() {
                 var x = new Long[k]
                 fillX(x, k, 777 + 7 * l + i + 1000 * tok)
                 var y = new Long[m]
-                var rc: Int = gpu.mvRun(7 * l + i, x, y, m, k)
+                var uno: Long = 1
+                var rc: Int = gpu.mvRun32(7 * l + i, x, y, m, k, uno)
                 if (rc != 0) {
                     println("STRESS FAIL run l=" + l + " i=" + i + " rc=" + rc)
                     return

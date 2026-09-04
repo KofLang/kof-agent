@@ -1,0 +1,94 @@
+#version 450
+#extension GL_EXT_shader_explicit_arithmetic_types_int64 : require
+// M36.2 matvecsim: y[M] = W[M x K] * x[K] REPRODUZINDO O SPLIT DO CPU
+// (4 acumuladores A/B/C/D + recomposicao por div). Bit-exato com o caminho
+// CPU do koflama: os 4 acc's sao somas exatas de int64 (associativas — o
+// tree reduce em shared preserva o resultado) e a recomposicao usa a mesma
+// formula do Kof. W em INT32 (os mesmos valores do warm i32), x em INT64
+// (residuo nano passa de 2^31), y em INT64.
+// wh = w/1000; wl = w%1000; xh = x/1000000; xl = x%1000000
+//   A += wh*xh; B += wh*xl; C += wl*xh; D += wl*xl
+// div=1e9  (W cru nano):  y = A + B/1e6 + C/1e3 + ((B%1e6)*1e3 + (C%1e3)*1e6 + D)/1e9
+// div=1e6  (W micro):     y = A*1e3 + B/1e3 + C + ((B%1e3)*1e6 + D)/1e6
+// outro    (W cru, lm):   y = A/1e3 + B/1e9 + C/1e6 + ((A%1e3)*1e9 + (B%1e9)*1e3 + (C%1e6)*1e6 + D)/1e12
+// Divisao/resto NEGATIVO: GLSL int64 / e % truncam para zero — igual ao Kof.
+
+layout(local_size_x = 64, local_size_y = 1, local_size_z = 1) in;
+
+layout(set = 0, binding = 0) readonly buffer BufW { int w[]; };
+layout(set = 0, binding = 1) readonly buffer BufX { int64_t x[]; };
+layout(set = 0, binding = 2) writeonly buffer BufY { int64_t y[]; };
+
+layout(push_constant) uniform Push {
+    int m;
+    int k;
+    int divId;  // 0 = div 1e9, 1 = div 1e6, 2 = div 1e12
+    int pad0;
+    int64_t div;
+} pc;
+
+shared int64_t redA[64];
+shared int64_t redB[64];
+shared int64_t redC[64];
+shared int64_t redD[64];
+
+void main() {
+    uint row = gl_WorkGroupID.x;
+    uint tid = gl_LocalInvocationID.x;
+    if (row >= uint(pc.m)) {
+        return;
+    }
+    uint off = row * uint(pc.k);
+    int64_t a = int64_t(0);
+    int64_t b = int64_t(0);
+    int64_t c = int64_t(0);
+    int64_t d = int64_t(0);
+    for (uint i = tid; i < uint(pc.k); i += 64u) {
+        int64_t wv = int64_t(w[off + i]);
+        int64_t xv = x[i];
+        int64_t wh = wv / int64_t(1000);
+        int64_t wl = wv % int64_t(1000);
+        int64_t xh = xv / int64_t(1000000);
+        int64_t xl = xv % int64_t(1000000);
+        a += wh * xh;
+        b += wh * xl;
+        c += wl * xh;
+        d += wl * xl;
+    }
+    redA[tid] = a;
+    redB[tid] = b;
+    redC[tid] = c;
+    redD[tid] = d;
+    barrier();
+    for (uint s = 32u; s > 0u; s >>= 1u) {
+        if (tid < s) {
+            redA[tid] += redA[tid + s];
+            redB[tid] += redB[tid + s];
+            redC[tid] += redC[tid + s];
+            redD[tid] += redD[tid + s];
+        }
+        barrier();
+    }
+    if (tid == 0u) {
+        int64_t A = redA[0];
+        int64_t B = redB[0];
+        int64_t C = redC[0];
+        int64_t D = redD[0];
+        int64_t outv;
+        if (pc.divId == 0) {
+            int64_t remT = (B % int64_t(1000000)) * int64_t(1000)
+                         + (C % int64_t(1000)) * int64_t(1000000) + D;
+            outv = A + B / int64_t(1000000) + C / int64_t(1000) + remT / pc.div;
+        } else if (pc.divId == 1) {
+            int64_t remT = (B % int64_t(1000)) * int64_t(1000000) + D;
+            outv = A * int64_t(1000) + B / int64_t(1000) + C + remT / pc.div;
+        } else {
+            int64_t remT = (A % int64_t(1000)) * int64_t(1000000000)
+                         + (B % int64_t(1000000000)) * int64_t(1000)
+                         + (C % int64_t(1000000)) * int64_t(1000000) + D;
+            outv = A / int64_t(1000) + B / int64_t(1000000000)
+                 + C / int64_t(1000000) + remT / pc.div;
+        }
+        y[row] = outv;
+    }
+}

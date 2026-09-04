@@ -91,20 +91,15 @@ kofLmMatvec(Long[] W, Long[] x, Int nRows, Int kdim, Long div): Long[] {
 kofLmMatvecId(Int wId, String path, KofGgufBinModel gg, String tensor,
               Long[] x, Int nRows, Int kdim, Long div): Long[] {
     var y = new Long[nRows]
-    // 0) residente rápido: sem decode, sem cópia de W
+    // 0) residente: sem decode, sem cópia de W. O shader (matvecsim64)
+    // reproduz o split do CPU bit-exato (4 accs + recomposição).
     if (wId >= 0) {
-        var xRes = new Long[kdim]
-        var cRes = 0
-        while (cRes < kdim) {
-            xRes[cRes] = x[cRes]
-            cRes = cRes + 1
-        }
-        var outRes = new Long[nRows]
-        var rcRes: Int = gpu.mvRun(wId, xRes, outRes, nRows, kdim)
+        var out64 = new Long[nRows]
+        var rcRes: Int = gpu.mvRunSp(wId, x, out64, nRows, kdim, div)
         if (rcRes == 0) {
             var rg0 = 0
             while (rg0 < nRows) {
-                y[rg0] = outRes[rg0] / div
+                y[rg0] = out64[rg0]
                 rg0 = rg0 + 1
             }
             return y
@@ -134,30 +129,7 @@ kofLmMatvecId(Int wId, String path, KofGgufBinModel gg, String tensor,
 
 kofLmMatvecIdOld(Int wId, Long[] W, Long[] x, Int nRows, Int kdim, Long div): Long[] {
     var y = new Long[nRows]
-    // 1) residente (wId >= 0): W já no device pelo warm; mvRun faz o init
-    // da lib64 internamente (independe do gpu.available() da lib32)
-    if (wId >= 0) {
-        var xCol = new Long[kdim]
-        var c0 = 0
-        while (c0 < kdim) {
-            xCol[c0] = x[c0]
-            c0 = c0 + 1
-        }
-        var out = new Long[nRows]
-        var rc: Int = gpu.mvRun(wId, xCol, out, nRows, kdim)
-        if (rc == 0) {
-            var rg = 0
-            while (rg < nRows) {
-                y[rg] = out[rg] / div
-                rg = rg + 1
-            }
-            return y
-        }
-        // rc != 0 (sem GPU/SPV): cai no CPU abaixo — mas o W local pode ser o
-        // cru (down) enquanto o residente era o dividido. O caller (forward)
-        // só usa wId p/ o down (dW cru) e os demais (iguais ao residente).
-    }
-    // 2) dispatch FASE B (gpu.available() da lib32 + set_shape/load_w)
+    // 1) dispatch FASE B (gpu.available() da lib32 + set_shape/load_w)
     var gpuOk: Bool = gpu.available()
     if (gpuOk) {
         var rcShape: Int = gpu.mvSetShape(nRows, kdim)
@@ -509,6 +481,61 @@ kofLmExpMicro(Long x): Long {
     return 1000000000000 / E
 }
 
+// M36.3: W cru Long[] → wh = w/1000, wl = w%1000 (i32; |wh| ≤ 3.6e5 ✓).
+// O par alimenta o matvecsplit (bit-exato com o CPU, zero div por termo).
+kofLmToWh(Long[] w, Int n): Int[] {
+    var out = new Int[n]
+    var i = 0
+    while (i < n) {
+        var h = w[i] / 1000
+        if (h > 2147483647) {
+            out[i] = 2147483647
+        } else if (h < 0 - 2147483648) {
+            out[i] = 0 - 2147483648
+        } else {
+            out[i] = h
+        }
+        i = i + 1
+    }
+    return out
+}
+
+kofLmToWl(Long[] w, Int n): Int[] {
+    var out = new Int[n]
+    var i = 0
+    while (i < n) {
+        out[i] = w[i] % 1000
+        i = i + 1
+    }
+    return out
+}
+
+// M36.1: Long[] → Int[] (o W do koflama cabe em i32; overflow vira clamp
+// silencioso — o caller confere o retorno de estourados)
+kofLmToI32(Long[] w, Int n): Int[] {
+    var out = new Int[n]
+    var i = 0
+    var over = 0
+    var min = 0 - 2147483648
+    while (i < n) {
+        var v = w[i]
+        if (v > 2147483647) {
+            out[i] = 2147483647
+            over = over + 1
+        } else if (v < min) {
+            out[i] = min
+            over = over + 1
+        } else {
+            out[i] = v
+        }
+        i = i + 1
+    }
+    if (over > 0) {
+        println("TOI32 OVER=" + over + " de " + n)
+    }
+    return out
+}
+
 // ── M36 FASE C2b: warm — sobe TODOS os W residentes (uma vez no boot) ──
 // ids: layer l: q=7l, k=7l+1, v=7l+2, o=7l+3, gate=7l+4, up=7l+5, down=7l+6;
 // lm_head=190. down já sobe DIVIDIDO por 1000 (contrato do forward).
@@ -519,36 +546,39 @@ kofLmWarmWeights(String path, KofGgufBinModel m, KofLmCfg cfg): Int {
     var l = 0
     while (l < cfg.layers) {
         var qW = kofGgufDecodeRowsN(path, m, "blk." + l + ".attn_q.weight", 0, cfg.embd, cfg.embd)
-        var rcq: Int = gpu.mvPutW(7 * l, qW, cfg.embd, cfg.embd)
+        var nq = cfg.embd * cfg.embd
+        var rcq: Int = gpu.mvPutSp(7 * l, kofLmToWh(qW, nq), kofLmToWl(qW, nq), cfg.embd, cfg.embd)
         if (rcq != 0) { return 7 * l + 1 }
         var kW = kofGgufDecodeRowsN(path, m, "blk." + l + ".attn_k.weight", 0, cfg.kvHeads * cfg.headDim, cfg.embd)
-        var rck: Int = gpu.mvPutW(7 * l + 1, kW, cfg.kvHeads * cfg.headDim, cfg.embd)
+        var nk = cfg.kvHeads * cfg.headDim * cfg.embd
+        var rck: Int = gpu.mvPutSp(7 * l + 1, kofLmToWh(kW, nk), kofLmToWl(kW, nk), cfg.kvHeads * cfg.headDim, cfg.embd)
         if (rck != 0) { return 7 * l + 2 }
         var vW = kofGgufDecodeRowsN(path, m, "blk." + l + ".attn_v.weight", 0, cfg.kvHeads * cfg.headDim, cfg.embd)
-        var rcv: Int = gpu.mvPutW(7 * l + 2, vW, cfg.kvHeads * cfg.headDim, cfg.embd)
+        var nv = cfg.kvHeads * cfg.headDim * cfg.embd
+        var rcv: Int = gpu.mvPutSp(7 * l + 2, kofLmToWh(vW, nv), kofLmToWl(vW, nv), cfg.kvHeads * cfg.headDim, cfg.embd)
         if (rcv != 0) { return 7 * l + 3 }
         var oW = kofGgufDecodeRowsN(path, m, "blk." + l + ".attn_output.weight", 0, cfg.embd, cfg.embd)
-        var rco: Int = gpu.mvPutW(7 * l + 3, oW, cfg.embd, cfg.embd)
+        var no = cfg.embd * cfg.embd
+        var rco: Int = gpu.mvPutSp(7 * l + 3, kofLmToWh(oW, no), kofLmToWl(oW, no), cfg.embd, cfg.embd)
         if (rco != 0) { return 7 * l + 4 }
         var gW = kofGgufDecodeRowsN(path, m, "blk." + l + ".ffn_gate.weight", 0, cfg.ffn, cfg.embd)
-        var rcg: Int = gpu.mvPutW(7 * l + 4, gW, cfg.ffn, cfg.embd)
+        var ng = cfg.ffn * cfg.embd
+        var rcg: Int = gpu.mvPutSp(7 * l + 4, kofLmToWh(gW, ng), kofLmToWl(gW, ng), cfg.ffn, cfg.embd)
         if (rcg != 0) { return 7 * l + 5 }
         var uW = kofGgufDecodeRowsN(path, m, "blk." + l + ".ffn_up.weight", 0, cfg.ffn, cfg.embd)
-        var rcu: Int = gpu.mvPutW(7 * l + 5, uW, cfg.ffn, cfg.embd)
+        var nu = cfg.ffn * cfg.embd
+        var rcu: Int = gpu.mvPutSp(7 * l + 5, kofLmToWh(uW, nu), kofLmToWl(uW, nu), cfg.ffn, cfg.embd)
         if (rcu != 0) { return 7 * l + 6 }
         var dW = kofGgufDecodeRowsN(path, m, "blk." + l + ".ffn_down.weight", 0, cfg.embd, cfg.ffn)
-        var iw = 0
-        while (iw < cfg.embd * cfg.ffn) {
-            dW[iw] = dW[iw] / 1000
-            iw = iw + 1
-        }
-        var rcd: Int = gpu.mvPutW(7 * l + 6, dW, cfg.embd, cfg.ffn)
+        var nd = cfg.embd * cfg.ffn
+        var rcd: Int = gpu.mvPutSp(7 * l + 6, kofLmToWh(dW, nd), kofLmToWl(dW, nd), cfg.embd, cfg.ffn)
         if (rcd != 0) { return 7 * l + 7 }
         println("warm L" + l + " ok")
         l = l + 1
     }
     var lgW = kofGgufDecodeRowsN(path, m, "output.weight", 0, cfg.vocab, cfg.embd)
-    var rclm: Int = gpu.mvPutW(190, lgW, cfg.vocab, cfg.embd)
+    var nl = cfg.vocab * cfg.embd
+    var rclm: Int = gpu.mvPutSp(190, kofLmToWh(lgW, nl), kofLmToWl(lgW, nl), cfg.vocab, cfg.embd)
     if (rclm != 0) { return 191 }
     return 0
 }

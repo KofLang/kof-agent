@@ -1,0 +1,89 @@
+#version 450
+#extension GL_EXT_shader_explicit_arithmetic_types_int64 : require
+// M36.3 matvecsplit: y[M] = W[M x K] * x[K] bit-exato com o split do CPU,
+// SEM divisao por termo — wh/wl chegam PRE-DIVIDIDOS no warm (buffers i32
+// separados) e xh/xl chegam pre-divididos por dispatch (o host computa de
+// x i64: xh = x/1e6 <= 2e4, xl = x%1e6 — ambos cabem em i32).
+//   A += wh*xh; B += wh*xl; C += wl*xh; D += wl*xl  (produtos i64, acc i64)
+// 4 tree reduces em shared + recomposicao por divId (a formula do Kof).
+// Bindings: 0=wh[i32] 1=wl[i32] 2=xh[i32] 3=xl[i32] 4=y[i64]
+
+layout(local_size_x = 64, local_size_y = 1, local_size_z = 1) in;
+
+layout(set = 0, binding = 0) readonly buffer BufWH { int wh[]; };
+layout(set = 0, binding = 1) readonly buffer BufWL { int wl[]; };
+layout(set = 0, binding = 2) readonly buffer BufXH { int xh[]; };
+layout(set = 0, binding = 3) readonly buffer BufXL { int xl[]; };
+layout(set = 0, binding = 4) writeonly buffer BufY { int64_t y[]; };
+
+layout(push_constant) uniform Push {
+    int m;
+    int k;
+    int divId;
+    int pad0;
+    int64_t div;
+} pc;
+
+shared int64_t redA[64];
+shared int64_t redB[64];
+shared int64_t redC[64];
+shared int64_t redD[64];
+
+void main() {
+    uint row = gl_WorkGroupID.x;
+    uint tid = gl_LocalInvocationID.x;
+    if (row >= uint(pc.m)) {
+        return;
+    }
+    uint off = row * uint(pc.k);
+    int64_t a = int64_t(0);
+    int64_t b = int64_t(0);
+    int64_t c = int64_t(0);
+    int64_t d = int64_t(0);
+    for (uint i = tid; i < uint(pc.k); i += 64u) {
+        int64_t whv = int64_t(wh[off + i]);
+        int64_t wlv = int64_t(wl[off + i]);
+        int64_t xhv = int64_t(xh[i]);
+        int64_t xlv = int64_t(xl[i]);
+        a += whv * xhv;
+        b += whv * xlv;
+        c += wlv * xhv;
+        d += wlv * xlv;
+    }
+    redA[tid] = a;
+    redB[tid] = b;
+    redC[tid] = c;
+    redD[tid] = d;
+    barrier();
+    for (uint s = 32u; s > 0u; s >>= 1u) {
+        if (tid < s) {
+            redA[tid] += redA[tid + s];
+            redB[tid] += redB[tid + s];
+            redC[tid] += redC[tid + s];
+            redD[tid] += redD[tid + s];
+        }
+        barrier();
+    }
+    if (tid == 0u) {
+        int64_t A = redA[0];
+        int64_t B = redB[0];
+        int64_t C = redC[0];
+        int64_t D = redD[0];
+        int64_t outv;
+        if (pc.divId == 0) {
+            int64_t remT = (B % int64_t(1000000)) * int64_t(1000)
+                         + (C % int64_t(1000)) * int64_t(1000000) + D;
+            outv = A + B / int64_t(1000000) + C / int64_t(1000) + remT / pc.div;
+        } else if (pc.divId == 1) {
+            int64_t remT = (B % int64_t(1000)) * int64_t(1000000) + D;
+            outv = A * int64_t(1000) + B / int64_t(1000) + C + remT / pc.div;
+        } else {
+            int64_t remT = (A % int64_t(1000)) * int64_t(1000000000)
+                         + (B % int64_t(1000000000)) * int64_t(1000)
+                         + (C % int64_t(1000000)) * int64_t(1000000) + D;
+            outv = A / int64_t(1000) + B / int64_t(1000000000)
+                 + C / int64_t(1000000) + remT / pc.div;
+        }
+        y[row] = outv;
+    }
+}
