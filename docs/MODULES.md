@@ -1,6 +1,12 @@
 # MODULES — Mapa de Módulos
 
-**Status:** aceita (Milestone 0)
+**Status:** atualizada 18/09 (reorganização pós-M36). A arvore real hoje:
+`agent/runtime/` (loop do agente), `engine/` (motor de inferência),
+`training/kf/` (pipeline de treino em Kof), `apps/` (hosts), `gpu/` (shaders),
+`tests/` (uma fonte .kf por suíte). Os diretórios-fantasma de fundação
+(cli, brain, planner, …) foram dissolvidos — as PARTS .kf vivem nos 3 primeiros.
+
+**Status original:** aceita (Milestone 0)
 
 Cada módulo declara: responsabilidade, API pública prevista, dependências
 permitidas (somente para baixo) e milestone de nascimento. Módulos não

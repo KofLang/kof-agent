@@ -1,32 +1,33 @@
-# TASKS
+# TASKS — fila v2 (desde 18/09; specs/ENGINE_V2.md)
 
-## M16 — Runtime AI v2
+## Bloqueado upstream
+- [ ] **N24** — VerifyError `gpu.dispatchMatmul` posicional em TU grande (JVM).
+  Report Kof4j com repro em `regressions/N24/`. Libera as 5 suítes ws no JVM.
 
-- [x] Tensor Engine V2 — arena+softmax+rmsnorm+gelu/silu+causal (M16.1)
-- [ ] MultiHead Attention completo (RoPE, KV)
-- [x] RoPE V2 (cache+offset) — M16.2
-- [x] KV Cache sliding/reset/snapshot — M16.2
-- [~] Quantização: Q8_0 (M10) + Q4_0 ok; Q6_K/Q5_K pendentes
-- [~] Sampler V3: greedy/top-k/multinomial-seed ok; top-p/min-p/penalties pendentes
-- [ ] 25 testes
-- [ ] benchmark baseline
+## E1 — Swap de contexto YAML (R3)
+- [ ] `workspace/context.yaml` (persona, estado, pendencias, regras_vivas)
+- [ ] leitor YAML em `engine/151_koflm_config.kf` + hot-reload por mtime no orchestrador
+- [ ] hash do contexto gravado no journal (determinismo reprodutível)
+- [ ] teste: editar YAML entre turnos muda comportamento sem rebuild
 
-## M17 — GGUF Loader
+## E2 — Dataset mínimo/ASK/RECUSA (R4.1)
+- [ ] reescrita v3 → v4: resposta só-com-resultado (−60% tokens, mesma informação)
+- [ ] exemplos ASK (pedido ambíguo → pergunta única) e RECUSA (errado → 1 linha)
+- [ ] eval 540 rotulada `expected=EXECUTE|ASK|REFUSE` + métricas do ENGINE_V2 §5.2
+- [ ] baseline antes/depois registrado em benchmarks/
 
-- [x] Parser V2/V3 header+metadata+tensor directory
-- [x] APIs tipadas (openGGUF/getMetadata/hasTensor/listTensors/tokenizerInfo/ropeInfo)
-- [x] Fixture golden tiny.gguf
-- [~] Testes 2/11 (9 a fechar em M17.1)
-- [ ] Checksum SHA256, cache/unload, mmap interface
-- [ ] Benchmark real
+## E3 — OpenCL completo (R1)
+- [ ] `liboclchain` (C magro, dlopen) + FFM no JVM + asm no native (padrão vkchain M32.3)
+- [ ] port dos 12 `.comp` → `.cl` em `gpu/kernels/` (build em runtime)
+- [ ] residência de pesos (cl_buffer, contrato mvPutSp)
+- [ ] `detectOpenCL()` em `150_koflm_backend.kf`; prioridade VK > CL > CPU
+- [ ] prova: bit-exato CL == VK == CPU golden nos 12 kernels (unit_shaders estendida)
 
-## M18 — Local Model Runner
+## E4 — Modelo especialista (R2)
+- [ ] config ≤400M, ctx 1024, vocab PT-BR+Kof enxuto; GGUF no registry kof-LM
+- [ ] ciclo de iteração: journal → exemplos → adapter no HAL → eval → publish
+- [ ] gate: ≥95% precisão de intenção, <2% chute sem perguntar, 0 API alucinada
 
-- [x] M18.1: loadModel/unload/generate/streamGenerate/cancel/reset + KV+RoPE+Sampler integrados (8/8)
-- [ ] M18.2: stop sequences, UTF-8 streaming, top-p/min-p, batching
-
-## M19 ✅ 8/8 — orchestrator/budget/audit/trace
-## M20 ✅ 6/6 — runtime unificado DAG+repair+journal
-
-## FASE 4 núcleo ✅ 22/22
-M21 LSP · M22 DevTools · M23 Plugin/MCP · M24 SelfImprovement · M25 Journal · M26 Observatory — expansão de features na fila.
+## E5 — CLI no contrato §2
+- [ ] formato de saída: resultado + ≤2 linhas; zero preâmbulo/cortesia
+- [ ] modo ASK quando confiança < limiar do YAML

@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## 2026-09-18
+- Limpeza: `build/` gerado (581 arquivos) fora do índice; lixo solto removido (logs, .class, .deb, tmp*/); REPORT_* → `docs/reports/`; dirs-fantasma de fundação dissolvidos.
+- Reorganização: `engine/` (motor de inferência) e `training/kf/` (pipeline) separados de `agent/runtime/` — TU byte-identico, ordem topológica preservada; `build.sh` resolve `--only` nos 3 dirs.
+- **Port kof 0.4.0-beta**: `fn`→sintaxe tipada; records mutados→classes (CorpMeta, ExecTaskState); `Map.get` `Int?`→`getOrDefault` no tokenizer KOFLM; clamps Long→`as Int`. `kof check` limpo no TU completo; suíte 11/16 nativas (5 ws vermelhas = N24, registrado com repro).
+- Diretriz v2 + plano: `specs/ENGINE_V2.md` (ferramenta não amiga: executa→explica ≤2 linhas→pergunta se duvida; ctx pequeno + swap YAML hot-reload; OpenCL completo no HAL; modelo ≤400M treinável por iteração com dataset mínimo/ASK/RECUSA; meta ≥95% precisão de intenção). Fila nova em `TASKS.md`.
+
 ## 2026-08-31
 - M32.3: dispatch Vulkan compute REAL (GPU) nos 2 backends — libvkchain.so (C validado RADV) + asm nativo dlopen/dlsym + JVM FFM 3 downcalls; SYS_exit_group fix (hang pós-main com threads do driver); gpuAvailable() real no HAL; unit_shaders 7/7 com GPU (RX 550); 16/16 suítes.
 - gpu-env.sh/kof-gpu wrapper: detecção universal (dGPU/iGPU/llvmpipe/CPU), KOF_DATA em disco separado, KOF_GPU_SPV.
