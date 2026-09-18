@@ -1,0 +1,485 @@
+---
+id: kof-idioms-ui-pt
+title: Idioms — kof.ui (Canvas 2D)
+module: kof
+category: kof-idioms
+version: 1
+languageVersion: 0.4.0
+author: Kof4j
+createdAt: 2026-09-18
+updatedAt: 2026-09-18
+keywords: kof,idioms,ui
+status: stable
+tags: kof,idioms,pt
+---
+[English](kof/idioms/ui.md) | [Português](kof/idioms/ui.pt_BR.md)
+
+# Idioms — kof.ui (Canvas 2D)
+
+## Canvas: gráfico de pizza
+
+**BAD — construir SVG manualmente com strings:**
+```kof
+// ❌ NÃO — manipulação manual de string SVG
+var svg = "<svg viewBox='0 0 36 36'><circle cx='18' cy='18' r='15' fill='none' stroke='blue' stroke-dasharray='45 55'/></svg>"
+var img = Image("data:image/svg+xml," + svg)
+```
+
+**GOOD — usar Canvas com beginPath/arc/fill:**
+```kof
+// ✅ IDIOMÁTICO — Canvas desenha diretamente
+var c = Canvas(400, 300)
+var PI = 3.14159265358979
+c.setFill(Palette.blue)
+c.beginPath()
+c.moveTo(200, 150)
+c.arc(200, 150, 100, 0.0, PI)
+c.closePath()
+c.fill()
+```
+
+**Por quê:** Canvas é a primitiva de desenho 2D da plataforma. SVG manual
+é verboso e frágil; Canvas é declarativo e performático.
+
+## Canvas: arco colorido
+
+**BAD — calcular coordenadas manualmente com sin/cos:**
+```kof
+// ❌ NÃO — calcular pontos do arco na mão
+var x1 = cx + r * 0.707  // cos(45°)
+var y1 = cy - r * 0.707  // sin(45°)
+```
+
+**GOOD — usar arc() com radianos:**
+```kof
+// ✅ IDIOMÁTICO — arc() calcula internamente
+c.arc(cx, cy, r, 0.0, 1.5708)  // 0 a π/2 (90°)
+```
+
+**Por quê:** `arc()` faz a trigonometria internamente. Não reinventar a roda.
+
+## Canvas: limpando antes de redesenhar
+
+**BAD — criar novo Canvas a cada frame:**
+```kof
+// ❌ NÃO — leak de elementos DOM
+c.remove()
+var c2 = Canvas(400, 300)
+// ... redesenhar
+```
+
+**GOOD — usar clearRect:**
+```kof
+// ✅ IDIOMÁTICO — limpa e redesenha no mesmo canvas
+c.clearRect(0, 0, 400, 300)
+// ... redesenhar
+```
+
+**Por quê:** `clearRect` é eficiente e preserva o elemento DOM.
+
+## Forms: input com placeholder
+
+**BAD — sem o idiom, o input nasce sem dica de entrada (placeholder é do
+widget, não da aplicação):**
+```kof
+// ❌ NÃO — input sem placeholder; a dica de uso fica no código, não na UI
+var campo = Input("")
+```
+
+**GOOD — `Input.setPlaceholder`:**
+```kof
+// ✅ IDIOMÁTICO — placeholder declarativo no widget
+var campo = Input("")
+campo.setPlaceholder("digite aqui")
+```
+
+**Por quê:** `setPlaceholder` é o atributo do widget (renderiza
+`placeholder="..."` no DOM do KofJS). Usar string vazia ou esconder a dica
+na aplicação é reimplementar uma feature da plataforma (R2).
+
+## Forms: tipo do input (password/number/email/...)
+
+**BAD — input text genérico para senha/número (o tipo é do widget, não da
+aplicação):**
+```kof
+// ❌ NÃO — senha em input text; o browser não mascara
+var senha = Input("")
+```
+
+**GOOD — `Input.setType`:**
+```kof
+// ✅ IDIOMÁTICO — tipo declarativo no widget (text/number/email/password/date)
+var senha = Input("")
+senha.setType("password")
+```
+
+**Por quê:** `setType` define o atributo `type` do `<input>` (mascara senha,
+teclado numérico no mobile, validação de email). Usar text para tudo é
+reimplementar uma feature da plataforma (R2).
+
+## Forms: checkbox/radio (setChecked + checked)
+
+**BAD — simular estado de checkbox com variável à parte (o estado é do
+widget, não da aplicação):**
+```kof
+// ❌ NÃO — estado duplicado fora do DOM
+var aceite = false
+var caixa = Input("")
+caixa.setType("checkbox")
+```
+
+**GOOD — `setChecked`/`checked` no widget:**
+```kof
+// ✅ IDIOMÁTICO — estado do checkbox mora no widget
+var caixa = Input("")
+caixa.setType("checkbox")
+caixa.setChecked(true)
+if (caixa.checked()) { println("aceito") }
+```
+
+**Por quê:** `setChecked`/`checked` leem/escrevem o estado real do
+`<input>` (property + atributo `checked`). Duplicar o estado em variável
+à parte diverge do DOM (R1: intenção, não mecanismo).
+
+## Forms: imagem com alt + dimensões
+
+**BAD — `<img>` sem alt/dimensões (acessibilidade + layout quebrados):**
+```kof
+// ❌ NÃO — imagem sem descrição alternativa nem tamanho
+var logo = Image("logo.png")
+```
+
+**GOOD — `Image.setAlt/setWidth/setHeight`:**
+```kof
+// ✅ IDIOMÁTICO — alt (a11y) + dimensões declarativas
+var logo = Image("logo.png")
+logo.setAlt("logotipo")
+logo.setWidth(120)
+logo.setHeight(60)
+```
+
+**Por quê:** `alt` é acessibilidade (screen readers); `width`/`height`
+evitam layout-shift. São atributos do widget (renderizam no DOM do
+KofJS), não da aplicação (R2).
+
+## Forms: agrupar campos em <form>
+
+**BAD — campos soltos sem agrupamento (sem fronteira de formulário):**
+```kof
+// ❌ NÃO — inputs e botão fora de um <form>
+var nome = Input("")
+var enviar = Button("enviar")
+var col = Column(listOf(nome, enviar))
+```
+
+**GOOD — `Form(children)`:**
+```kof
+// ✅ IDIOMÁTICO — campos agrupados em <form>
+var nome = Input("")
+var enviar = Button("enviar")
+var f = Form(listOf(nome, enviar))
+```
+
+**Por quê:** `Form` renderiza `<form>` (renderiza no DOM do KofJS) e
+agrupa os campos — fronteira semântica de formulário. Campos soltos
+perdem a semântica de submissão/acessibilidade (R1: intenção).
+
+## Widgets: id, class e disabled
+
+**BAD — criar wrappers só para dar id/classe a um widget:**
+```kof
+// ❌ NÃO — View envolvendo o input só para "carregar" um id
+var wrapper = View(campo)
+```
+
+**GOOD — `setId`/`setClass`/`setDisabled` no próprio widget:**
+```kof
+// ✅ IDIOMÁTICO — atributos são do widget (família compartilhada)
+var campo = Input("")
+campo.setId("nome")
+campo.setClass("destaque")
+campo.setDisabled(true)
+```
+
+**Por quê:** id/class/disabled são atributos do elemento DOM; a família
+`widget_*` do kof.ui os expõe em qualquer widget (Label/Button/Input/View/
+Link/Image/Icon/Form/Column/Row). Envelopar para contornar é mecanismo,
+não intenção (R1).
+
+## Forms: onSubmit (handler de submissão)
+
+**BAD — botão avulso que chama a lógica (o form não tem dono da submissão):**
+```kof
+// ❌ NÃO — submit solto num Button, sem Form
+var enviar = Button("enviar", () -> salvar())
+```
+
+**GOOD — `Form.onSubmit` + `submit()`:**
+```kof
+// ✅ IDIOMÁTICO — o form é dono da submissão
+var f = Form(listOf(nome, email))
+f.onSubmit(() -> salvar())
+f.submit()   // ou o usuário aperta Enter no browser
+```
+
+**Por quê:** `onSubmit` registra o handler no `<form>` (roda no evento
+submit, com `preventDefault` — sem recarregar a página); `submit()`
+submete programaticamente. A semântica de formulário fica no form (R1).
+
+## Forms: texto multilinha (Textarea)
+
+**BAD — Input com type=text para texto longo (sem quebras de linha):**
+```kof
+// ❌ NÃO — input de linha única para descrição multilinha
+var obs = Input("")
+```
+
+**GOOD — `Textarea(text)`:**
+```kof
+// ✅ IDIOMÁTICO — widget de primeira classe para texto multilinha
+var obs = Textarea("descreva aqui")
+obs.setPlaceholder("máx. 500 caracteres")
+println(obs.text())
+```
+
+**Por quê:** `Textarea` renderiza `<textarea>` (multilinha, redimensionável);
+`Input` é linha única. Usar o widget certo é intenção, não mecanismo (R1).
+
+## Forms: escolha de opção (Select)
+
+**BAD — encadear Inputs/checkboxes para uma escolha única:**
+```kof
+// ❌ NÃO — 3 checkboxes para escolher 1 cor
+var c1 = Input(""); c1.setType("checkbox")
+var c2 = Input(""); c2.setType("checkbox")
+```
+
+**GOOD — `Select(opções)`:**
+```kof
+// ✅ IDIOMÁTICO — a lista É o widget
+var cor = Select(listOf("vermelho", "verde", "azul"))
+cor.setSelected(1)
+println(cor.selected())   // índice da opção ativa
+```
+
+**Por quê:** `Select` renderiza `<select>`/`<option>` (escolha única de N);
+`setOptions` troca a lista, `selected`/`setSelected` leem/escrevem o índice.
+Representar o domínio (conjunto de opções) com a coleção da linguagem, não
+N widgets manuais (R3).
+
+## Canvas: estado de desenho e texto (UI009)
+
+**BAD — redesenhar sem preservar/limpar o estado do contexto:**
+```kof
+// ❌ NÃO — alpha/transform vazam para os próximos desenhos
+c.setGlobalAlpha(0.3)
+c.fillText("rótulo", 10, 20)
+c.setFill(Palette.blue)   // ainda com alpha 0.3!
+```
+
+**GOOD — `save()`/`restore()` em volta do estado temporário:**
+```kof
+// ✅ IDIOMÁTICO — o bloco salvo é descartado
+c.save()
+c.setGlobalAlpha(0.3)
+c.transform(1.0, 0.0, 0.0, 1.0, 0.0, 0.0)
+c.fillText("rótulo", 10, 20)
+c.restore()
+var w = c.measureText("rótulo")   // Double — largura real do texto
+```
+
+**Por quê:** `save`/`restore` empilham o estado do contexto (alpha, transform,
+cores) — sem eles, um ajuste vaza para todo o desenho seguinte.
+`measureText` devolve `Double` (largura em px) para layout de texto.
+
+## Canvas: compor imagens (drawImage)
+
+**GOOD — `drawImage(img, x, y)`:**
+```kof
+// ✅ IDIOMÁTICO — o Image é o próprio elemento <img> do DOM
+var logo = Image("data:image/svg+xml,...")
+c.drawImage(logo, 5, 5)
+```
+
+**Por quê:** `Image` já materializa um `<img>` no runtime; `drawImage` o
+compõe no bitmap do canvas sem round-trip por URL — a plataforma cuida do
+carregamento (R2).
+
+## Listas de itens (Ul/Ol)
+
+**BAD — montar `<li>` na mão com Column + Labels:**
+```kof
+// ❌ NÃO — reimplementar a lista com widgets avulsos
+var col = Column(listOf(Label("maçã"), Label("uva")))
+```
+
+**GOOD — `Ul(itens)` / `Ol(itens)`:**
+```kof
+// ✅ IDIOMÁTICO — a coleção da linguagem VIRA a lista HTML
+var frutas = Ul(listOf("maçã", "uva"))
+frutas.setItems(listOf("manga"))
+var passos = Ol(listOf("primeiro", "segundo"))
+```
+
+**Por quê:** `Ul`/`Ol` tomam `List<String>` e materializam `<ul>/<ol>` com
+um `<li>` por item — representar o domínio (lista ordenada/não-ordenada)
+com a coleção da linguagem, não N widgets manuais (R3).
+
+## Tabelas de dados (Table)
+
+**BAD — Column de Rows de Labels para dados tabulares:**
+```kof
+// ❌ NÃO — grid manual
+var linha1 = Row(listOf(Label("mel"), Label("26")))
+```
+
+**GOOD — `Table(cabeçalho, linhas)`:**
+```kof
+// ✅ IDIOMÁTICO — a coleção aninhada VIRA a tabela
+var t = Table(listOf("nome", "idade"),
+              listOf(listOf("mel", "26"), listOf("ana", "30")))
+t.setRows(listOf(listOf("bob", "41")))
+```
+
+**Por quê:** `Table` toma `List<String>` (cabeçalho) + `List<List<String>>`
+(linhas) e materializa `<thead>/<tbody><tr><td>` — dados tabulares com a
+coleção da linguagem, não N widgets manuais (R3).
+
+## Agrupamento e mídia (Fieldset/Iframe/Video/Audio/Hr)
+
+**BAD — div com borda manual e Label de título para agrupar:**
+```kof
+// ❌ NÃO — agrupamento fake
+var g = Column(listOf(Label("credenciais"), user, pass))
+```
+
+**GOOD — `Fieldset(children, legenda)`:**
+```kof
+// ✅ IDIOMÁTICO — o widget de agrupamento semântico
+var fs = Fieldset(listOf(user, pass), "credenciais")
+```
+
+**Por quê:** `Fieldset` materializa `<fieldset>` + `<legend>` — agrupamento
+semântico de formulário com título, não um div com borda inventada (R3).
+
+**Mídia e separadores:** `Iframe(url)` → `<iframe src>`, `Video(url)`/
+`Audio(url)` → `<video|audio controls src>`, `Hr()` → `<hr>` — cada um é
+um widget de primeira classe (com `.remove()`), não markup manual.
+
+```kof
+var fr = Iframe("https://example.org")
+var v = Video("clip.mp4")
+var a = Audio("som.mp3")
+var h = Hr()
+```
+
+## Eventos com payload (Event.key/value/x/y/target/relatedTarget)
+
+**BAD — handler global sem payload, mutação manual:**
+```kof
+// ❌ NÃO — evento sem dados, estado global adivinhado
+campo.on("keydown", () -> { processar("") })
+```
+
+**GOOD — o handler lê o payload do DOM event real:**
+```kof
+// ✅ IDIOMÁTICO — o evento carrega tecla/valor/posição/alvo
+campo.on("keydown", (e: Event) -> { campo.setPlaceholder("tecla: " + e.key()) })
+campo.on("input",   (e: Event) -> { filtro.set(e.value()) })
+campo.on("click",   (e: Event) -> { println(e.x()) })
+campo.on("click",   (e: Event) -> { println(e.target()) })        // id do nó origem
+campo.on("focus",   (e: Event) -> { println(e.relatedTarget()) }) // nó de onde veio
+```
+
+**Por quê:** `Event.key()/value()/x()/y()/target()/relatedTarget()` leem o
+evento DOM real (KeyboardEvent.key, target.value, clientX/Y, target.id,
+relatedTarget.id) — o payload vem do browser, não de estado global manual
+(R3). `target()` retorna o **id** do nó que originou o evento (fallback
+`tagName` minúsculo quando o nó não tem `setId`; `""` fora do browser).
+`relatedTarget()` idem para o nó relacionado (foco/mouse). Funciona em
+qualquer widget DOM via `.on(type, handler)`.
+
+## Style declarativo (string CSS-like)
+
+**RUIM — setters por propriedade, cerimônia de Java:**
+```kof
+// ❌ NÃO — uma chamada por propriedade, e só o View tinha estilo
+var v = View(Style(Palette.white, Palette.black, 8, 4))
+```
+
+**BOM — uma string CSS idiomática, parseada e validada no compilador:**
+```kof
+// ✅ IDIOMÁTICO — parse/validação em compile-time (SEM076/076/077, nunca silencioso)
+var card = Style("background: #ffffff; padding: 8; border-radius: 4")
+var v = View(card)
+var l = Label("titulo")
+l.setStyle(card)                       // qualquer widget DOM, não só View
+```
+
+**Por quê:** o compilador faz o parse (D-UI-STYLE/UI007): cores hex/nome/`Palette`,
+inteiro nu = px, `px`/`%`/`em`/`rem`, e uma whitelist tipada — propriedade
+desconhecida é `SEM076`, declaração malformada `SEM077`, valor inválido
+`SEM078`. Nunca fallback silencioso para `node.style` (R6). Real no KofJS;
+no-op documentado no JVM/Native/Script, igual ao `Style` de 4 Ints.
+
+## Tokens do design system (Spacing/Radius/Border/Elevation/Typography)
+
+**RUIM — números mágicos hard-coded (a intenção de design fica sem nome):**
+```kof
+// ❌ NÃO — 16 e 4 são literais; ninguém sabe o que significam
+var card = Style("background: #ffffff; padding: 16; border-radius: 4")
+l.setFontSize(20)
+```
+
+**BOM — nomear a intenção de design com as escalas de token (Fase 10, D-UI-TOKENS):**
+```kof
+// ✅ IDIOMÁTICO — Spacing/Radius/Border/Elevation/Typography.<name> = Int px
+var card = Style("background: #ffffff; padding: 16; border-radius: 4")  // Style ainda exige literal
+l.setFontSize(Typography.lg)        // 20
+var pad = Spacing.md                 // 16
+var rad = Radius.md                  // 4
+```
+
+**Por quê:** tokens são constantes em compile-time (Int px — D-UI-STYLE Q2),
+folding pelo mesmo idiom que o `Palette`; como o fold está no frontend
+compartilhado, os quatro targets carregam o mesmo valor. Membro inexistente
+(`Spacing.huge`) ou chamada de método num namespace (`Spacing.of(4)`) é
+`SEM079` (R6 — nunca 0 silencioso). Escalas (grade de 8px): `Spacing`
+xs/sm/md/lg/xl = 4/8/16/24/32 · `Radius` none/sm/md/lg/full = 0/2/4/8/9999 ·
+`Border` hairline/thin/medium/thick = 1/2/4/8 · `Elevation` none/sm/md/lg/xl
+= 0/1/2/3/4 · `Typography` xs/sm/md/lg/xl/hero = 12/14/16/20/24/32.
+
+## Estado da aplicação sem prop-drilling (Fase 8)
+
+**RUIM (prop-drilling):**
+
+```kof
+main() {
+    var theme = Store(0)
+    buildHeader(theme)              // descer o handle por camada...
+}
+Header buildHeader(Store theme) {   // ...toda, uma a uma
+    return buildLogo(theme)
+}
+```
+
+**PREFERIDO:**
+
+```kof
+main() {
+    AppState(0).set(1)              // store-raiz: um por aplicação
+}
+Label buildLogo() {
+    var l = Label("")
+    AppState(0).subscribe((v: Int) -> { l.text = "mode " + v })   // alcança direto
+    return l
+}
+```
+
+**Por quê:** `AppState(initial)` é o store-raiz do escopo da aplicação —
+singleton create-or-get sobre a máquina do `Store` (`D-UI-APPSTATE`): a
+primeira chamada cria com `initial`, as seguintes devolvem o mesmo handle.
+Components leem onde precisam, sem carregar handles por camadas. Os métodos
+são exatamente os do Store; `unsubscribe` é real desde o §279 (cleanup manual
+hoje — auto-atribuição ao ciclo de vida do component é regra 6, indecisa). O
+observable vive no KofJS; JVM/Native são no-ops documentados.
