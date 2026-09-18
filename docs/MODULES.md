@@ -91,11 +91,15 @@ Legenda de estado: ⬜ planejado · 🟡 parcial · ✅ completo
 
 ## Camada 3 — Conhecimento
 
-### `corpus/` ⬜ (M5)
+### `corpus/` 🟡 (M5)
 - **Responsabilidade:** loader/parser markdown com metadata (id, title,
   module, target, version, keywords, symbols, embedding, checksum),
   versionamento, cache, indexador incremental.
 - **Depende de:** tokenizer, embeddings, scheduler.
+- **Conteúdo atual:** 115 docs — corpus Kof oficial sincronizado de
+  `Kof4j/training` (`scripts/sync_corpus.py`, idempotente; `corpus/kof/`,
+  46 PT-BR + 46 EN) + bloco Java `corpus/java/` (identificar/migrar/recusar)
+  + docs factuais do agente. Loader/validador/registries testados (15/15).
 
 ### `retrieval/` ⬜ (M6)
 - **Responsabilidade:** índice vetorial binário local, top-K, MMR, ranking,

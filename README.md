@@ -9,7 +9,7 @@ executa a tarefa, explica o mínimo possível, pergunta quando não entende.
 | Camada | Estado |
 |---|---|
 | M0–M31 runtime/tools/AI/HAL/shaders | ✅ |
-| M5 corpus/retrieval | ✅ código · 🟡 conteúdo: 20 docs reais em 15 categorias (14 novas 18/09, factuais); base p/ repair ainda rasa — encher com diagnostiquês novo a cada bug |
+| M5 corpus/retrieval | ✅ código · ✅ conteúdo: **115 docs** = corpus Kof oficial (92, sync de `Kof4j/training` via `scripts/sync_corpus.py`, 46 PT-BR + 46 EN) + bloco **Java** (3: identificar/migrar/recusar) + 20 factuais do agente (port-0.4.0, contrato, tooling, dataset v4, diagnostics PARSE085/SEM038/SEM011/ARITH001) |
 | M32 GPU Vulkan (FFM vkchain, dispatch matmul 32/64) | ✅ |
 | M33 GGUF parser binário 100% Kof (Q4_K/Q6_K/F16) | ✅ |
 | M34 forward TinyLlama token exato + tokenizer SPM + geração | ✅ |

@@ -29,3 +29,7 @@ tags: tooling
   `docs/compiler/reports/sweep-<hash>.md`. So o TU atual confirma um fix;
   repros antigos com `fn` dao PARSE085 e NAO contam como evidencia.
 - `scripts/test_corpus.sh` — roda `tests/corpus/*` listados em MANIFEST.
+- `scripts/sync_corpus.py` — re-sincroniza `corpus/kof/` a partir de
+  `$KOF4J_ROOT/training` (regra Kof: linguagem, idioms, migracao Java→Kof,
+  anti-padroes, reference). Idempotente; regravar nao muda bytes. Rode apos
+  `git -C ~/Documentos/Kof4j pull`.
