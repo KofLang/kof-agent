@@ -1,0 +1,620 @@
+{"id": "eval-0000", "category": "sintaxe", "instruction": "[sintaxe] Como declaro uma função em Kof?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0001", "category": "sintaxe", "instruction": "[sintaxe] Explique records em Kof.", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0002", "category": "sintaxe", "instruction": "[sintaxe] Diferença entre class e record?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0003", "category": "sintaxe", "instruction": "[sintaxe] Para que serve enum?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0004", "category": "sintaxe", "instruction": "[sintaxe] Como declaro uma função em Kof?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0005", "category": "sintaxe", "instruction": "[sintaxe] Explique records em Kof.", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0006", "category": "sintaxe", "instruction": "[sintaxe] Diferença entre class e record?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0007", "category": "sintaxe", "instruction": "[sintaxe] Para que serve enum?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0008", "category": "sintaxe", "instruction": "[sintaxe] Como declaro uma função em Kof?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0009", "category": "sintaxe", "instruction": "[sintaxe] Explique records em Kof.", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0010", "category": "sintaxe", "instruction": "[sintaxe] Diferença entre class e record?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0011", "category": "sintaxe", "instruction": "[sintaxe] Para que serve enum?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0012", "category": "sintaxe", "instruction": "[sintaxe] Como declaro uma função em Kof?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0013", "category": "sintaxe", "instruction": "[sintaxe] Explique records em Kof.", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0014", "category": "sintaxe", "instruction": "[sintaxe] Diferença entre class e record?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0015", "category": "sintaxe", "instruction": "[sintaxe] Para que serve enum?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0016", "category": "sintaxe", "instruction": "[sintaxe] Como declaro uma função em Kof?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0017", "category": "sintaxe", "instruction": "[sintaxe] Explique records em Kof.", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0018", "category": "sintaxe", "instruction": "[sintaxe] Diferença entre class e record?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0019", "category": "sintaxe", "instruction": "[sintaxe] Para que serve enum?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0020", "category": "sintaxe", "instruction": "[sintaxe] Como declaro uma função em Kof?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0021", "category": "sintaxe", "instruction": "[sintaxe] Explique records em Kof.", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0022", "category": "sintaxe", "instruction": "[sintaxe] Diferença entre class e record?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0023", "category": "sintaxe", "instruction": "[sintaxe] Para que serve enum?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0024", "category": "sintaxe", "instruction": "[sintaxe] Como declaro uma função em Kof?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0025", "category": "sintaxe", "instruction": "[sintaxe] Explique records em Kof.", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0026", "category": "sintaxe", "instruction": "[sintaxe] Diferença entre class e record?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0027", "category": "sintaxe", "instruction": "[sintaxe] Para que serve enum?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0028", "category": "sintaxe", "instruction": "[sintaxe] Como declaro uma função em Kof?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0029", "category": "sintaxe", "instruction": "[sintaxe] Explique records em Kof.", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0030", "category": "sintaxe", "instruction": "[sintaxe] Diferença entre class e record?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0031", "category": "sintaxe", "instruction": "[sintaxe] Para que serve enum?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0032", "category": "sintaxe", "instruction": "[sintaxe] Como declaro uma função em Kof?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0033", "category": "sintaxe", "instruction": "[sintaxe] Explique records em Kof.", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0034", "category": "sintaxe", "instruction": "[sintaxe] Diferença entre class e record?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0035", "category": "sintaxe", "instruction": "[sintaxe] Para que serve enum?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0036", "category": "sintaxe", "instruction": "[sintaxe] Como declaro uma função em Kof?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0037", "category": "sintaxe", "instruction": "[sintaxe] Explique records em Kof.", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0038", "category": "sintaxe", "instruction": "[sintaxe] Diferença entre class e record?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0039", "category": "sintaxe", "instruction": "[sintaxe] Para que serve enum?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0040", "category": "sintaxe", "instruction": "[sintaxe] Como declaro uma função em Kof?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0041", "category": "sintaxe", "instruction": "[sintaxe] Explique records em Kof.", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0042", "category": "sintaxe", "instruction": "[sintaxe] Diferença entre class e record?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0043", "category": "sintaxe", "instruction": "[sintaxe] Para que serve enum?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0044", "category": "sintaxe", "instruction": "[sintaxe] Como declaro uma função em Kof?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0045", "category": "sintaxe", "instruction": "[sintaxe] Explique records em Kof.", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0046", "category": "sintaxe", "instruction": "[sintaxe] Diferença entre class e record?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0047", "category": "sintaxe", "instruction": "[sintaxe] Para que serve enum?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0048", "category": "sintaxe", "instruction": "[sintaxe] Como declaro uma função em Kof?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0049", "category": "sintaxe", "instruction": "[sintaxe] Explique records em Kof.", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0050", "category": "sintaxe", "instruction": "[sintaxe] Diferença entre class e record?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0051", "category": "sintaxe", "instruction": "[sintaxe] Para que serve enum?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0052", "category": "sintaxe", "instruction": "[sintaxe] Como declaro uma função em Kof?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0053", "category": "sintaxe", "instruction": "[sintaxe] Explique records em Kof.", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0054", "category": "sintaxe", "instruction": "[sintaxe] Diferença entre class e record?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0055", "category": "sintaxe", "instruction": "[sintaxe] Para que serve enum?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0056", "category": "sintaxe", "instruction": "[sintaxe] Como declaro uma função em Kof?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0057", "category": "sintaxe", "instruction": "[sintaxe] Explique records em Kof.", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0058", "category": "sintaxe", "instruction": "[sintaxe] Diferença entre class e record?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0059", "category": "sintaxe", "instruction": "[sintaxe] Para que serve enum?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0060", "category": "sintaxe", "instruction": "[sintaxe] Como declaro uma função em Kof?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0061", "category": "sintaxe", "instruction": "[sintaxe] Explique records em Kof.", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0062", "category": "sintaxe", "instruction": "[sintaxe] Diferença entre class e record?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0063", "category": "sintaxe", "instruction": "[sintaxe] Para que serve enum?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0064", "category": "sintaxe", "instruction": "[sintaxe] Como declaro uma função em Kof?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0065", "category": "sintaxe", "instruction": "[sintaxe] Explique records em Kof.", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0066", "category": "sintaxe", "instruction": "[sintaxe] Diferença entre class e record?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0067", "category": "sintaxe", "instruction": "[sintaxe] Para que serve enum?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0068", "category": "sintaxe", "instruction": "[sintaxe] Como declaro uma função em Kof?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0069", "category": "sintaxe", "instruction": "[sintaxe] Explique records em Kof.", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0070", "category": "sintaxe", "instruction": "[sintaxe] Diferença entre class e record?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0071", "category": "sintaxe", "instruction": "[sintaxe] Para que serve enum?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0072", "category": "sintaxe", "instruction": "[sintaxe] Como declaro uma função em Kof?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0073", "category": "sintaxe", "instruction": "[sintaxe] Explique records em Kof.", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0074", "category": "sintaxe", "instruction": "[sintaxe] Diferença entre class e record?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0075", "category": "sintaxe", "instruction": "[sintaxe] Para que serve enum?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0076", "category": "sintaxe", "instruction": "[sintaxe] Como declaro uma função em Kof?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0077", "category": "sintaxe", "instruction": "[sintaxe] Explique records em Kof.", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0078", "category": "sintaxe", "instruction": "[sintaxe] Diferença entre class e record?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0079", "category": "sintaxe", "instruction": "[sintaxe] Para que serve enum?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0080", "category": "sintaxe", "instruction": "[sintaxe] Como declaro uma função em Kof?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0081", "category": "sintaxe", "instruction": "[sintaxe] Explique records em Kof.", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0082", "category": "sintaxe", "instruction": "[sintaxe] Diferença entre class e record?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0083", "category": "sintaxe", "instruction": "[sintaxe] Para que serve enum?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0084", "category": "sintaxe", "instruction": "[sintaxe] Como declaro uma função em Kof?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0085", "category": "sintaxe", "instruction": "[sintaxe] Explique records em Kof.", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0086", "category": "sintaxe", "instruction": "[sintaxe] Diferença entre class e record?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0087", "category": "sintaxe", "instruction": "[sintaxe] Para que serve enum?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0088", "category": "sintaxe", "instruction": "[sintaxe] Como declaro uma função em Kof?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0089", "category": "sintaxe", "instruction": "[sintaxe] Explique records em Kof.", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0090", "category": "runtime", "instruction": "[runtime] Explique o Scheduler cooperativo.", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0091", "category": "runtime", "instruction": "[runtime] Como funciona o EventBus?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0092", "category": "runtime", "instruction": "[runtime] O que faz Lifecycle?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0093", "category": "runtime", "instruction": "[runtime] Como usar Metrics?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0094", "category": "runtime", "instruction": "[runtime] Explique o Scheduler cooperativo.", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0095", "category": "runtime", "instruction": "[runtime] Como funciona o EventBus?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0096", "category": "runtime", "instruction": "[runtime] O que faz Lifecycle?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0097", "category": "runtime", "instruction": "[runtime] Como usar Metrics?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0098", "category": "runtime", "instruction": "[runtime] Explique o Scheduler cooperativo.", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0099", "category": "runtime", "instruction": "[runtime] Como funciona o EventBus?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0100", "category": "runtime", "instruction": "[runtime] O que faz Lifecycle?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0101", "category": "runtime", "instruction": "[runtime] Como usar Metrics?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0102", "category": "runtime", "instruction": "[runtime] Explique o Scheduler cooperativo.", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0103", "category": "runtime", "instruction": "[runtime] Como funciona o EventBus?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0104", "category": "runtime", "instruction": "[runtime] O que faz Lifecycle?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0105", "category": "runtime", "instruction": "[runtime] Como usar Metrics?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0106", "category": "runtime", "instruction": "[runtime] Explique o Scheduler cooperativo.", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0107", "category": "runtime", "instruction": "[runtime] Como funciona o EventBus?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0108", "category": "runtime", "instruction": "[runtime] O que faz Lifecycle?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0109", "category": "runtime", "instruction": "[runtime] Como usar Metrics?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0110", "category": "runtime", "instruction": "[runtime] Explique o Scheduler cooperativo.", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0111", "category": "runtime", "instruction": "[runtime] Como funciona o EventBus?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0112", "category": "runtime", "instruction": "[runtime] O que faz Lifecycle?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0113", "category": "runtime", "instruction": "[runtime] Como usar Metrics?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0114", "category": "runtime", "instruction": "[runtime] Explique o Scheduler cooperativo.", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0115", "category": "runtime", "instruction": "[runtime] Como funciona o EventBus?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0116", "category": "runtime", "instruction": "[runtime] O que faz Lifecycle?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0117", "category": "runtime", "instruction": "[runtime] Como usar Metrics?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0118", "category": "runtime", "instruction": "[runtime] Explique o Scheduler cooperativo.", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0119", "category": "runtime", "instruction": "[runtime] Como funciona o EventBus?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0120", "category": "runtime", "instruction": "[runtime] O que faz Lifecycle?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0121", "category": "runtime", "instruction": "[runtime] Como usar Metrics?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0122", "category": "runtime", "instruction": "[runtime] Explique o Scheduler cooperativo.", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0123", "category": "runtime", "instruction": "[runtime] Como funciona o EventBus?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0124", "category": "runtime", "instruction": "[runtime] O que faz Lifecycle?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0125", "category": "runtime", "instruction": "[runtime] Como usar Metrics?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0126", "category": "runtime", "instruction": "[runtime] Explique o Scheduler cooperativo.", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0127", "category": "runtime", "instruction": "[runtime] Como funciona o EventBus?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0128", "category": "runtime", "instruction": "[runtime] O que faz Lifecycle?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0129", "category": "runtime", "instruction": "[runtime] Como usar Metrics?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0130", "category": "runtime", "instruction": "[runtime] Explique o Scheduler cooperativo.", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0131", "category": "runtime", "instruction": "[runtime] Como funciona o EventBus?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0132", "category": "runtime", "instruction": "[runtime] O que faz Lifecycle?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0133", "category": "runtime", "instruction": "[runtime] Como usar Metrics?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0134", "category": "runtime", "instruction": "[runtime] Explique o Scheduler cooperativo.", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0135", "category": "runtime", "instruction": "[runtime] Como funciona o EventBus?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0136", "category": "runtime", "instruction": "[runtime] O que faz Lifecycle?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0137", "category": "runtime", "instruction": "[runtime] Como usar Metrics?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0138", "category": "runtime", "instruction": "[runtime] Explique o Scheduler cooperativo.", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0139", "category": "runtime", "instruction": "[runtime] Como funciona o EventBus?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0140", "category": "runtime", "instruction": "[runtime] O que faz Lifecycle?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0141", "category": "runtime", "instruction": "[runtime] Como usar Metrics?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0142", "category": "runtime", "instruction": "[runtime] Explique o Scheduler cooperativo.", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0143", "category": "runtime", "instruction": "[runtime] Como funciona o EventBus?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0144", "category": "runtime", "instruction": "[runtime] O que faz Lifecycle?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0145", "category": "runtime", "instruction": "[runtime] Como usar Metrics?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0146", "category": "runtime", "instruction": "[runtime] Explique o Scheduler cooperativo.", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0147", "category": "runtime", "instruction": "[runtime] Como funciona o EventBus?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0148", "category": "runtime", "instruction": "[runtime] O que faz Lifecycle?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0149", "category": "runtime", "instruction": "[runtime] Como usar Metrics?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0150", "category": "runtime", "instruction": "[runtime] Explique o Scheduler cooperativo.", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0151", "category": "runtime", "instruction": "[runtime] Como funciona o EventBus?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0152", "category": "runtime", "instruction": "[runtime] O que faz Lifecycle?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0153", "category": "runtime", "instruction": "[runtime] Como usar Metrics?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0154", "category": "runtime", "instruction": "[runtime] Explique o Scheduler cooperativo.", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0155", "category": "runtime", "instruction": "[runtime] Como funciona o EventBus?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0156", "category": "runtime", "instruction": "[runtime] O que faz Lifecycle?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0157", "category": "runtime", "instruction": "[runtime] Como usar Metrics?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0158", "category": "runtime", "instruction": "[runtime] Explique o Scheduler cooperativo.", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0159", "category": "runtime", "instruction": "[runtime] Como funciona o EventBus?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0160", "category": "runtime", "instruction": "[runtime] O que faz Lifecycle?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0161", "category": "runtime", "instruction": "[runtime] Como usar Metrics?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0162", "category": "runtime", "instruction": "[runtime] Explique o Scheduler cooperativo.", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0163", "category": "runtime", "instruction": "[runtime] Como funciona o EventBus?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0164", "category": "runtime", "instruction": "[runtime] O que faz Lifecycle?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0165", "category": "runtime", "instruction": "[runtime] Como usar Metrics?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0166", "category": "runtime", "instruction": "[runtime] Explique o Scheduler cooperativo.", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0167", "category": "runtime", "instruction": "[runtime] Como funciona o EventBus?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0168", "category": "runtime", "instruction": "[runtime] O que faz Lifecycle?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0169", "category": "runtime", "instruction": "[runtime] Como usar Metrics?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0170", "category": "runtime", "instruction": "[runtime] Explique o Scheduler cooperativo.", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0171", "category": "runtime", "instruction": "[runtime] Como funciona o EventBus?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0172", "category": "runtime", "instruction": "[runtime] O que faz Lifecycle?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0173", "category": "runtime", "instruction": "[runtime] Como usar Metrics?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0174", "category": "runtime", "instruction": "[runtime] Explique o Scheduler cooperativo.", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0175", "category": "runtime", "instruction": "[runtime] Como funciona o EventBus?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0176", "category": "runtime", "instruction": "[runtime] O que faz Lifecycle?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0177", "category": "runtime", "instruction": "[runtime] Como usar Metrics?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0178", "category": "runtime", "instruction": "[runtime] Explique o Scheduler cooperativo.", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0179", "category": "runtime", "instruction": "[runtime] Como funciona o EventBus?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0180", "category": "compiler", "instruction": "[compiler] Por que SEM025 ocorre?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0181", "category": "compiler", "instruction": "[compiler] O que é N10-progressivo?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0182", "category": "compiler", "instruction": "[compiler] Como contornar N18?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0183", "category": "compiler", "instruction": "[compiler] Explique COMP002.", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0184", "category": "compiler", "instruction": "[compiler] Por que SEM025 ocorre?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0185", "category": "compiler", "instruction": "[compiler] O que é N10-progressivo?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0186", "category": "compiler", "instruction": "[compiler] Como contornar N18?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0187", "category": "compiler", "instruction": "[compiler] Explique COMP002.", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0188", "category": "compiler", "instruction": "[compiler] Por que SEM025 ocorre?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0189", "category": "compiler", "instruction": "[compiler] O que é N10-progressivo?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0190", "category": "compiler", "instruction": "[compiler] Como contornar N18?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0191", "category": "compiler", "instruction": "[compiler] Explique COMP002.", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0192", "category": "compiler", "instruction": "[compiler] Por que SEM025 ocorre?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0193", "category": "compiler", "instruction": "[compiler] O que é N10-progressivo?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0194", "category": "compiler", "instruction": "[compiler] Como contornar N18?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0195", "category": "compiler", "instruction": "[compiler] Explique COMP002.", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0196", "category": "compiler", "instruction": "[compiler] Por que SEM025 ocorre?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0197", "category": "compiler", "instruction": "[compiler] O que é N10-progressivo?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0198", "category": "compiler", "instruction": "[compiler] Como contornar N18?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0199", "category": "compiler", "instruction": "[compiler] Explique COMP002.", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0200", "category": "compiler", "instruction": "[compiler] Por que SEM025 ocorre?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0201", "category": "compiler", "instruction": "[compiler] O que é N10-progressivo?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0202", "category": "compiler", "instruction": "[compiler] Como contornar N18?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0203", "category": "compiler", "instruction": "[compiler] Explique COMP002.", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0204", "category": "compiler", "instruction": "[compiler] Por que SEM025 ocorre?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0205", "category": "compiler", "instruction": "[compiler] O que é N10-progressivo?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0206", "category": "compiler", "instruction": "[compiler] Como contornar N18?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0207", "category": "compiler", "instruction": "[compiler] Explique COMP002.", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0208", "category": "compiler", "instruction": "[compiler] Por que SEM025 ocorre?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0209", "category": "compiler", "instruction": "[compiler] O que é N10-progressivo?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0210", "category": "compiler", "instruction": "[compiler] Como contornar N18?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0211", "category": "compiler", "instruction": "[compiler] Explique COMP002.", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0212", "category": "compiler", "instruction": "[compiler] Por que SEM025 ocorre?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0213", "category": "compiler", "instruction": "[compiler] O que é N10-progressivo?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0214", "category": "compiler", "instruction": "[compiler] Como contornar N18?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0215", "category": "compiler", "instruction": "[compiler] Explique COMP002.", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0216", "category": "compiler", "instruction": "[compiler] Por que SEM025 ocorre?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0217", "category": "compiler", "instruction": "[compiler] O que é N10-progressivo?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0218", "category": "compiler", "instruction": "[compiler] Como contornar N18?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0219", "category": "compiler", "instruction": "[compiler] Explique COMP002.", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0220", "category": "compiler", "instruction": "[compiler] Por que SEM025 ocorre?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0221", "category": "compiler", "instruction": "[compiler] O que é N10-progressivo?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0222", "category": "compiler", "instruction": "[compiler] Como contornar N18?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0223", "category": "compiler", "instruction": "[compiler] Explique COMP002.", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0224", "category": "compiler", "instruction": "[compiler] Por que SEM025 ocorre?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0225", "category": "compiler", "instruction": "[compiler] O que é N10-progressivo?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0226", "category": "compiler", "instruction": "[compiler] Como contornar N18?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0227", "category": "compiler", "instruction": "[compiler] Explique COMP002.", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0228", "category": "compiler", "instruction": "[compiler] Por que SEM025 ocorre?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0229", "category": "compiler", "instruction": "[compiler] O que é N10-progressivo?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0230", "category": "compiler", "instruction": "[compiler] Como contornar N18?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0231", "category": "compiler", "instruction": "[compiler] Explique COMP002.", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0232", "category": "compiler", "instruction": "[compiler] Por que SEM025 ocorre?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0233", "category": "compiler", "instruction": "[compiler] O que é N10-progressivo?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0234", "category": "compiler", "instruction": "[compiler] Como contornar N18?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0235", "category": "compiler", "instruction": "[compiler] Explique COMP002.", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0236", "category": "compiler", "instruction": "[compiler] Por que SEM025 ocorre?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0237", "category": "compiler", "instruction": "[compiler] O que é N10-progressivo?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0238", "category": "compiler", "instruction": "[compiler] Como contornar N18?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0239", "category": "compiler", "instruction": "[compiler] Explique COMP002.", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0240", "category": "compiler", "instruction": "[compiler] Por que SEM025 ocorre?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0241", "category": "compiler", "instruction": "[compiler] O que é N10-progressivo?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0242", "category": "compiler", "instruction": "[compiler] Como contornar N18?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0243", "category": "compiler", "instruction": "[compiler] Explique COMP002.", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0244", "category": "compiler", "instruction": "[compiler] Por que SEM025 ocorre?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0245", "category": "compiler", "instruction": "[compiler] O que é N10-progressivo?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0246", "category": "compiler", "instruction": "[compiler] Como contornar N18?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0247", "category": "compiler", "instruction": "[compiler] Explique COMP002.", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0248", "category": "compiler", "instruction": "[compiler] Por que SEM025 ocorre?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0249", "category": "compiler", "instruction": "[compiler] O que é N10-progressivo?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0250", "category": "compiler", "instruction": "[compiler] Como contornar N18?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0251", "category": "compiler", "instruction": "[compiler] Explique COMP002.", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0252", "category": "compiler", "instruction": "[compiler] Por que SEM025 ocorre?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0253", "category": "compiler", "instruction": "[compiler] O que é N10-progressivo?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0254", "category": "compiler", "instruction": "[compiler] Como contornar N18?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0255", "category": "compiler", "instruction": "[compiler] Explique COMP002.", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0256", "category": "compiler", "instruction": "[compiler] Por que SEM025 ocorre?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0257", "category": "compiler", "instruction": "[compiler] O que é N10-progressivo?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0258", "category": "compiler", "instruction": "[compiler] Como contornar N18?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0259", "category": "compiler", "instruction": "[compiler] Explique COMP002.", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0260", "category": "compiler", "instruction": "[compiler] Por que SEM025 ocorre?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0261", "category": "compiler", "instruction": "[compiler] O que é N10-progressivo?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0262", "category": "compiler", "instruction": "[compiler] Como contornar N18?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0263", "category": "compiler", "instruction": "[compiler] Explique COMP002.", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0264", "category": "compiler", "instruction": "[compiler] Por que SEM025 ocorre?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0265", "category": "compiler", "instruction": "[compiler] O que é N10-progressivo?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0266", "category": "compiler", "instruction": "[compiler] Como contornar N18?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0267", "category": "compiler", "instruction": "[compiler] Explique COMP002.", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0268", "category": "compiler", "instruction": "[compiler] Por que SEM025 ocorre?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0269", "category": "compiler", "instruction": "[compiler] O que é N10-progressivo?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0270", "category": "tooling", "instruction": "[tooling] Como funciona WorkspaceIndex?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0271", "category": "tooling", "instruction": "[tooling] Explique Retrieval Engine.", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0272", "category": "tooling", "instruction": "[tooling] O que faz ToolOrchestrator?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0273", "category": "tooling", "instruction": "[tooling] Para que serve ExecutionJournal?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0274", "category": "tooling", "instruction": "[tooling] Como funciona WorkspaceIndex?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0275", "category": "tooling", "instruction": "[tooling] Explique Retrieval Engine.", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0276", "category": "tooling", "instruction": "[tooling] O que faz ToolOrchestrator?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0277", "category": "tooling", "instruction": "[tooling] Para que serve ExecutionJournal?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0278", "category": "tooling", "instruction": "[tooling] Como funciona WorkspaceIndex?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0279", "category": "tooling", "instruction": "[tooling] Explique Retrieval Engine.", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0280", "category": "tooling", "instruction": "[tooling] O que faz ToolOrchestrator?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0281", "category": "tooling", "instruction": "[tooling] Para que serve ExecutionJournal?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0282", "category": "tooling", "instruction": "[tooling] Como funciona WorkspaceIndex?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0283", "category": "tooling", "instruction": "[tooling] Explique Retrieval Engine.", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0284", "category": "tooling", "instruction": "[tooling] O que faz ToolOrchestrator?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0285", "category": "tooling", "instruction": "[tooling] Para que serve ExecutionJournal?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0286", "category": "tooling", "instruction": "[tooling] Como funciona WorkspaceIndex?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0287", "category": "tooling", "instruction": "[tooling] Explique Retrieval Engine.", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0288", "category": "tooling", "instruction": "[tooling] O que faz ToolOrchestrator?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0289", "category": "tooling", "instruction": "[tooling] Para que serve ExecutionJournal?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0290", "category": "tooling", "instruction": "[tooling] Como funciona WorkspaceIndex?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0291", "category": "tooling", "instruction": "[tooling] Explique Retrieval Engine.", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0292", "category": "tooling", "instruction": "[tooling] O que faz ToolOrchestrator?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0293", "category": "tooling", "instruction": "[tooling] Para que serve ExecutionJournal?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0294", "category": "tooling", "instruction": "[tooling] Como funciona WorkspaceIndex?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0295", "category": "tooling", "instruction": "[tooling] Explique Retrieval Engine.", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0296", "category": "tooling", "instruction": "[tooling] O que faz ToolOrchestrator?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0297", "category": "tooling", "instruction": "[tooling] Para que serve ExecutionJournal?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0298", "category": "tooling", "instruction": "[tooling] Como funciona WorkspaceIndex?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0299", "category": "tooling", "instruction": "[tooling] Explique Retrieval Engine.", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0300", "category": "tooling", "instruction": "[tooling] O que faz ToolOrchestrator?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0301", "category": "tooling", "instruction": "[tooling] Para que serve ExecutionJournal?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0302", "category": "tooling", "instruction": "[tooling] Como funciona WorkspaceIndex?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0303", "category": "tooling", "instruction": "[tooling] Explique Retrieval Engine.", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0304", "category": "tooling", "instruction": "[tooling] O que faz ToolOrchestrator?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0305", "category": "tooling", "instruction": "[tooling] Para que serve ExecutionJournal?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0306", "category": "tooling", "instruction": "[tooling] Como funciona WorkspaceIndex?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0307", "category": "tooling", "instruction": "[tooling] Explique Retrieval Engine.", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0308", "category": "tooling", "instruction": "[tooling] O que faz ToolOrchestrator?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0309", "category": "tooling", "instruction": "[tooling] Para que serve ExecutionJournal?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0310", "category": "tooling", "instruction": "[tooling] Como funciona WorkspaceIndex?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0311", "category": "tooling", "instruction": "[tooling] Explique Retrieval Engine.", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0312", "category": "tooling", "instruction": "[tooling] O que faz ToolOrchestrator?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0313", "category": "tooling", "instruction": "[tooling] Para que serve ExecutionJournal?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0314", "category": "tooling", "instruction": "[tooling] Como funciona WorkspaceIndex?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0315", "category": "tooling", "instruction": "[tooling] Explique Retrieval Engine.", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0316", "category": "tooling", "instruction": "[tooling] O que faz ToolOrchestrator?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0317", "category": "tooling", "instruction": "[tooling] Para que serve ExecutionJournal?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0318", "category": "tooling", "instruction": "[tooling] Como funciona WorkspaceIndex?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0319", "category": "tooling", "instruction": "[tooling] Explique Retrieval Engine.", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0320", "category": "tooling", "instruction": "[tooling] O que faz ToolOrchestrator?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0321", "category": "tooling", "instruction": "[tooling] Para que serve ExecutionJournal?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0322", "category": "tooling", "instruction": "[tooling] Como funciona WorkspaceIndex?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0323", "category": "tooling", "instruction": "[tooling] Explique Retrieval Engine.", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0324", "category": "tooling", "instruction": "[tooling] O que faz ToolOrchestrator?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0325", "category": "tooling", "instruction": "[tooling] Para que serve ExecutionJournal?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0326", "category": "tooling", "instruction": "[tooling] Como funciona WorkspaceIndex?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0327", "category": "tooling", "instruction": "[tooling] Explique Retrieval Engine.", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0328", "category": "tooling", "instruction": "[tooling] O que faz ToolOrchestrator?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0329", "category": "tooling", "instruction": "[tooling] Para que serve ExecutionJournal?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0330", "category": "tooling", "instruction": "[tooling] Como funciona WorkspaceIndex?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0331", "category": "tooling", "instruction": "[tooling] Explique Retrieval Engine.", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0332", "category": "tooling", "instruction": "[tooling] O que faz ToolOrchestrator?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0333", "category": "tooling", "instruction": "[tooling] Para que serve ExecutionJournal?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0334", "category": "tooling", "instruction": "[tooling] Como funciona WorkspaceIndex?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0335", "category": "tooling", "instruction": "[tooling] Explique Retrieval Engine.", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0336", "category": "tooling", "instruction": "[tooling] O que faz ToolOrchestrator?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0337", "category": "tooling", "instruction": "[tooling] Para que serve ExecutionJournal?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0338", "category": "tooling", "instruction": "[tooling] Como funciona WorkspaceIndex?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0339", "category": "tooling", "instruction": "[tooling] Explique Retrieval Engine.", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0340", "category": "tooling", "instruction": "[tooling] O que faz ToolOrchestrator?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0341", "category": "tooling", "instruction": "[tooling] Para que serve ExecutionJournal?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0342", "category": "tooling", "instruction": "[tooling] Como funciona WorkspaceIndex?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0343", "category": "tooling", "instruction": "[tooling] Explique Retrieval Engine.", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0344", "category": "tooling", "instruction": "[tooling] O que faz ToolOrchestrator?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0345", "category": "tooling", "instruction": "[tooling] Para que serve ExecutionJournal?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0346", "category": "tooling", "instruction": "[tooling] Como funciona WorkspaceIndex?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0347", "category": "tooling", "instruction": "[tooling] Explique Retrieval Engine.", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0348", "category": "tooling", "instruction": "[tooling] O que faz ToolOrchestrator?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0349", "category": "tooling", "instruction": "[tooling] Para que serve ExecutionJournal?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0350", "category": "tooling", "instruction": "[tooling] Como funciona WorkspaceIndex?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0351", "category": "tooling", "instruction": "[tooling] Explique Retrieval Engine.", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0352", "category": "tooling", "instruction": "[tooling] O que faz ToolOrchestrator?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0353", "category": "tooling", "instruction": "[tooling] Para que serve ExecutionJournal?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0354", "category": "tooling", "instruction": "[tooling] Como funciona WorkspaceIndex?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0355", "category": "tooling", "instruction": "[tooling] Explique Retrieval Engine.", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0356", "category": "tooling", "instruction": "[tooling] O que faz ToolOrchestrator?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0357", "category": "tooling", "instruction": "[tooling] Para que serve ExecutionJournal?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0358", "category": "tooling", "instruction": "[tooling] Como funciona WorkspaceIndex?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0359", "category": "tooling", "instruction": "[tooling] Explique Retrieval Engine.", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0360", "category": "ai", "instruction": "[ai] Gere uma função Kof que soma dois ints.", "expected_kind": "code", "expected_action": "EXECUTE"}
+{"id": "eval-0361", "category": "ai", "instruction": "[ai] Refatore este código para usar records.", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0362", "category": "ai", "instruction": "[ai] Documente esta função.", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0363", "category": "ai", "instruction": "[ai] Corrija este loop infinito.", "expected_kind": "code", "expected_action": "EXECUTE"}
+{"id": "eval-0364", "category": "ai", "instruction": "[ai] Gere uma função Kof que soma dois ints.", "expected_kind": "code", "expected_action": "EXECUTE"}
+{"id": "eval-0365", "category": "ai", "instruction": "[ai] Refatore este código para usar records.", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0366", "category": "ai", "instruction": "[ai] Documente esta função.", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0367", "category": "ai", "instruction": "[ai] Corrija este loop infinito.", "expected_kind": "code", "expected_action": "EXECUTE"}
+{"id": "eval-0368", "category": "ai", "instruction": "[ai] Gere uma função Kof que soma dois ints.", "expected_kind": "code", "expected_action": "EXECUTE"}
+{"id": "eval-0369", "category": "ai", "instruction": "[ai] Refatore este código para usar records.", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0370", "category": "ai", "instruction": "[ai] Documente esta função.", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0371", "category": "ai", "instruction": "[ai] Corrija este loop infinito.", "expected_kind": "code", "expected_action": "EXECUTE"}
+{"id": "eval-0372", "category": "ai", "instruction": "[ai] Gere uma função Kof que soma dois ints.", "expected_kind": "code", "expected_action": "EXECUTE"}
+{"id": "eval-0373", "category": "ai", "instruction": "[ai] Refatore este código para usar records.", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0374", "category": "ai", "instruction": "[ai] Documente esta função.", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0375", "category": "ai", "instruction": "[ai] Corrija este loop infinito.", "expected_kind": "code", "expected_action": "EXECUTE"}
+{"id": "eval-0376", "category": "ai", "instruction": "[ai] Gere uma função Kof que soma dois ints.", "expected_kind": "code", "expected_action": "EXECUTE"}
+{"id": "eval-0377", "category": "ai", "instruction": "[ai] Refatore este código para usar records.", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0378", "category": "ai", "instruction": "[ai] Documente esta função.", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0379", "category": "ai", "instruction": "[ai] Corrija este loop infinito.", "expected_kind": "code", "expected_action": "EXECUTE"}
+{"id": "eval-0380", "category": "ai", "instruction": "[ai] Gere uma função Kof que soma dois ints.", "expected_kind": "code", "expected_action": "EXECUTE"}
+{"id": "eval-0381", "category": "ai", "instruction": "[ai] Refatore este código para usar records.", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0382", "category": "ai", "instruction": "[ai] Documente esta função.", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0383", "category": "ai", "instruction": "[ai] Corrija este loop infinito.", "expected_kind": "code", "expected_action": "EXECUTE"}
+{"id": "eval-0384", "category": "ai", "instruction": "[ai] Gere uma função Kof que soma dois ints.", "expected_kind": "code", "expected_action": "EXECUTE"}
+{"id": "eval-0385", "category": "ai", "instruction": "[ai] Refatore este código para usar records.", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0386", "category": "ai", "instruction": "[ai] Documente esta função.", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0387", "category": "ai", "instruction": "[ai] Corrija este loop infinito.", "expected_kind": "code", "expected_action": "EXECUTE"}
+{"id": "eval-0388", "category": "ai", "instruction": "[ai] Gere uma função Kof que soma dois ints.", "expected_kind": "code", "expected_action": "EXECUTE"}
+{"id": "eval-0389", "category": "ai", "instruction": "[ai] Refatore este código para usar records.", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0390", "category": "ai", "instruction": "[ai] Documente esta função.", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0391", "category": "ai", "instruction": "[ai] Corrija este loop infinito.", "expected_kind": "code", "expected_action": "EXECUTE"}
+{"id": "eval-0392", "category": "ai", "instruction": "[ai] Gere uma função Kof que soma dois ints.", "expected_kind": "code", "expected_action": "EXECUTE"}
+{"id": "eval-0393", "category": "ai", "instruction": "[ai] Refatore este código para usar records.", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0394", "category": "ai", "instruction": "[ai] Documente esta função.", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0395", "category": "ai", "instruction": "[ai] Corrija este loop infinito.", "expected_kind": "code", "expected_action": "EXECUTE"}
+{"id": "eval-0396", "category": "ai", "instruction": "[ai] Gere uma função Kof que soma dois ints.", "expected_kind": "code", "expected_action": "EXECUTE"}
+{"id": "eval-0397", "category": "ai", "instruction": "[ai] Refatore este código para usar records.", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0398", "category": "ai", "instruction": "[ai] Documente esta função.", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0399", "category": "ai", "instruction": "[ai] Corrija este loop infinito.", "expected_kind": "code", "expected_action": "EXECUTE"}
+{"id": "eval-0400", "category": "ai", "instruction": "[ai] Gere uma função Kof que soma dois ints.", "expected_kind": "code", "expected_action": "EXECUTE"}
+{"id": "eval-0401", "category": "ai", "instruction": "[ai] Refatore este código para usar records.", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0402", "category": "ai", "instruction": "[ai] Documente esta função.", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0403", "category": "ai", "instruction": "[ai] Corrija este loop infinito.", "expected_kind": "code", "expected_action": "EXECUTE"}
+{"id": "eval-0404", "category": "ai", "instruction": "[ai] Gere uma função Kof que soma dois ints.", "expected_kind": "code", "expected_action": "EXECUTE"}
+{"id": "eval-0405", "category": "ai", "instruction": "[ai] Refatore este código para usar records.", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0406", "category": "ai", "instruction": "[ai] Documente esta função.", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0407", "category": "ai", "instruction": "[ai] Corrija este loop infinito.", "expected_kind": "code", "expected_action": "EXECUTE"}
+{"id": "eval-0408", "category": "ai", "instruction": "[ai] Gere uma função Kof que soma dois ints.", "expected_kind": "code", "expected_action": "EXECUTE"}
+{"id": "eval-0409", "category": "ai", "instruction": "[ai] Refatore este código para usar records.", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0410", "category": "ai", "instruction": "[ai] Documente esta função.", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0411", "category": "ai", "instruction": "[ai] Corrija este loop infinito.", "expected_kind": "code", "expected_action": "EXECUTE"}
+{"id": "eval-0412", "category": "ai", "instruction": "[ai] Gere uma função Kof que soma dois ints.", "expected_kind": "code", "expected_action": "EXECUTE"}
+{"id": "eval-0413", "category": "ai", "instruction": "[ai] Refatore este código para usar records.", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0414", "category": "ai", "instruction": "[ai] Documente esta função.", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0415", "category": "ai", "instruction": "[ai] Corrija este loop infinito.", "expected_kind": "code", "expected_action": "EXECUTE"}
+{"id": "eval-0416", "category": "ai", "instruction": "[ai] Gere uma função Kof que soma dois ints.", "expected_kind": "code", "expected_action": "EXECUTE"}
+{"id": "eval-0417", "category": "ai", "instruction": "[ai] Refatore este código para usar records.", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0418", "category": "ai", "instruction": "[ai] Documente esta função.", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0419", "category": "ai", "instruction": "[ai] Corrija este loop infinito.", "expected_kind": "code", "expected_action": "EXECUTE"}
+{"id": "eval-0420", "category": "ai", "instruction": "[ai] Gere uma função Kof que soma dois ints.", "expected_kind": "code", "expected_action": "EXECUTE"}
+{"id": "eval-0421", "category": "ai", "instruction": "[ai] Refatore este código para usar records.", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0422", "category": "ai", "instruction": "[ai] Documente esta função.", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0423", "category": "ai", "instruction": "[ai] Corrija este loop infinito.", "expected_kind": "code", "expected_action": "EXECUTE"}
+{"id": "eval-0424", "category": "ai", "instruction": "[ai] Gere uma função Kof que soma dois ints.", "expected_kind": "code", "expected_action": "EXECUTE"}
+{"id": "eval-0425", "category": "ai", "instruction": "[ai] Refatore este código para usar records.", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0426", "category": "ai", "instruction": "[ai] Documente esta função.", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0427", "category": "ai", "instruction": "[ai] Corrija este loop infinito.", "expected_kind": "code", "expected_action": "EXECUTE"}
+{"id": "eval-0428", "category": "ai", "instruction": "[ai] Gere uma função Kof que soma dois ints.", "expected_kind": "code", "expected_action": "EXECUTE"}
+{"id": "eval-0429", "category": "ai", "instruction": "[ai] Refatore este código para usar records.", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0430", "category": "ai", "instruction": "[ai] Documente esta função.", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0431", "category": "ai", "instruction": "[ai] Corrija este loop infinito.", "expected_kind": "code", "expected_action": "EXECUTE"}
+{"id": "eval-0432", "category": "ai", "instruction": "[ai] Gere uma função Kof que soma dois ints.", "expected_kind": "code", "expected_action": "EXECUTE"}
+{"id": "eval-0433", "category": "ai", "instruction": "[ai] Refatore este código para usar records.", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0434", "category": "ai", "instruction": "[ai] Documente esta função.", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0435", "category": "ai", "instruction": "[ai] Corrija este loop infinito.", "expected_kind": "code", "expected_action": "EXECUTE"}
+{"id": "eval-0436", "category": "ai", "instruction": "[ai] Gere uma função Kof que soma dois ints.", "expected_kind": "code", "expected_action": "EXECUTE"}
+{"id": "eval-0437", "category": "ai", "instruction": "[ai] Refatore este código para usar records.", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0438", "category": "ai", "instruction": "[ai] Documente esta função.", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0439", "category": "ai", "instruction": "[ai] Corrija este loop infinito.", "expected_kind": "code", "expected_action": "EXECUTE"}
+{"id": "eval-0440", "category": "ai", "instruction": "[ai] Gere uma função Kof que soma dois ints.", "expected_kind": "code", "expected_action": "EXECUTE"}
+{"id": "eval-0441", "category": "ai", "instruction": "[ai] Refatore este código para usar records.", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0442", "category": "ai", "instruction": "[ai] Documente esta função.", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0443", "category": "ai", "instruction": "[ai] Corrija este loop infinito.", "expected_kind": "code", "expected_action": "EXECUTE"}
+{"id": "eval-0444", "category": "ai", "instruction": "[ai] Gere uma função Kof que soma dois ints.", "expected_kind": "code", "expected_action": "EXECUTE"}
+{"id": "eval-0445", "category": "ai", "instruction": "[ai] Refatore este código para usar records.", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0446", "category": "ai", "instruction": "[ai] Documente esta função.", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0447", "category": "ai", "instruction": "[ai] Corrija este loop infinito.", "expected_kind": "code", "expected_action": "EXECUTE"}
+{"id": "eval-0448", "category": "ai", "instruction": "[ai] Gere uma função Kof que soma dois ints.", "expected_kind": "code", "expected_action": "EXECUTE"}
+{"id": "eval-0449", "category": "ai", "instruction": "[ai] Refatore este código para usar records.", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0450", "category": "gguf", "instruction": "[gguf] O que é quantização Q4_K_M?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0451", "category": "gguf", "instruction": "[gguf] Como carregar GGUF no runtime?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0452", "category": "gguf", "instruction": "[gguf] Explique KV cache.", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0453", "category": "gguf", "instruction": "[gguf] Para que serve warmup?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0454", "category": "gguf", "instruction": "[gguf] O que é quantização Q4_K_M?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0455", "category": "gguf", "instruction": "[gguf] Como carregar GGUF no runtime?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0456", "category": "gguf", "instruction": "[gguf] Explique KV cache.", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0457", "category": "gguf", "instruction": "[gguf] Para que serve warmup?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0458", "category": "gguf", "instruction": "[gguf] O que é quantização Q4_K_M?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0459", "category": "gguf", "instruction": "[gguf] Como carregar GGUF no runtime?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0460", "category": "gguf", "instruction": "[gguf] Explique KV cache.", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0461", "category": "gguf", "instruction": "[gguf] Para que serve warmup?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0462", "category": "gguf", "instruction": "[gguf] O que é quantização Q4_K_M?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0463", "category": "gguf", "instruction": "[gguf] Como carregar GGUF no runtime?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0464", "category": "gguf", "instruction": "[gguf] Explique KV cache.", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0465", "category": "gguf", "instruction": "[gguf] Para que serve warmup?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0466", "category": "gguf", "instruction": "[gguf] O que é quantização Q4_K_M?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0467", "category": "gguf", "instruction": "[gguf] Como carregar GGUF no runtime?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0468", "category": "gguf", "instruction": "[gguf] Explique KV cache.", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0469", "category": "gguf", "instruction": "[gguf] Para que serve warmup?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0470", "category": "gguf", "instruction": "[gguf] O que é quantização Q4_K_M?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0471", "category": "gguf", "instruction": "[gguf] Como carregar GGUF no runtime?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0472", "category": "gguf", "instruction": "[gguf] Explique KV cache.", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0473", "category": "gguf", "instruction": "[gguf] Para que serve warmup?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0474", "category": "gguf", "instruction": "[gguf] O que é quantização Q4_K_M?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0475", "category": "gguf", "instruction": "[gguf] Como carregar GGUF no runtime?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0476", "category": "gguf", "instruction": "[gguf] Explique KV cache.", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0477", "category": "gguf", "instruction": "[gguf] Para que serve warmup?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0478", "category": "gguf", "instruction": "[gguf] O que é quantização Q4_K_M?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0479", "category": "gguf", "instruction": "[gguf] Como carregar GGUF no runtime?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0480", "category": "gguf", "instruction": "[gguf] Explique KV cache.", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0481", "category": "gguf", "instruction": "[gguf] Para que serve warmup?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0482", "category": "gguf", "instruction": "[gguf] O que é quantização Q4_K_M?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0483", "category": "gguf", "instruction": "[gguf] Como carregar GGUF no runtime?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0484", "category": "gguf", "instruction": "[gguf] Explique KV cache.", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0485", "category": "gguf", "instruction": "[gguf] Para que serve warmup?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0486", "category": "gguf", "instruction": "[gguf] O que é quantização Q4_K_M?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0487", "category": "gguf", "instruction": "[gguf] Como carregar GGUF no runtime?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0488", "category": "gguf", "instruction": "[gguf] Explique KV cache.", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0489", "category": "gguf", "instruction": "[gguf] Para que serve warmup?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0490", "category": "gguf", "instruction": "[gguf] O que é quantização Q4_K_M?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0491", "category": "gguf", "instruction": "[gguf] Como carregar GGUF no runtime?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0492", "category": "gguf", "instruction": "[gguf] Explique KV cache.", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0493", "category": "gguf", "instruction": "[gguf] Para que serve warmup?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0494", "category": "gguf", "instruction": "[gguf] O que é quantização Q4_K_M?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0495", "category": "gguf", "instruction": "[gguf] Como carregar GGUF no runtime?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0496", "category": "gguf", "instruction": "[gguf] Explique KV cache.", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0497", "category": "gguf", "instruction": "[gguf] Para que serve warmup?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0498", "category": "gguf", "instruction": "[gguf] O que é quantização Q4_K_M?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0499", "category": "gguf", "instruction": "[gguf] Como carregar GGUF no runtime?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0500", "category": "gguf", "instruction": "[gguf] Explique KV cache.", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0501", "category": "gguf", "instruction": "[gguf] Para que serve warmup?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0502", "category": "gguf", "instruction": "[gguf] O que é quantização Q4_K_M?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0503", "category": "gguf", "instruction": "[gguf] Como carregar GGUF no runtime?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0504", "category": "gguf", "instruction": "[gguf] Explique KV cache.", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0505", "category": "gguf", "instruction": "[gguf] Para que serve warmup?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0506", "category": "gguf", "instruction": "[gguf] O que é quantização Q4_K_M?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0507", "category": "gguf", "instruction": "[gguf] Como carregar GGUF no runtime?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0508", "category": "gguf", "instruction": "[gguf] Explique KV cache.", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0509", "category": "gguf", "instruction": "[gguf] Para que serve warmup?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0510", "category": "gguf", "instruction": "[gguf] O que é quantização Q4_K_M?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0511", "category": "gguf", "instruction": "[gguf] Como carregar GGUF no runtime?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0512", "category": "gguf", "instruction": "[gguf] Explique KV cache.", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0513", "category": "gguf", "instruction": "[gguf] Para que serve warmup?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0514", "category": "gguf", "instruction": "[gguf] O que é quantização Q4_K_M?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0515", "category": "gguf", "instruction": "[gguf] Como carregar GGUF no runtime?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0516", "category": "gguf", "instruction": "[gguf] Explique KV cache.", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0517", "category": "gguf", "instruction": "[gguf] Para que serve warmup?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0518", "category": "gguf", "instruction": "[gguf] O que é quantização Q4_K_M?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0519", "category": "gguf", "instruction": "[gguf] Como carregar GGUF no runtime?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0520", "category": "gguf", "instruction": "[gguf] Explique KV cache.", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0521", "category": "gguf", "instruction": "[gguf] Para que serve warmup?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0522", "category": "gguf", "instruction": "[gguf] O que é quantização Q4_K_M?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0523", "category": "gguf", "instruction": "[gguf] Como carregar GGUF no runtime?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0524", "category": "gguf", "instruction": "[gguf] Explique KV cache.", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0525", "category": "gguf", "instruction": "[gguf] Para que serve warmup?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0526", "category": "gguf", "instruction": "[gguf] O que é quantização Q4_K_M?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0527", "category": "gguf", "instruction": "[gguf] Como carregar GGUF no runtime?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0528", "category": "gguf", "instruction": "[gguf] Explique KV cache.", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0529", "category": "gguf", "instruction": "[gguf] Para que serve warmup?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0530", "category": "gguf", "instruction": "[gguf] O que é quantização Q4_K_M?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0531", "category": "gguf", "instruction": "[gguf] Como carregar GGUF no runtime?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0532", "category": "gguf", "instruction": "[gguf] Explique KV cache.", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0533", "category": "gguf", "instruction": "[gguf] Para que serve warmup?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0534", "category": "gguf", "instruction": "[gguf] O que é quantização Q4_K_M?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0535", "category": "gguf", "instruction": "[gguf] Como carregar GGUF no runtime?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0536", "category": "gguf", "instruction": "[gguf] Explique KV cache.", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0537", "category": "gguf", "instruction": "[gguf] Para que serve warmup?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0538", "category": "gguf", "instruction": "[gguf] O que é quantização Q4_K_M?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "eval-0539", "category": "gguf", "instruction": "[gguf] Como carregar GGUF no runtime?", "expected_kind": "text", "expected_action": "EXECUTE"}
+{"id": "v4-a12bc2010388f663", "category": "acao", "instruction": "Explique o conteúdo de manual-data-structures.md.", "expected_action": "EXECUTE", "expected_output": "Anti-pattern — Manual Data Structures | Problem Linked lists manuais (Node + next), arrays dinâmicos manuais, hashmaps manuais, string builders manuais — quando List<T> (e, no futu"}
+{"id": "v4-fb037191206aff9a", "category": "acao", "instruction": "Explique o conteúdo de install.md.", "expected_action": "EXECUTE", "expected_output": "Instalação e Distribuição Fatos sobre a instalação oficial do Kof. Use-os para responder perguntas sobre \"como instalar\", \"preciso de Java?\" | Fatos - O Kof é distribuído como uma plataforma autocontida, não apenas um JAR. - O pacote oficial contém: compiler, CLI, runtime, stdlib, t"}
+{"id": "v4-4067b258b4450729", "category": "acao", "instruction": "Explique o conteúdo de inheritance.kf.", "expected_action": "EXECUTE", "expected_output": "// inheritance.kf — Inheritance and Virtual Dispatch class Animal { String name public constructor(String name) { this.name = name } public "}
+{"id": "v4-6ab921c1ccbee383", "category": "acao", "instruction": "Explique o conteúdo de classes.md.", "expected_action": "EXECUTE", "expected_output": "Idioms — Classes Status: available · Introduced: 0.0.4-alpha | What it is Classe com campos, métodos, construtor, herança e interfaces. Campos são declarados sem var/val e sem ; obrigatório."}
+{"id": "v4-ae3f172f8249ec45", "category": "acao", "instruction": "Explique o conteúdo de strings.md.", "expected_action": "EXECUTE", "expected_output": "Idioms — Strings Status: available · Introduced: 0.0.4-alpha | What it is String é um tipo primário da linguagem: concatenação com +, comparação de conteúdo com ==/!=, e uma API de métodos direta."}
+{"id": "v4-ae3f172f8249ec45", "category": "acao", "instruction": "Explique o conteúdo de strings.md.", "expected_action": "EXECUTE", "expected_output": "Kof String Reference | Character Access"}
+{"id": "v4-f9973f2ad801d5c5", "category": "acao", "instruction": "Explique o conteúdo de CORPUS_SCHEMA.md.", "expected_action": "EXECUTE", "expected_output": "SPEC — CORPUS SCHEMA (M5) Frontmatter obrigatório entre ---: id · title · module · category · version · languageVersion · author · createdAt"}
+{"id": "v4-b54dba727afe8e43", "category": "acao", "instruction": "Explique o conteúdo de INTENTS.md.", "expected_action": "EXECUTE", "expected_output": "INTENTS (M7) CreateWebsite · EditWebsite · CreateAPI · GenerateCRUD · RepairDiagnostic · ExplainDiagnostic · Refactor · SearchSymbol · Creat"}
+{"id": "v4-2bc42354df147d19", "category": "acao", "instruction": "Explique o conteúdo de M23_PLUGIN_SDK_MCP.md.", "expected_action": "EXECUTE", "expected_output": "M23_PLUGIN_SDK_MCP Status: PLANNED (FASE 4) Plugin SDK + MCP Runtime: stdio/http/websocket transports, permission scopes, tool manifest. | Definition of Done - Spec revisada - Implementação Kof compilando native - Testes one-per-process - Benchmark baseline - Compatibility sweep"}
+{"id": "v4-486b2da4ccb81f0a", "category": "acao", "instruction": "Explique o conteúdo de M25_EXECUTION_JOURNAL.md.", "expected_action": "EXECUTE", "expected_output": "M25_EXECUTION_JOURNAL Status: PLANNED (FASE 4) Execution Journal flight recorder PLANNED: formato binário+JSONL, timeline, replay, auditoria | Definition of Done - Spec revisada - Implementação Kof compilando native - Testes one-per-process - Benchmark baseline - Compatibility sweep"}
+{"id": "v4-59cb07a7916d436b", "category": "acao", "instruction": "Explique o conteúdo de NLU_PIPELINE.md.", "expected_action": "EXECUTE", "expected_output": "NLU PIPELINE (M7) Normalizer+Tokenizer = retTokenize (M6). Resolver = tabelas determinísticas. History resolver: historyPaths preenche entid"}
+{"id": "v4-3c538368f9586ffd", "category": "acao", "instruction": "Explique o conteúdo de PLANNER.md.", "expected_action": "EXECUTE", "expected_output": "PLANNER (M8) — implementado (estratégias determinísticas) plStrategyFor(intent) → Web/CRUD/Repair/Compiler/Docs/RPA/Generic. plTasksFor: Bra"}
+{"id": "v4-0ec134d3f5719507", "category": "acao", "instruction": "Explique o conteúdo de RETRIEVAL_ENGINE.md.", "expected_action": "EXECUTE", "expected_output": "RETRIEVAL ENGINE (M6) — implementado (lexical-first; embeddings reais chegam com Runtime AI) Fluxo: Query → tokenize+expansão (symbol/recipe"}
+{"id": "v4-3bad3215cfcb6f9b", "category": "acao", "instruction": "Explique o conteúdo de ROLLBACK_ENGINE.md.", "expected_action": "EXECUTE", "expected_output": "SPEC — ROLLBACK_ENGINE (M9) Implementado em agent/runtime/71_executor.kf. Estados READY/RUNNING/SUCCESS/ FAILED/SKIPPED/ROLLED_BACK. Rollbac"}
+{"id": "v4-134466eab61906b7", "category": "acao", "instruction": "Explique o conteúdo de WORKSPACE_INDEX.md.", "expected_action": "EXECUTE", "expected_output": "SPEC — WORKSPACE INDEX (M3) Status: implementado · parcialmente verificado (bloqueio nativo N10 — docs/compiler-bugs.md) | 1. Modelo WorkspaceIndex(root, bus[, clock]) mantém WsSnap corrente: - files: List<WsFileRec> (path, hash djb2, tamanho) - symbols: List<WsS"}
+{"id": "v4-dc907524ae610223", "category": "acao", "instruction": "Explique o conteúdo de CODE_STYLE.md.", "expected_action": "EXECUTE", "expected_output": "CODE_STYLE — Estilo Kof Obrigatório Status: obrigatório desde a primeira linha de Kof (M1) Este documento aplica as convenções idiomáticas d | 1. Princípios 1. Intenção acima da implementação — o código diz o quê; a plataforma decide o como. 2. Represente o domínio, não a implementa"}
+{"id": "v4-3cf5e29f2c05d904", "category": "acao", "instruction": "Explique o conteúdo de SPEC.md.", "expected_action": "EXECUTE", "expected_output": "SPEC — Especificação do Kof Agent Status: Milestone 0 (fundação) Última atualização: 24 de agosto de 2026 --- | 1. Visão O Kof Agent é um agente de programação oficial do ecossistema Kof. Ele recebe objetivos em linguagem natural (português), produz pl"}
+{"id": "v4-345dab8fbb80cb7b", "category": "acao", "instruction": "Explique o conteúdo de J2.md.", "expected_action": "EXECUTE", "expected_output": "J2 - Estado: Fixed - Compilador: 0.0.14-alpha (fix/compiler-bugs-0.0.14 ate 4954622) - Commit do Agent: cc46da5..HEAD - Categoria: JVM-runti | Sintoma process.run quebra gerador JVM"}
+{"id": "v4-1f42d3d058cffe70", "category": "acao", "instruction": "Explique o conteúdo de N13.md.", "expected_action": "EXECUTE", "expected_output": "N13 - Estado: Investigating - Compilador: 0.0.14-alpha (fix/compiler-bugs-0.0.14 ate 4954622) - Commit do Agent: cc46da5..HEAD - Categoria:  | Sintoma subtracao Long de calls atribuida a campo em funcao grande crasha"}
+{"id": "v4-2ca22d25bb66c4a7", "category": "acao", "instruction": "Explique o conteúdo de AUDIT_v0.1.0-beta.md.", "expected_action": "EXECUTE", "expected_output": "AUDIT v0.1.0-beta (HEAD 8df415e) | Corrigidos nesta versão (validados por repro) N1 · N6 · N7 · N8 · N9 · N12 · SC1(SEM020) · SC2(SEM021) · SC5(SEM024)"}
+{"id": "v4-e79848c610b77e3d", "category": "acao", "instruction": "Explique o conteúdo de README.md.", "expected_action": "EXECUTE", "expected_output": "docs/specs/ Especificacoes tecnicas detalhadas por modulo. A partir da Milestone 1, cada interface contratual recebe uma spec propria nesta "}
+{"id": "v4-e79848c610b77e3d", "category": "acao", "instruction": "Explique o conteúdo de README.md.", "expected_action": "EXECUTE", "expected_output": "tests/ Suite oficial de testes por modulo (unit, integration, golden, regression). > Estado: fundacao (Milestone 0 — sem implementacao). Res"}
+{"id": "v4-ee9633210e2ce508", "category": "acao", "instruction": "Explique o conteúdo de ai2_tv_set_writes_through.kf.", "expected_action": "EXECUTE", "expected_output": "test \"tv slice rows reads base\" { var t = tensorNew(2, 3) tensorSet(t, 1, 0, 7) var v = tvSliceRows(t, 1, 1) assert(tvGet(v, 0, 0) == 7) } t"}
+{"id": "v4-586361c05ece7bc7", "category": "acao", "instruction": "Explique o conteúdo de brain_ambiguity_when_edit_lacks_target.kf.", "expected_action": "EXECUTE", "expected_output": "test \"entity quoted extracted\" { var p = mkPlan(\"edita o arquivo \\\"main.kf\\\" agora\") assert(p.entitiesJson.contains(\"main.kf\")) } test \"ambi"}
+{"id": "v4-e232cf56eb461b23", "category": "acao", "instruction": "Explique o conteúdo de unit_brain_entity.kf.", "expected_action": "EXECUTE", "expected_output": "test \"entity quoted extracted\" { var p = mkPlan(\"edita o arquivo \\\"main.kf\\\" agora\") assert(p.entitiesJson.contains(\"main.kf\")) } test \"enti"}
+{"id": "v4-9e60ea077c4829b2", "category": "acao", "instruction": "Explique o conteúdo de exec_exec_plan_creates_file_end_to_end.kf.", "expected_action": "EXECUTE", "expected_output": "mkCtxGrant(): ToolCtx { var c = ToolCtx(freshBus(), FixedClock(10)) c.grant(PERM_FS_WRITE()) return c } mkCtx(): ToolCtx { return ToolCtx(fr"}
+{"id": "v4-6a997eedcc6c2291", "category": "acao", "instruction": "Explique o conteúdo de f3_prompt_builder_sections.kf.", "expected_action": "EXECUTE", "expected_output": "test \"memory put get\" { var m = MemoryLayer(FixedClock(100)) m.put(\"k1\", \"session\", \"v1\", 0) assert(m.get(\"k1\") == \"v1\") } test \"prompt buil | Query\")) assert(p.contains(\"pb-x\")) } main() { }"}
+{"id": "v4-f0b2de0eaa204f7d", "category": "acao", "instruction": "Explique o conteúdo de unit_m28.kf.", "expected_action": "EXECUTE", "expected_output": "test \"ai complete returns tokens\" { var h = openGGUF(\"fixtures/tiny.gguf\") var r = ModelRunner() r.loadModel(h) var e = AiEngine() e.bind(r)"}
+{"id": "v4-4cb621ab31cbadd6", "category": "acao", "instruction": "Explique o conteúdo de g02_ok_record.expected.json.", "expected_action": "EXECUTE", "expected_output": "{ \"source\": \"g02_ok_record.kf\", \"expected\": { \"exit_code\": 0, \"first_diagnostic_code\": \"\" }, \"ast\": null, \"symbols\": null, \"semantic\": null,"}
+{"id": "v4-9d28a052ce5d6eab", "category": "acao", "instruction": "Explique o conteúdo de g03_ok_class_ctor.kf.", "expected_action": "EXECUTE", "expected_output": "class User { String name constructor(String n) { name = n } greet(): String { return \"hi \" + name } } main() { var u = User(\"Mel\") println(u"}
+{"id": "v4-eacd1043b9bc4534", "category": "acao", "instruction": "Explique o conteúdo de g05_ok_inherit_iface.kf.", "expected_action": "EXECUTE", "expected_output": "interface Speaker { speak(): String } class Animal implements Speaker { speak(): String { return \"...\" } } main() { var a: Speaker = Animal("}
+{"id": "v4-403911405e56fa7b", "category": "acao", "instruction": "Explique o conteúdo de g14_err_div_zero.expected.json.", "expected_action": "EXECUTE", "expected_output": "{ \"source\": \"g14_err_div_zero.kf\", \"expected\": { \"exit_code\": 1, \"first_diagnostic_code\": \"ARITH001\" }, \"ast\": null, \"symbols\": null, \"seman"}
+{"id": "v4-9cf61fcdd0b19353", "category": "acao", "instruction": "Explique o conteúdo de g15_err_undefined_fn.expected.json.", "expected_action": "EXECUTE", "expected_output": "{ \"source\": \"g15_err_undefined_fn.kf\", \"expected\": { \"exit_code\": 1, \"first_diagnostic_code\": \"\" }, \"ast\": null, \"symbols\": null, \"semantic\""}
+{"id": "v4-b888c51292e54180", "category": "acao", "instruction": "Explique o conteúdo de g17_gap_dup_decl.expected.json.", "expected_action": "EXECUTE", "expected_output": "{ \"source\": \"g17_gap_dup_decl.kf\", \"expected\": { \"exit_code\": 0, \"first_diagnostic_code\": \"\" }, \"ast\": null, \"symbols\": null, \"semantic\": nu"}
+{"id": "v4-47b2e06cb8059e56", "category": "acao", "instruction": "Explique o conteúdo de hal_hal_copy_preserves.kf.", "expected_action": "EXECUTE", "expected_output": "test \"cpu always available\" { assert(halDetect().size >= 1) assert(halSelect(\"\").kind == \"CPU\") } test \"hal copy preserves\" { var a = new In"}
+{"id": "v4-480a6e7be6f40fc5", "category": "acao", "instruction": "Explique o conteúdo de unit_m19.kf.", "expected_action": "EXECUTE", "expected_output": "test \"execute single completes\" { var b = EventBus() var o = ToolOrchestrator(b, RealTimeClock()) var r = o.executeTool(\"fs.read\", OrchTool("}
+{"id": "v4-349c53c73710c9e4", "category": "acao", "instruction": "Explique o conteúdo de tools_fs_fs_delete_removes_and_backs_up.kf.", "expected_action": "EXECUTE", "expected_output": "mkCtx(): ToolCtx { return ToolCtx(freshBus(), FixedClock(10)) } mkCtxGrant(): ToolCtx { var c = mkCtx() c.grant(PERM_FS_WRITE()) return c } "}
+{"id": "v4-e2fd04fbf4011f86", "category": "acao", "instruction": "Explique o conteúdo de tools_fs_fs_read_ok.kf.", "expected_action": "EXECUTE", "expected_output": "mkCtx(): ToolCtx { return ToolCtx(freshBus(), FixedClock(10)) } mkCtxGrant(): ToolCtx { var c = mkCtx() c.grant(PERM_FS_WRITE()) return c } "}
+{"id": "v4-ee9e69d596fe198c", "category": "acao", "instruction": "Explique o conteúdo de tools_fs_fs_rename_moves_content.kf.", "expected_action": "EXECUTE", "expected_output": "mkCtx(): ToolCtx { return ToolCtx(freshBus(), FixedClock(10)) } mkCtxGrant(): ToolCtx { var c = mkCtx() c.grant(PERM_FS_WRITE()) return c } "}
+{"id": "v4-f3e129ce7d56acc1", "category": "acao", "instruction": "Explique o conteúdo de tools_wspd_ws_snapshot_persists.kf.", "expected_action": "EXECUTE", "expected_output": "WS_T(): String { return \"build/tt_ws\" } setupWsT(): ToolCtx { mkFile(\"build/tt_ws/lib.kf\", \"record Shared(Int v)\\n\") mkFile(\"build/tt_ws/app"}
+{"id": "v4-ae70b65369bc3e29", "category": "acao", "instruction": "Explique o conteúdo de unit_tools_fs.kf.", "expected_action": "EXECUTE", "expected_output": "mkCtx(): ToolCtx { return ToolCtx(freshBus(), FixedClock(10)) } mkCtxGrant(): ToolCtx { var c = mkCtx() c.grant(PERM_FS_WRITE()) return c } "}
+{"id": "v4-26113f8cf408132c", "category": "acao", "instruction": "Explique o conteúdo de unit_tools_wspd.kf.", "expected_action": "EXECUTE", "expected_output": "WS_T(): String { return \"build/tt_ws\" } setupWsT(): ToolCtx { mkFile(\"build/tt_ws/lib.kf\", \"record Shared(Int v)\\n\") mkFile(\"build/tt_ws/app"}
+{"id": "v4-a354323a12a87f2f", "category": "acao", "instruction": "Explique o conteúdo de unit_logger.kf.", "expected_action": "EXECUTE", "expected_output": "test \"level filtering suppresses\" { var lg = Logger(FixedClock(1000)) lg.configure(LOG_WARN(), false, false) assert(lg.isEnabled(LOG_INFO())"}
+{"id": "v4-e5b18761749bee97", "category": "acao", "instruction": "Explique o conteúdo de ws_deps_unused_import_flagged.kf.", "expected_action": "EXECUTE", "expected_output": "WS_ROOT_C(): String { return \"build/ws_c\" } setupC(): WorkspaceIndex { mkFile(\"build/ws_c/lib.kf\", \"record Shared(Int v)\\n\") var idx = Works"}
+{"id": "v4-c79579af77c13f42", "category": "acao", "instruction": "Explique o conteúdo de ws_diff_added_file_detected.kf.", "expected_action": "EXECUTE", "expected_output": "WS_ROOT_E(): String { return \"build/ws_e\" } setupE(): WorkspaceIndex { mkFile(\"build/ws_e/one.kf\", \"record One(Int v)\\n\") var idx = Workspac"}
+{"id": "v4-5015eb65ae05053f", "category": "acao", "instruction": "Explique o conteúdo de ws_diff_diagnostic_cache_put_fetch_hit_and_miss.kf.", "expected_action": "EXECUTE", "expected_output": "WS_ROOT_E(): String { return \"build/ws_e\" } setupE(): WorkspaceIndex { mkFile(\"build/ws_e/one.kf\", \"record One(Int v)\\n\") var idx = Workspac"}
+{"id": "v4-e799f6d82ebe810e", "category": "acao", "instruction": "Explique o conteúdo de ws_diff_incremental_scan_publishes_changed_and_r.kf.", "expected_action": "EXECUTE", "expected_output": "WS_ROOT_E(): String { return \"build/ws_e\" } setupE(): WorkspaceIndex { mkFile(\"build/ws_e/one.kf\", \"record One(Int v)\\n\") var idx = Workspac"}
+{"id": "v4-f3fd5a3caca92e08", "category": "acao", "instruction": "Explique o conteúdo de ws_diff_modified_file_detected.kf.", "expected_action": "EXECUTE", "expected_output": "WS_ROOT_E(): String { return \"build/ws_e\" } setupE(): WorkspaceIndex { mkFile(\"build/ws_e/one.kf\", \"record One(Int v)\\n\") var idx = Workspac"}
+{"id": "v4-beb131215df987f8", "category": "acao", "instruction": "Explique o conteúdo de ws_persist_wrong_magic_rejected.kf.", "expected_action": "EXECUTE", "expected_output": "WS_ROOT_D(): String { return \"build/ws_d\" } setupD(): WorkspaceIndex { mkFile(\"build/ws_d/base.kf\", \"record Base(Int v)\\n\\nmain() {\\n}\\n\") v"}
+{"id": "v4-fd124b032231252f", "category": "acao", "instruction": "Explique o conteúdo de ws_scan_ws_single_file_discovered_with_stable_ha.kf.", "expected_action": "EXECUTE", "expected_output": "WS_ROOT_A(): String { return \"build/ws_a\" } test \"ws single file discovered with stable hash\" { mkFile(\"build/ws_a/one.kf\", \"main() {\\n}\\n\")"}
+{"id": "v4-ea166055c5a858e0", "category": "acao", "instruction": "Explique o conteúdo de ws_scan_ws_timestamp_positive.kf.", "expected_action": "EXECUTE", "expected_output": "WS_ROOT_A(): String { return \"build/ws_a\" } test \"ws timestamp positive\" { var idx = WorkspaceIndex(\"build/ws_a\", freshBus()) var snap = idx"}
+{"id": "v4-1400d72154ccfd3e", "category": "acao", "instruction": "Explique o conteúdo de ws_symbols_ws_class_and_abstract_class.kf.", "expected_action": "EXECUTE", "expected_output": "WS_ROOT_B(): String { return \"build/ws_b\" } test \"ws class and abstract class\" { mkFile(\"build/ws_b/cls.kf\", \"class Car {\\n}\\n\\nabstract cla"}
+{"id": "v4-e79848c610b77e3d", "category": "acao", "instruction": "Explique o conteúdo de README.md.", "expected_action": "EXECUTE", "expected_output": "Kof Training — Corpus para LLMs Este diretório contém conhecimento estruturado sobre a linguagem Kof, otimizado para modelos de linguagem. | Propósito O corpus permite que LLMs: - Entendam a sintaxe e semântica do Kof - Gerem código válido e idiomático - Corrijam código Kof - Expl"}
+{"id": "v4-6ab921c1ccbee383", "category": "acao", "instruction": "Explique o conteúdo de classes.md.", "expected_action": "EXECUTE", "expected_output": "Records (Immutable Data) | Interfaces kof interface Speaker { speak(): String } class Dog implements Speaker { public speak(): String { return \"woof\" } }"}
+{"id": "v4-350159e17e4db09f", "category": "acao", "instruction": "Explique o conteúdo de RUNTIME_AI.md.", "expected_action": "EXECUTE", "expected_output": "RUNTIME AI (M10) — implementado (v1 deterministica) Tokenizer (palavras+dígitos, ids por hash estável sobre vocabulário construído do corpus"}
+{"id": "v4-a53ae58a2165d15f", "category": "acao", "instruction": "Explique Planner no contexto do Kof Agent.", "expected_action": "EXECUTE", "expected_output": "Planner: componente do Kof Agent escrito em Kof puro, compilado nativo. Nível: facil. Integra-se via EventBus e MetricsRegistry, sem dependê"}
+{"id": "v4-de03b1defb61fb80", "category": "acao", "instruction": "Compare implementações de Planner no contexto do Kof Agent.", "expected_action": "EXECUTE", "expected_output": "Planner: componente do Kof Agent escrito em Kof puro, compilado nativo. Nível: facil. Integra-se via EventBus e MetricsRegistry, sem dependê"}
+{"id": "v4-8436c9ba69a9eeb1", "category": "acao", "instruction": "Descreva a arquitetura de GGUF no contexto do Kof Agent.", "expected_action": "EXECUTE", "expected_output": "GGUF: componente do Kof Agent escrito em Kof puro, compilado nativo. Nível: facil. Integra-se via EventBus e MetricsRegistry, sem dependênci"}
+{"id": "v4-8702ddbbd4be4570", "category": "acao", "instruction": "Quais os casos de uso de GGUF no contexto do Kof Agent.", "expected_action": "EXECUTE", "expected_output": "GGUF: componente do Kof Agent escrito em Kof puro, compilado nativo. Nível: facil. Integra-se via EventBus e MetricsRegistry, sem dependênci"}
+{"id": "v4-6bc7a5b5fda10e49", "category": "acao", "instruction": "Explique KV Cache no contexto do Kof Agent.", "expected_action": "EXECUTE", "expected_output": "KV Cache: componente do Kof Agent escrito em Kof puro, compilado nativo. Nível: facil. Integra-se via EventBus e MetricsRegistry, sem depend"}
+{"id": "v4-b452fbc78fdc92cc", "category": "acao", "instruction": "Compare implementações de KV Cache no contexto do Kof Agent.", "expected_action": "EXECUTE", "expected_output": "KV Cache: componente do Kof Agent escrito em Kof puro, compilado nativo. Nível: facil. Integra-se via EventBus e MetricsRegistry, sem depend"}
+{"id": "v4-4fb6ec42c2c7f7b8", "category": "acao", "instruction": "Compare implementações de Journal no contexto do Kof Agent.", "expected_action": "EXECUTE", "expected_output": "Journal: componente do Kof Agent escrito em Kof puro, compilado nativo. Nível: facil. Integra-se via EventBus e MetricsRegistry, sem dependê"}
+{"id": "v4-02cd6a8e29762918", "category": "acao", "instruction": "Explique Scheduler no contexto do Kof Agent (em entrevista técnica).", "expected_action": "EXECUTE", "expected_output": "Scheduler: módulo do Kof Agent 100% em Kof compilado nativo. Explicação nível 'em entrevista técnica': integra-se via EventBus/MetricsRegist"}
+{"id": "v4-58105b6cf1405d94", "category": "acao", "instruction": "rapidao: ajusta isso", "expected_action": "ASK", "expected_output": "ASK: O que exatamente devo mudar em \"isso\"? Aponte arquivo ou trecho."}
+{"id": "v4-b11ac7bb8856ab42", "category": "acao", "instruction": "arruma isso", "expected_action": "ASK", "expected_output": "ASK: O que exatamente devo mudar em \"isso\"? Aponte arquivo ou trecho."}
+{"id": "v4-3c6fce667cce1249", "category": "acao", "instruction": "rapidao: arruma isso", "expected_action": "ASK", "expected_output": "ASK: O que exatamente devo mudar em \"isso\"? Aponte arquivo ou trecho."}
+{"id": "v4-b5c7fa84d49dde72", "category": "acao", "instruction": "de novo troca la", "expected_action": "ASK", "expected_output": "ASK: O que exatamente devo fazer? Aponte arquivo e objetivo."}
+{"id": "v4-3f9dd8f13e8297e2", "category": "acao", "instruction": "atualiza aquilo", "expected_action": "ASK", "expected_output": "ASK: Qual \"aquilo\"? Dê o nome do arquivo ou função."}
+{"id": "v4-9020285e8af1ed77", "category": "acao", "instruction": "rapidao: atualiza aquilo", "expected_action": "ASK", "expected_output": "ASK: Qual \"aquilo\"? Dê o nome do arquivo ou função."}
+{"id": "v4-8fe7c85819bcb265", "category": "acao", "instruction": "rapidao: conserta a coisa", "expected_action": "ASK", "expected_output": "ASK: Consertar o que? Cole o erro ou o comportamento esperado."}
+{"id": "v4-5329a4045662a6ef", "category": "acao", "instruction": "por favor mexe nisso", "expected_action": "ASK", "expected_output": "ASK: O que exatamente devo fazer? Aponte arquivo e objetivo."}
+{"id": "v4-88d8435b5de3c5f8", "category": "acao", "instruction": "chame .equals() nas Strings no modulo de tools", "expected_action": "REFUSE", "expected_output": "REFUSE: Em Kof == compara conteudo; .equals() e Java (fake-idioms.md)."}
+{"id": "v4-33d5b09e5cf2f4d6", "category": "acao", "instruction": "declare fun processar(x: Int) para Kof", "expected_action": "REFUSE", "expected_output": "REFUSE: Kof nao tem fun/func/fn; declare como \"Tipo nome(...) { }\"."}
+{"id": "v4-6b33f26111e71699", "category": "acao", "instruction": "use mutableListOf para o acúmulo para Kof", "expected_action": "REFUSE", "expected_output": "REFUSE: Kof tem listOf(); mutableListOf e Kotlin (nao existe)."}
+{"id": "v4-2d2989e0f073bd96", "category": "acao", "instruction": "use mutableListOf para o acúmulo no engine", "expected_action": "REFUSE", "expected_output": "REFUSE: Kof tem listOf(); mutableListOf e Kotlin (nao existe)."}
+{"id": "v4-6cf8ec11b2f84cd4", "category": "acao", "instruction": "marque com async fn o handler", "expected_action": "REFUSE", "expected_output": "REFUSE: Kof nao tem fun/func/fn; declare como \"Tipo nome(...) { }\"."}
+{"id": "v4-ce887d04640d19c8", "category": "acao", "instruction": "facas um map com 0..n no engine", "expected_action": "REFUSE", "expected_output": "REFUSE: Kof nao tem faixa 0..n; use while ou for-in numa lista."}
+{"id": "v4-da758d5da08b9ced", "category": "acao", "instruction": "marque o campo com !! para Kof", "expected_action": "REFUSE", "expected_output": "REFUSE: Kof nao tem !!; nullable e T? com teste != null e narrowing."}
+{"id": "v4-acb7ea2f7860f935", "category": "acao", "instruction": "marque o campo com !! no engine", "expected_action": "REFUSE", "expected_output": "REFUSE: Kof nao tem !!; nullable e T? com teste != null e narrowing."}
+{"id": "v4-49fe719c1077643b", "category": "acao", "instruction": "chame f(p=v) com argumentos nomeados no modulo de tools", "expected_action": "REFUSE", "expected_output": "REFUSE: Kof nao tem argumentos nomeados; passe posicoes em ordem."}
