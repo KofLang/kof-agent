@@ -6,10 +6,15 @@ class KofTrainer {
     Int phase = 0
     Int dsSize = 0
     Int seed = 42
+    String datasetPath = "datasets/jsonl/koflm-v2.jsonl"
+
+    useDataset(String path) {
+        datasetPath = path
+    }
 
     prepareDataset(): Bool {
         if (phase != 0) { return false }
-        var f = File("datasets/jsonl/koflm-v2.jsonl")
+        var f = File(datasetPath)
         if (!f.exists()) { return false }
         var lines = splitStr(f.readText(), "\n")
         var n = 0

@@ -1,0 +1,30 @@
+{
+  "name": "kof-LM",
+  "version": 2,
+  "status": "architecture-spec (treino pendente — E4 gate = eval §5.2)",
+  "language": "pt-BR",
+  "task": "agente de execucao Kof: pedido -> tarefa + <=2 linhas | ASK | REFUSE",
+  "architecture": "koflama llama-like, int64 nano ponto-fixo (mesmo caminho de M33-M36)",
+  "context": 1024,
+  "dims": {
+    "embedding_length": 1024,
+    "block_count": 16,
+    "attention.head_count": 8,
+    "attention.head_count_kv": 2,
+    "feed_forward_length": 2816,
+    "vocab_size": 32000
+  },
+  "params_estimados": "~238M (<= 400M alvo ENGINE_V2 §3.3)",
+  "quantization": ["Q4_K_M", "Q8_0", "F16"],
+  "dataset": "datasets/jsonl/koflm-v4.jsonl (EXECUTE/ASK/REFUSE, mediana 140 chars)",
+  "sampling": { "mode": "greedy", "temperature": 0, "top_k": 1 },
+  "gate_metricas": {
+    "precisao_intencao": ">=0.95",
+    "ask_correto": ">=0.90",
+    "explicacao_linhas_max": 2,
+    "chute_sem_pergunta": "<0.02",
+    "determinismo": 1.0
+  },
+  "license": "GPLv3",
+  "description": "SLM especialista e deterministico do Kof Agent (conciso, verdadeiro, pergunta quando nao entende)"
+}
