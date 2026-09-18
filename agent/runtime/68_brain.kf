@@ -19,7 +19,7 @@ brainSynonymIntent(String token): String {
     if (s == "refatore" || s == "refatorar") {
         return "refactor"
     }
-    if (s == "busque" || s == "buscar" || s == "procure" || s == "procurar") {
+    if (s == "busque" || s == "buscar" || s == "procure" || s == "procurar" || s == "liste" || s == "lista" || s == "listar" || s == "mostre" || s == "mostrar" || s == "encontre" || s == "encontrar") {
         return "search"
     }
     if (s == "rode" || s == "rodar" || s == "teste" || s == "testar" || s == "execute") {
@@ -131,8 +131,17 @@ brainExtractEntities(String text): String {
     }
     var paths = ""
     for (var t in splitStr(text, " ")) {
-        if (t.endsWith(".kf") || t.startsWith("build/") || t.contains("/")) {
-            paths = t
+        var clean = ""
+        var ci = 0
+        while (ci < t.length) {
+            var ch = t.charAt(ci)
+            if (ch != 34) {
+                clean = clean + t.substring(ci, ci + 1)
+            }
+            ci = ci + 1
+        }
+        if (clean.endsWith(".kf") || clean.startsWith("build/") || clean.contains("/")) {
+            paths = clean
         }
     }
     return "{\"quoted\":\"" + escapeJson(quoted) + "\",\"diagCode\":\"" + codes + "\",\"path\":\"" + escapeJson(paths) + "\"}"
@@ -177,6 +186,9 @@ brainCandidateTools(String intent): String {
     }
     if (intent == "SearchSymbol") {
         return "search.symbol"
+    }
+    if (intent == "SearchGeneric") {
+        return "fs.list,search.text,ws.open"
     }
     return ""
 }

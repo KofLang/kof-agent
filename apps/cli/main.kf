@@ -10,7 +10,8 @@ usageText(): String {
     u = u + "  kof-agent help\n"
     u = u + "  kof-agent status [--root DIR] [--json]\n"
     u = u + "  kof-agent doctor [--root DIR] [--json]\n"
-    u = u + "  kof-agent config show [--file PATH] [--json]\n"
+    u = u + "  kof-agent ask [--root DIR] [--json] <pedido>
+  kof-agent config show [--file PATH] [--json]\n"
     u = u + "\n"
     u = u + "exit codes: 0 ok · 1 usage · 2 failure\n"
     return u
@@ -22,6 +23,7 @@ class CliOpts {
     Bool jsonFlag = false
     String root = "."
     String file = ""
+    String text = ""
 }
 
 parseOptsList(List<String> raw): CliOpts {
@@ -45,6 +47,12 @@ parseOptsList(List<String> raw): CliOpts {
             o.cmd = a
         } else if (o.sub == "" && (o.cmd == "config")) {
             o.sub = a
+        } else if (o.cmd == "ask") {
+            var add = " "
+            if (o.text == "") {
+                add = ""
+            }
+            o.text = o.text + add + a
         } else {
             throw "cli: unknown argument '" + a + "'"
         }
@@ -226,6 +234,31 @@ cmdConfigShow(CliOpts o): Int {
     return 0
 }
 
+cmdAsk(CliOpts o): Int {
+    var ctx = bootQuiet(o)
+    ctx.life.transition(LC_INITIALIZING())
+    ctx.finishBoot()
+    var ix = corpusLoad(ctx.bus, joinPath(o.root, "corpus"), ctx.clock)
+    var c = ctxLoad(joinPath(o.root, "workspace/context.yaml"))
+    var plan = brainProcess(ctx.bus, ix, o.text, listOf<String>(), listOf<String>())
+    ctx.shutdownGraceful()
+    if (o.jsonFlag) {
+        println(brainPlanJson(plan))
+        return 0
+    }
+    var req = brainRequiredEntity(plan.intent)
+    if (plan.intent == B_INTENT_UNKNOWN() || plan.confidence * 10 < c.confiancaMin) {
+        var q = "qual arquivo e qual acao exatas?"
+        if (req != "") {
+            q = "falta '" + req + "' no pedido — informe."
+        }
+        println(outAsk(q))
+        return 2
+    }
+    println(outFmt("intent=" + plan.intent + " conf=" + plan.confidence + " tools=" + plan.candidateToolsCsv, "planejamento sem execucao: executor ainda nao ligado ao ask", c.linhasMax))
+    return 0
+}
+
 main() {
     var argv = loadArgsFile(".kofargs")
     var code = 0
@@ -242,6 +275,13 @@ main() {
             code = cmdDoctor(o)
         } else if (o.cmd == "config") {
             code = cmdConfigShow(o)
+        } else if (o.cmd == "ask") {
+            if (o.text == "") {
+                println("ask: pedido vazio")
+                code = 1
+            } else {
+                code = cmdAsk(o)
+            }
         } else {
             println("kof-agent: unknown command '" + o.cmd + "'")
             print(usageText())
