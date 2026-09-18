@@ -238,7 +238,10 @@ cmdAsk(CliOpts o): Int {
     var ctx = bootQuiet(o)
     ctx.life.transition(LC_INITIALIZING())
     ctx.finishBoot()
-    var ix = corpusLoad(ctx.bus, joinPath(o.root, "corpus"), ctx.clock)
+    var ix = CorpusIndex()
+    if (o.jsonFlag) {
+        ix = corpusLoad(ctx.bus, joinPath(o.root, "corpus"), ctx.clock)
+    }
     var c = ctxLoad(joinPath(o.root, "workspace/context.yaml"))
     var plan = brainProcess(ctx.bus, ix, o.text, listOf<String>(), listOf<String>())
     ctx.shutdownGraceful()

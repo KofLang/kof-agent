@@ -19,6 +19,9 @@ brainSynonymIntent(String token): String {
     if (s == "refatore" || s == "refatorar") {
         return "refactor"
     }
+    if (s == "converta" || s == "converte" || s == "converter" || s == "migre" || s == "migrar" || s == "traduza" || s == "traduzir") {
+        return "create"
+    }
     if (s == "busque" || s == "buscar" || s == "procure" || s == "procurar" || s == "liste" || s == "lista" || s == "listar" || s == "mostre" || s == "mostrar" || s == "encontre" || s == "encontrar") {
         return "search"
     }
@@ -41,7 +44,9 @@ brainResolveIntent(List<String> tokens): String {
     for (var t in tokens) {
         joined = joined + retLower(t) + " "
     }
-    if (joined.contains(" site ") || joined.contains("website")) {
+    if (joined.contains("java")) {
+        obj = "JavaSource"
+    } else if (joined.contains(" site ") || joined.contains("website")) {
         obj = "Website"
     } else if (joined.contains("crud")) {
         obj = "CRUD"
@@ -74,6 +79,9 @@ brainResolveIntent(List<String> tokens): String {
     }
     if (obj == "CRUD") {
         return "GenerateCRUD"
+    }
+    if (obj == "JavaSource") {
+        return "CreateFromJava"
     }
     if (obj == "Diagnostic" && verb == "repair") {
         return "RepairDiagnostic"
@@ -140,7 +148,7 @@ brainExtractEntities(String text): String {
             }
             ci = ci + 1
         }
-        if (clean.endsWith(".kf") || clean.startsWith("build/") || clean.contains("/")) {
+        if (clean.endsWith(".kf") || clean.endsWith(".java") || clean.startsWith("build/") || clean.contains("/")) {
             paths = clean
         }
     }
@@ -152,6 +160,9 @@ brainRequiredEntity(String intent): String {
         return "diagCode"
     }
     if (intent == "EditWebsite" || intent == "EditFeature" || intent == "Refactor") {
+        return "path"
+    }
+    if (intent == "CreateFromJava") {
         return "path"
     }
     return ""
@@ -183,6 +194,9 @@ brainCandidateTools(String intent): String {
     }
     if (intent == "RunTests") {
         return "compiler.run"
+    }
+    if (intent == "CreateFromJava") {
+        return "fs.write,compiler.check"
     }
     if (intent == "SearchSymbol") {
         return "search.symbol"

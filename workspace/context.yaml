@@ -2,12 +2,15 @@
 # Recarregado por CONTEUDO a cada turno: editar este arquivo = trocar o
 # comportamento sem recompilar nem retreinar. O hash vai no journal.
 persona: kof-tool
-intencao_atual: "E3(b): dispatch gpu.cl.* no compilador + ICD Rusticl para o harness"
+intencao_atual: "sessao de chat aberta no xterm: rotear pedidos Kof/Java/PT-BR; proximo passo e ligar o executor ao ask"
 estado:
-  - "E1,E2,E4,E5 e E3(a) commitados; 13/18 nativo; N24 segue bloqueando ws no JVM (upstream)"
+  - "aprendido 18/09: corpus proprio = 92 docs Kof oficiais (sync Kof4j/training) + java + docs do agente; migration Java->Kof roteada; ask nao carrega corpus no modo humano (42s -> 0.03s)"
+  - "E1,E2,E4,E5 e E3(a) commitados; 13/18 nativo + brain 22/22 + corpus 15/15 + f6 13/13; N24 bloqueia ws no JVM (upstream)"
 pendencias:
+  - "E6: cache de tokens/CRPIDX no corpusLoad+retrieval (TASKS.md)"
   - "E3(b): ICD Rusticl na maquina + integracao gpu.cl.* (lane Kof4j)"
   - "treinar adapter no v4 e rodar eval rotulada (gate 95%)"
+  - "ligar executor (71) ao ask para EXECUTE de verdade"
 regras_vivas:
   perguntar_se_confianca: 0.7
   max_explicacao_linhas: 2

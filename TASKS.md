@@ -29,6 +29,10 @@
 - [ ] ciclo de iteração: journal → exemplos → adapter no HAL → eval → publish
 - [ ] gate: ≥95% precisão de intenção, <2% chute sem perguntar, 0 API alucinada
 
+## E6 — Performance do corpus (aberto 18/09, medido)
+- [ ] `corpusLoad` ~15 s e `retBuildContext` ~25 s para 131 docs (nativo): re-tokeniza corpo de cada doc a cada chamada e re-parseia tudo a cada processo. Fix: tokens memoizados no CorpusIndex no load + aproveitar cache CRPIDX (corpusSaveCache já existe; falta o load path). Workaround atual: ask humano não carrega corpus (routing não usa contexto; --json sim).
+- [ ] medir de novo após fix (alvo: ask --json < 2 s com cache quente).
+
 ## E5 — CLI no contrato §2
 - [x] engine/161_contract.kf: outFmt/outAsk/outRefuse/outFromCtx (unit_contract 5/5)
 - [x] clamp/regras do YAML no contrato (unit_contract 5/5)
