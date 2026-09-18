@@ -1,0 +1,72 @@
+// E1: suíte do módulo de contexto YAML (engine/160_context.kf)
+
+test "yaml scalars lists and defaults" {
+    var y = "persona: kof-tool\nintencao_atual: \"fazer X\"  # comentario\nestado:\n  - passo a\n  - passo b\npendencias:\n  - \"p1\"\nregras_vivas:\n  perguntar_se_confianca: 0.7\n  max_explicacao_linhas: 2\n"
+    var c = ctxParseYaml(y)
+    assert(c.persona == "kof-tool")
+    assert(c.intencao == "fazer X")
+    assert(c.estado.size == 2)
+    assert(c.estado.get(0) == "passo a")
+    assert(c.pendencias.size == 1)
+    assert(c.pendencias.get(0) == "p1")
+    assert(c.linhasMax == 2)
+    assert(c.confiancaMin == 700)
+}
+
+test "threshold parsing edges" {
+    assert(ctxParseThreshold("1") == 1000)
+    assert(ctxParseThreshold("0.95") == 950)
+    assert(ctxParseThreshold("0.075") == 75)
+    assert(ctxParseThreshold("0.7") == 700)
+    assert(ctxParseThreshold("") == 0)
+}
+
+test "empty file yields defaults no crash" {
+    var c = ctxParseYaml("")
+    assert(c.persona == "")
+    assert(c.estado.size == 0)
+    assert(c.linhasMax == 2)
+    assert(c.confiancaMin == 700)
+}
+
+test "hash stable then changes with content" {
+    var a = ctxParseYaml("persona: x\n")
+    var b = ctxParseYaml("persona: x\n")
+    var d = ctxParseYaml("persona: y\n")
+    assert(a.yhash == b.yhash)
+    assert(a.yhash != d.yhash)
+}
+
+test "prompt includes every section" {
+    var c = ctxParseYaml("persona: p\nintencao_atual: i\nestado:\n  - e1\npendencias:\n  - p1\nregras_vivas:\n  max_explicacao_linhas: 3\n")
+    var pr = ctxPrompt(c)
+    assert(pr.contains("[persona] p"))
+    assert(pr.contains("[intencao] i"))
+    assert(pr.contains("[estado] e1"))
+    assert(pr.contains("[pendencia] p1"))
+    assert(pr.contains("[regra] max_explicacao_linhas=3"))
+    assert(ctxLines(pr) == 6)
+}
+
+test "load and change detection via real file" {
+    var path = "build/ctx_e1_test.yaml"
+    var f = File(path)
+    f.writeText("persona: one\nintencao_atual: t\n")
+    var c1 = ctxLoad(path)
+    assert(c1.persona == "one")
+    assert(ctxChanged(c1, path) == false)
+    f.writeText("persona: two\nintencao_atual: t\n")
+    assert(ctxChanged(c1, path) == true)
+    var c2 = ctxLoad(path)
+    assert(c2.persona == "two")
+}
+
+test "explanation clamp to max lines" {
+    var txt4 = "l1\nl2\nl3\nl4"
+    assert(ctxClampExplanation(txt4, 2) == "l1\nl2")
+    assert(ctxClampExplanation("so", 5) == "so")
+    assert(ctxLines(ctxClampExplanation(txt4, 2)) == 2)
+}
+
+main() {
+}
