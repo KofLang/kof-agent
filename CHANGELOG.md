@@ -10,6 +10,7 @@
 - E3(a): OpenCL — 14 kernels `.cl` + `gpu/tests_ocl.c` (dlopen + referências bit-exatas, skip rc=77 sem ICD) + `detectOpenCL()`; unit_backends 6/6. E3(b): gpu.cl.* no compilador + `mesa-opencl-icd`.
 - E4: `models/kof-LM/model-v2.json` (~238M, ctx-1024, greedy/temp-0, gate de métricas) + `KofTrainer.useDataset`.
 - E5: `engine/161_contract.kf` — outFmt/outAsk/outRefuse/outFromCtx; unit_contract 5/5. Gate: 13/18 nativo (5 ws presas por N24).
+- Auditoria (acusação "corpus vazio" — procedente): corpus tinha 6 docs finos + 15 README-stub; +14 docs factuais novos (20 total). README perdia a verdade em `M0–M31 ✅` — corrigido. `check_compat.sh` em rc=1 por culpa minha (glob que eu alarguei). Sweep b120945c: 5 linhas "fix" sem evidência → relotadas INVALIDO. **Bug real**: `parseLongSafe` descartava não-dígitos e aceitava cache com CRC violado → estrito (com sinal; wsHash é Int). `test_corpus.sh` (que eu nunca rodara): 12/15 antes — 2 falhas pré-existentes escondidas (broken-link dependia de acidente de API; registry com contagem pinada) → 15/15. TASKS: 3 caixas infladas voltam a [ ] honestos.
 
 ## 2026-08-31
 - M32.3: dispatch Vulkan compute REAL (GPU) nos 2 backends — libvkchain.so (C validado RADV) + asm nativo dlopen/dlsym + JVM FFM 3 downcalls; SYS_exit_group fix (hang pós-main com threads do driver); gpuAvailable() real no HAL; unit_shaders 7/7 com GPU (RX 550); 16/16 suítes.

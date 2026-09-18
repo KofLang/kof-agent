@@ -5,8 +5,8 @@
   Report Kof4j com repro em `regressions/N24/`. Libera as 5 suítes ws no JVM.
 
 ## E1 — Swap de contexto YAML (R3)
-- [ ] `workspace/context.yaml` (persona, estado, pendencias, regras_vivas)
-- [ ] leitor YAML em `engine/151_koflm_config.kf` + hot-reload por mtime no orchestrador
+- [x] `engine/160_context.kf` parser YAML subset + hot-reload por hash de conteudo + `workspace/context.yaml`
+- [ ] orquestrador reconstrói prompt quando hash muda (`ctxChanged()` pronto/testado; falta ligar no loop)
 - [ ] hash do contexto gravado no journal (determinismo reprodutível)
 - [x] teste: editar YAML entre turnos muda comportamento sem rebuild
 
@@ -31,4 +31,5 @@
 
 ## E5 — CLI no contrato §2
 - [x] engine/161_contract.kf: outFmt/outAsk/outRefuse/outFromCtx (unit_contract 5/5)
-- [x] clamp/reglas do YAML no contrato; gate de confianca<limiar -> outAsk = proximo passo no loop
+- [x] clamp/regras do YAML no contrato (unit_contract 5/5)
+- [ ] modo ASK quando confiança < limiar no loop do orquestrador (contrato `outAsk` pronto; gatilho falta)
