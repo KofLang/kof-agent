@@ -36,3 +36,10 @@ test "drm cards 0..7 scanned" {
     }
     assert(any == detectOpenGL())
 }
+
+test "ocl detect pure logic (E3)" {
+    assert(oclDetectFrom(true, true))
+    assert(oclDetectFrom(true, false) == false)
+    assert(oclDetectFrom(false, true) == false)
+    assert(detectOpenCL() == oclDetectFrom(hasOpenclLoader(), hasOpenclVendor()))
+}

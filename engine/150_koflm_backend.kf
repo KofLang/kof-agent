@@ -67,6 +67,42 @@ Bool detectOpenGL() {
     return false
 }
 
+// E3 (specs/ENGINE_V2.md §3.2): OpenCL existe quando ha loader ICD E ao menos
+// um vendor .icd instalado (mesmo com libOpenCL sem plataforma o build de
+// kernels nao roda — ver gpu/tests_ocl.c rc=77). Logica pura p/ teste:
+oclDetectFrom(Bool loader, Bool vendorIcd): Bool {
+    return loader && vendorIcd
+}
+
+Bool hasOpenclLoader(): Bool {
+    var p = listOf<String>()
+    p.add("/usr/lib/x86_64-linux-gnu/libOpenCL.so.1")
+    p.add("/usr/lib/libOpenCL.so.1")
+    p.add("/usr/lib/x86_64-linux-gnu/libOpenCL.so")
+    for (var one in p) {
+        var f = File(one)
+        if (f.exists()) { return true }
+    }
+    return false
+}
+
+Bool hasOpenclVendor(): Bool {
+    var v = listOf<String>()
+    v.add("/etc/OpenCL/vendors/mesa_icd.x86_64.icd")
+    v.add("/etc/OpenCL/vendors/nvidia.icd")
+    v.add("/etc/OpenCL/vendors/amdocl64.icd")
+    v.add("/etc/OpenCL/vendors/pocl.icd")
+    for (var one in v) {
+        var f = File(one)
+        if (f.exists()) { return true }
+    }
+    return false
+}
+
+detectOpenCL(): Bool {
+    return oclDetectFrom(hasOpenclLoader(), hasOpenclVendor())
+}
+
 // Override por ambiente (gpu-env.sh): KOF_GPU_BACKEND=vulkan|opengl|cpu.
 // secrets.get lê /proc/self/environ no nativo e System.getenv no JVM.
 String envBackendOverride() {
