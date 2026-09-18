@@ -9,7 +9,7 @@ test "symbol registry built from frontmatter" {
 
 test "diagnostic registry populated with workaround lookup" {
     var ix = corpusLoad(freshBus(), CROOT(), FixedClock(1))
-    assert(ix.diagRegistry.size == 2)
+    assert(ix.diagRegistry.size >= 2)
     var hasArith = false
     for (var d in ix.diagRegistry) {
         if (d.code == "diag-ARITH001") {

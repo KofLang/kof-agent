@@ -1,11 +1,16 @@
 CROOT(): String { return "corpus" }
 
-test "broken link detected" {
-    var ix = corpusLoad(freshBus(), CROOT(), FixedClock(1))
-    var issues = corpusValidate(ix, CROOT())
+test "broken link detected (fixture: link a arquivo inexistente)" {
+    var root = "build/corpus_fixture"
+    var dd = Directory(root)
+    dd.createDirectories()
+    var a = File(root + "/broken.md")
+    a.writeText("---\nid: fix-broken\ntitle: fixture\nmodule: m\ncategory: c\nstatus: stable\n---\n# fixture\nveja [spawn](language/spawn-inexistente.md).\n")
+    var ix = corpusLoad(freshBus(), root, FixedClock(1))
+    var issues = corpusValidate(ix, root)
     var found = false
     for (var i in issues) {
-        if (i.kind == "broken-link" && i.detail.contains("language/spawn.md")) {
+        if (i.kind == "broken-link" && i.detail.contains("language/spawn-inexistente.md")) {
             found = true
         }
     }

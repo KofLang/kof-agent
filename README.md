@@ -8,7 +8,8 @@ executa a tarefa, explica o mínimo possível, pergunta quando não entende.
 
 | Camada | Estado |
 |---|---|
-| M0–M31 runtime/tools/corpus/retrieval/AI/HAL/shaders | ✅ |
+| M0–M31 runtime/tools/AI/HAL/shaders | ✅ |
+| M5 corpus/retrieval | ✅ código · 🟡 conteúdo: 20 docs reais em 15 categorias (14 novas 18/09, factuais); base p/ repair ainda rasa — encher com diagnostiquês novo a cada bug |
 | M32 GPU Vulkan (FFM vkchain, dispatch matmul 32/64) | ✅ |
 | M33 GGUF parser binário 100% Kof (Q4_K/Q6_K/F16) | ✅ |
 | M34 forward TinyLlama token exato + tokenizer SPM + geração | ✅ |

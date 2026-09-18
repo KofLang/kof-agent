@@ -82,14 +82,29 @@ wsInList(List<String> xs, String v): Bool {
 }
 
 parseLongSafe(String s): Long {
-    var n = 0
+    if (s.length == 0) {
+        return -1
+    }
+    var neg = false
     var i = 0
+    if (s.charAt(0) == 45) {
+        if (s.length == 1) {
+            return -1
+        }
+        neg = true
+        i = 1
+    }
+    var n = 0
     while (i < s.length) {
         var c = s.charAt(i)
-        if (c >= 48 && c <= 57) {
-            n = n * 10 + (c - 48)
+        if (c < 48 || c > 57) {
+            return -1
         }
+        n = n * 10 + (c - 48)
         i = i + 1
+    }
+    if (neg) {
+        return 0 - n
     }
     return n
 }
