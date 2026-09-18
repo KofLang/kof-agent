@@ -1,0 +1,39 @@
+// E5 (specs/ENGINE_V2.md §2): contrato de saida da ferramenta.
+// resultado primeiro; explicacao e extra opcional capped por max_explicacao_linhas
+// do context.yaml (160); ASK e REFUSE sao prefixes canonicos de 1 linha.
+
+outFmt(String result, String explain, Int maxLines): String {
+    if (explain == "" || maxLines <= 0) {
+        return result
+    }
+    return result + "\n" + ctxClampExplanation(explain, maxLines)
+}
+
+outOneLine(String s): String {
+    var out = ""
+    var i = 0
+    while (i < s.length) {
+        var c = s.charAt(i)
+        if (c == 10) {
+            out = out + " "
+        } else {
+            out = out + s.substring(i, i + 1)
+        }
+        i = i + 1
+    }
+    return out.trim()
+}
+
+outAsk(String question): String {
+    return "ASK: " + outOneLine(question)
+}
+
+outRefuse(String reason): String {
+    return "REFUSE: " + outOneLine(reason)
+}
+
+// saida com as regras vivas do YAML de contexto (linhasMax do arquivo)
+outFromCtx(String ctxPath, String result, String explain): String {
+    var c = ctxLoad(ctxPath)
+    return outFmt(result, explain, c.linhasMax)
+}

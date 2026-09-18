@@ -1,0 +1,32 @@
+// E5: suíte do contrato de saida (engine/161_contract.kf)
+
+test "outFmt result first, explanation clamped" {
+    var r = outFmt("ok: 3 arquivos", "l1\nl2\nl3\nl4", 2)
+    assert(r == "ok: 3 arquivos\nl1\nl2")
+}
+
+test "outFmt without explanation is pure result" {
+    assert(outFmt("feito", "", 2) == "feito")
+}
+
+test "ask and refuse are one line with prefix" {
+    assert(outAsk("qual arquivo?\nqual modulo?") == "ASK: qual arquivo? qual modulo?")
+    assert(outRefuse("Kof nao tem StringBuilder") == "REFUSE: Kof nao tem StringBuilder")
+}
+
+test "from ctx honors max_explicacao_linhas" {
+    var path = "build/ctx_e5_test.yaml"
+    var f = File(path)
+    f.writeText("persona: kof-tool\nintencao_atual: e5\nregras_vivas:\n  max_explicacao_linhas: 1\n")
+    var out = outFromCtx(path, "diff aplicado", "a\nb\nc")
+    assert(out == "diff aplicado\na")
+}
+
+test "empty explanation and empty lines edges" {
+    assert(outFmt("", "", 2) == "")
+    assert(outOneLine("") == "")
+    assert(outFmt("r", "u", 0) == "r")
+}
+
+main() {
+}

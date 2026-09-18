@@ -60,6 +60,7 @@ PARTS=(
   engine/koflama_forward.kf
   engine/koflama_tokenizer.kf
   engine/160_context.kf
+  engine/161_contract.kf
 )
 
 # usage: build.sh <entry.kf> <out.kf> [--with-gateway]
