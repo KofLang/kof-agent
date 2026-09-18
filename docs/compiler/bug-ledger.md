@@ -91,3 +91,5 @@ SECN002 (AES-GCM nativo) fechado — G10 completo. Não rastreado pelo agente (f
 - Suite M10 (`unit_ai2`) no **native**: 8/9 PASS (antes segfault N10-family). Restante: q8 roundtrip = vítima do **N17** (`v < 0` em load de Int[] dentro de quantizeQ8Block).
 - Suite M10 no **JVM**: bloqueada por **J4**.
 - Suite FASE 3 (`unit_f3`, 1.5MB asm): ainda segfault (139) → **N10-progressivo segue aberto**.
+| N24 | JVM Codegen | VerifyError: checkcast sobre int do gpu.dispatchMatmul em TU grande (posicional, familia N10; TU minimo nao falha) | 48eb2d7b | — | Open | alta | ws suites em native; gpuMatmul isolado | Compiler |
+

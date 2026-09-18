@@ -4,7 +4,7 @@ record RunnerConfig(Int maxTokens, Int topK, Int temperature, Int seed)
 record GenMetrics(Int promptTokens, Int genTokens, Int elapsedMs)
 record StreamEvent(Int kind, Int token)
 
-fn mrEmbed(GgufHandle h, Int tokenId, Int dims): TensorR {
+TensorR mrEmbed(GgufHandle h, Int tokenId, Int dims) {
     var t = tensorNew(1, dims)
     var blob = getTensorLazy(h, "tok_embd")
     var i = 0
@@ -22,7 +22,7 @@ fn mrEmbed(GgufHandle h, Int tokenId, Int dims): TensorR {
     return t
 }
 
-fn mrLogits(GgufHandle h, TensorR hidden, Int vocab): Int[] {
+Int[] mrLogits(GgufHandle h, TensorR hidden, Int vocab) {
     var lg = new Int[vocab]
     var proj = getTensorLazy(h, "out_proj")
     var i = 0

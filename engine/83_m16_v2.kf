@@ -94,7 +94,7 @@ class KVCacheV2 {
     }
 }
 
-fn quantizeQ4(Int[] src, Int off): Int[] {
+Int[] quantizeQ4(Int[] src, Int off) {
     var out = new Int[Q8_BLOCK() / 2 + 1]
     var maxAbs = 0
     var i = 0
@@ -127,7 +127,7 @@ fn quantizeQ4(Int[] src, Int off): Int[] {
     return out
 }
 
-fn dequantizeQ4(Int[] blk): Int[] {
+Int[] dequantizeQ4(Int[] blk) {
     var o = new Int[Q8_BLOCK()]
     var scale = blk[0]
     var i = 0
@@ -144,7 +144,7 @@ fn dequantizeQ4(Int[] blk): Int[] {
 
 record SamplerConfig(Int temperature, Int topK, Int topP, Int minP, Int repPenalty, Int seed)
 
-fn samplerGreedy(Int[] logits, Int n): Int {
+Int samplerGreedy(Int[] logits, Int n) {
     var best = 0
     var bv = logits[0]
     var i = 1
@@ -158,13 +158,13 @@ fn samplerGreedy(Int[] logits, Int n): Int {
 
 record LcgState(Int v)
 
-fn lcgNext(LcgState st): Int {
+Int lcgNext(LcgState st) {
     var nv = st.v * 1103515245 + 12345
     if (nv < 0) { nv = 0 - nv }
     return nv % 2147483647
 }
 
-fn samplerTopKV3(Int[] logits, Int n, Int k, Int seed): Int {
+Int samplerTopKV3(Int[] logits, Int n, Int k, Int seed) {
     var chosen = samplerGreedy(logits, n)
     if (k >= n || k <= 0) { return chosen }
     var idx = lcgNext(LcgState(seed)) % n

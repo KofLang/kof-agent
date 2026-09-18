@@ -5,6 +5,8 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 . "$(dirname "$0")/kof-env.sh"
 [ -x "$KOF" ] || KOF="$(command -v kof)"
 
+# Ordens de concatenacao = topologica (fix N16: uso deve seguir definicao).
+# Mover/renomear arquivos exige reconcatenar e diffar contra o TU anterior.
 PARTS=(
   agent/runtime/00_core.kf
   agent/runtime/05_log.kf
@@ -23,40 +25,40 @@ PARTS=(
   agent/runtime/88_conversation.kf
   agent/runtime/89_orchestrator.kf
   agent/runtime/77_runtime_ai.kf
-  agent/runtime/81_tensors_v2.kf
-  agent/runtime/82_tensor_ops.kf
-  agent/runtime/79_hal.kf
-  agent/runtime/83_m16_v2.kf
-  agent/runtime/83_nn_interfaces.kf
-  agent/runtime/84_gguf.kf
+  engine/81_tensors_v2.kf
+  engine/82_tensor_ops.kf
+  engine/79_hal.kf
+  engine/83_m16_v2.kf
+  engine/83_nn_interfaces.kf
+  engine/84_gguf.kf
   agent/runtime/68_brain.kf
   agent/runtime/69_planner.kf
   agent/runtime/71_executor.kf
   agent/runtime/90_runtime.kf
-  agent/runtime/153_graph_executor.kf
-  agent/runtime/kof_f16.kf
-  agent/runtime/159_shader_hal.kf
-  agent/runtime/154_attention_swiglu.kf
-  agent/runtime/156_lmhead_quant.kf
-  agent/runtime/157_quant8_embed.kf
-  agent/runtime/140_dataset_builder.kf
-  agent/runtime/141_corpus_intel.kf
-  agent/runtime/142_training_pipeline.kf
-  agent/runtime/143_gguf_builder.kf
-  agent/runtime/145_koflm_dataset_loader.kf
-  agent/runtime/151_koflm_config.kf
-  agent/runtime/155_tokenizer_engine.kf
-  agent/runtime/150_koflm_backend.kf
-  agent/runtime/147_koflm_tokenizer.kf
-  agent/runtime/152_inference_engine.kf
-  agent/runtime/144_koflm_runtime.kf
-  agent/runtime/146_koflm_v2.kf
-  agent/runtime/85_model_runner.kf
+  engine/153_graph_executor.kf
+  engine/kof_f16.kf
+  engine/159_shader_hal.kf
+  engine/154_attention_swiglu.kf
+  engine/156_lmhead_quant.kf
+  engine/157_quant8_embed.kf
+  training/kf/140_dataset_builder.kf
+  training/kf/141_corpus_intel.kf
+  training/kf/142_training_pipeline.kf
+  training/kf/143_gguf_builder.kf
+  training/kf/145_koflm_dataset_loader.kf
+  engine/151_koflm_config.kf
+  engine/155_tokenizer_engine.kf
+  engine/150_koflm_backend.kf
+  engine/147_koflm_tokenizer.kf
+  engine/152_inference_engine.kf
+  engine/144_koflm_runtime.kf
+  engine/146_koflm_v2.kf
+  engine/85_model_runner.kf
   agent/runtime/131_ai_engine.kf
   agent/runtime/133_model_manager.kf
-  agent/runtime/koflama_gguf.kf
-  agent/runtime/koflama_forward.kf
-  agent/runtime/koflama_tokenizer.kf
+  engine/koflama_gguf.kf
+  engine/koflama_forward.kf
+  engine/koflama_tokenizer.kf
 )
 
 # usage: build.sh <entry.kf> <out.kf> [--with-gateway]
@@ -64,11 +66,23 @@ ENTRY="$1"
 OUT="$2"
 mkdir -p "$(dirname "$ROOT/$OUT")"
 : > "$ROOT/$OUT"
+resolve_part() {
+  local name="$1" d
+  for d in agent/runtime engine training/kf; do
+    if [ -f "$ROOT/$d/$name" ]; then
+      printf '%s/%s\n' "$d" "$name"
+      return 0
+    fi
+  done
+  echo "build.sh: part nao encontrada: $name" >&2
+  return 1
+}
+
 SELECTED=("${PARTS[@]}")
 for flag in "${@:3}"; do
   case "$flag" in
     --with-gateway) SELECTED+=("agent/runtime/95_gateway.kf") ;;
-    --only=*) SELECTED=(); for f in $(echo "$flag" | cut -d= -f2 | tr ',' ' '); do SELECTED+=("agent/runtime/$f"); done ;;
+    --only=*) SELECTED=(); for f in $(echo "$flag" | cut -d= -f2 | tr ',' ' '); do SELECTED+=("$(resolve_part "$f")"); done ;;
     --native-clock) SELECTED+=("agent/runtime/98_native_clock.kf") ;;
     --no-native-clock) ;;
     *) echo "unknown flag $flag" >&2 ;;

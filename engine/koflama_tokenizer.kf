@@ -123,13 +123,11 @@ kofLmTokEncode(String[] vocab, Long[] scores, String text, Int bosId): Int[] {
         while (len >= 1) {
             if (pos + len <= n) {
                 var sub = sb.substring(pos, pos + len)
-                if (idx.contains(sub)) {
-                    var r = idx.get(sub)
-                    if (r != null) {
-                        bestLen = len
-                        bestId = r
-                        len = 0
-                    }
+                var r = idx.getOrDefault(sub, 0 - 1)
+                if (r >= 0) {
+                    bestLen = len
+                    bestId = r
+                    len = 0
                 }
             }
             len = len - 1
@@ -157,12 +155,7 @@ kofLmTokEncode(String[] vocab, Long[] scores, String text, Int bosId): Int[] {
 
 // find via Map (O(1); índice build uma vez em kofLmTokEncode)
 kofLmTokFind2(Map<String, Int> idx, String sub): Int {
-    if (idx.contains(sub)) {
-        var r = idx.get(sub)
-        if (r == null) { return 0 - 1 }
-        return r
-    }
-    return 0 - 1
+    return idx.getOrDefault(sub, 0 - 1)
 }
 
 // decode: ids → texto ('▁'→' ', <0xNN>→byte)

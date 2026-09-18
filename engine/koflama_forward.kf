@@ -488,13 +488,10 @@ kofLmToWh(Long[] w, Int n): Int[] {
     var i = 0
     while (i < n) {
         var h = w[i] / 1000
-        if (h > 2147483647) {
-            out[i] = 2147483647
-        } else if (h < 0 - 2147483648) {
-            out[i] = 0 - 2147483648
-        } else {
-            out[i] = h
-        }
+        var c = h
+        if (h > 2147483647) { c = 2147483647 }
+        else if (h < 0 - 2147483647 - 1) { c = 0 - 2147483647 - 1 }
+        out[i] = c as Int
         i = i + 1
     }
     return out
@@ -504,7 +501,7 @@ kofLmToWl(Long[] w, Int n): Int[] {
     var out = new Int[n]
     var i = 0
     while (i < n) {
-        out[i] = w[i] % 1000
+        out[i] = (w[i] % 1000) as Int
         i = i + 1
     }
     return out
@@ -516,18 +513,18 @@ kofLmToI32(Long[] w, Int n): Int[] {
     var out = new Int[n]
     var i = 0
     var over = 0
-    var min = 0 - 2147483648
+    var min = 0 - 2147483647 - 1
     while (i < n) {
         var v = w[i]
+        var c = v
         if (v > 2147483647) {
-            out[i] = 2147483647
+            c = 2147483647
             over = over + 1
         } else if (v < min) {
-            out[i] = min
+            c = min
             over = over + 1
-        } else {
-            out[i] = v
         }
+        out[i] = c as Int
         i = i + 1
     }
     if (over > 0) {

@@ -1,4 +1,39 @@
-record CorpMeta(String id, String title, String module, String category, String version, String languageVersion, String author, String createdAt, String updatedAt, String keywordsCsv, String symbolsCsv, String dependenciesCsv, String status, String tagsCsv, String extraKey, String extraValue)
+class CorpMeta {
+    String id = ""
+    String title = ""
+    String module = ""
+    String category = ""
+    String version = ""
+    String languageVersion = ""
+    String author = ""
+    String createdAt = ""
+    String updatedAt = ""
+    String keywordsCsv = ""
+    String symbolsCsv = ""
+    String dependenciesCsv = ""
+    String status = ""
+    String tagsCsv = ""
+    String extraKey = ""
+    String extraValue = ""
+    public constructor(String id, String title, String module, String category, String version, String languageVersion, String author, String createdAt, String updatedAt, String keywordsCsv, String symbolsCsv, String dependenciesCsv, String status, String tagsCsv, String extraKey, String extraValue) {
+        this.id = id
+        this.title = title
+        this.module = module
+        this.category = category
+        this.version = version
+        this.languageVersion = languageVersion
+        this.author = author
+        this.createdAt = createdAt
+        this.updatedAt = updatedAt
+        this.keywordsCsv = keywordsCsv
+        this.symbolsCsv = symbolsCsv
+        this.dependenciesCsv = dependenciesCsv
+        this.status = status
+        this.tagsCsv = tagsCsv
+        this.extraKey = extraKey
+        this.extraValue = extraValue
+    }
+}
 class CorpusDoc {
     CorpMeta meta = CorpMeta("", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "")
     String body = ""

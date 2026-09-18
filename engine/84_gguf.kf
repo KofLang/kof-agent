@@ -7,12 +7,12 @@ record MetaValue(Int kind, Int intVal, String strVal)
 record TensorEntry(String name, Int nDims, Int d0, Int d1, Int dtype, Int offset, Int size)
 record GgufHandle(GgufHeader header, List<MetaValue> metaKeys, List<String> metaNames, List<TensorEntry> tensors, List<Int[]> blobs, Int errorCount, String errorCode)
 
-fn ggufHexVal(Char c): Int {
+Int ggufHexVal(Char c) {
     if (c >= '0' && c <= '9') { return c - '0' }
     return (c - 'a') + 10
 }
 
-fn ggufDecodeHex(String hex, Int byteOff): Int {
+Int ggufDecodeHex(String hex, Int byteOff) {
     var i = byteOff * 2
     if (i + 1 >= hex.length) { return 0 }
     var hi = ggufHexVal(hex.charAt(i))

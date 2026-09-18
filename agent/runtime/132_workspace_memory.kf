@@ -3,7 +3,7 @@
 record Chunk(String uri, Int idx, Int hash)
 record Scored(Chunk c, Int score)
 
-fn chunkHash(String text, Int from, Int len): Int {
+Int chunkHash(String text, Int from, Int len) {
     var h = 0
     var i = from
     while (i < from + len && i < text.length) {

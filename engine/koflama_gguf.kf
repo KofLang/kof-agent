@@ -14,23 +14,23 @@ record KofGgufBinModel(KofGgufBinHeader header, List<KofGgufBinKv> kv, List<KofG
 record GgufBinStr(Int len, Int[] chars)
 
 // ── leitura little-endian de um Int[] de bytes ──────────────────────────
-fn kofGgufU32(Int[] b, Int off): Int {
+Int kofGgufU32(Int[] b, Int off) {
     if (off + 4 > b.length) { return 0 }
     return b[off] + b[off + 1] * 256 + b[off + 2] * 65536 + b[off + 3] * 16777216
 }
 
-fn kofGgufU64Low(Int[] b, Int off): Int {
+Int kofGgufU64Low(Int[] b, Int off) {
     if (off + 8 > b.length) { return 0 }
     return b[off] + b[off + 1] * 256 + b[off + 2] * 65536 + b[off + 3] * 16777216
 }
 
-fn kofGgufU64High(Int[] b, Int off): Int {
+Int kofGgufU64High(Int[] b, Int off) {
     if (off + 8 > b.length) { return 0 }
     return b[off + 4] + b[off + 5] * 256 + b[off + 6] * 65536 + b[off + 7] * 16777216
 }
 
 // u64→Long p/ offsets de tensor (GGUF até 4G+ usa hi*2^32)
-fn kofGgufU64ToLong(Int[] b, Int off): Long {
+Long kofGgufU64ToLong(Int[] b, Int off) {
     var hi = kofGgufU64High(b, off)
     if (hi == 0) {
         var lo = kofGgufU64Low(b, off)
@@ -41,13 +41,13 @@ fn kofGgufU64ToLong(Int[] b, Int off): Long {
 
 // len disponível na janela a partir de off+8 (evita index OOB quando a
 // string cruza o fim do buffer lido)
-fn kofGgufStrAvail(Int[] b, Int off): Int {
+Int kofGgufStrAvail(Int[] b, Int off) {
     var avail = b.length - (off + 8)
     if (avail < 0) { return 0 }
     return avail
 }
 
-fn kofGgufReadStr(Int[] b, Int off): GgufBinStr {
+GgufBinStr kofGgufReadStr(Int[] b, Int off) {
     var len = kofGgufU64Low(b, off)
     var avail = kofGgufStrAvail(b, off)
     if (len > avail) { len = avail }
@@ -63,7 +63,7 @@ fn kofGgufReadStr(Int[] b, Int off): GgufBinStr {
 
 // byte → String com decode UTF-8 (ASCII 1B, cont 2B/3B/4B). O Kof
 // String é UTF-16; o vocab SPM tem ▁ (E2 96 81) e <0xXX> ASCII.
-fn kofGgufStr(Int[] b, Int off): String {
+String kofGgufStr(Int[] b, Int off) {
     var s = ""
     var st = kofGgufReadStr(b, off)
     var i = 0
@@ -94,7 +94,7 @@ fn kofGgufStr(Int[] b, Int off): String {
 // bytes que o VALOR deste kv consome (pVal = offset APÓS o u32 do kind).
 // Retorna NEGATIVO se a janela é pequena demais (qualquer leitura truncada —
 // sinal p/ o driver dobrar a janela antes de confiar no valor)
-fn kofGgufKvNeed(Int[] buf, Int pVal, Int kind): Int {
+Int kofGgufKvNeed(Int[] buf, Int pVal, Int kind) {
     if (pVal + 8 > buf.length) { return 0 - 1 }
     if (kind == 8) {
         var vs = kofGgufReadStr(buf, pVal)
@@ -130,7 +130,7 @@ fn kofGgufKvNeed(Int[] buf, Int pVal, Int kind): Int {
     return need
 }
 
-fn kofGgufArrayElemSize(Int kind): Int {
+Int kofGgufArrayElemSize(Int kind) {
     if (kind == 0 || kind == 1 || kind == 7) { return 1 }   // u8/i8/bool
     if (kind == 2 || kind == 3) { return 2 }                 // u16/i16
     if (kind == 4 || kind == 5 || kind == 6) { return 4 }    // u32/i32/f32
@@ -245,8 +245,8 @@ kofGgufBinOpen(String path): KofGgufBinModel {
 // tensor dir: logo após os kvs. Cada entry: name(str) + n_dims u32 +
 // dims u64*n + type u32 + offset u64. Janela de 64KB (TinyLlama:
 // 201 tensors × ~70B ≈ 14KB — cabe).
-fn ggufBinReadTensorDir(String path, Int version, Int tensorCount, Int kvCount,
-                        List<KofGgufBinKv> kv, Int align, Long dirStart): KofGgufBinModel {
+KofGgufBinModel ggufBinReadTensorDir(String path, Int version, Int tensorCount, Int kvCount,
+                        List<KofGgufBinKv> kv, Int align, Long dirStart) {
     var f = File(path)
     var dir = f.readRange(dirStart, 65536)
     if (dir == null || dir.length < 8) {
@@ -294,14 +294,14 @@ fn ggufBinReadTensorDir(String path, Int version, Int tensorCount, Int kvCount,
 
 // ── acesso a tensor ─────────────────────────────────────────────────────
 // GGUF quant types: 0 F32, 1 F16, 8 Q8_0 (32→34B), 12 Q4_K (256→144B), 14 Q6_K (256→210B)
-fn kofGgufQuantBlockElems(Int quant): Int {
+Int kofGgufQuantBlockElems(Int quant) {
     if (quant == 12) { return 256 }
     if (quant == 14) { return 256 }
     if (quant == 8) { return 32 }
     return 1
 }
 
-fn kofGgufQuantBlockSize(Int quant): Int {
+Int kofGgufQuantBlockSize(Int quant) {
     if (quant == 12) { return 144 }
     if (quant == 14) { return 210 }
     if (quant == 8) { return 34 }
@@ -309,7 +309,7 @@ fn kofGgufQuantBlockSize(Int quant): Int {
     return 4
 }
 
-fn kofGgufQuantName(Int quant): String {
+String kofGgufQuantName(Int quant) {
     if (quant == 0) { return "F32" }
     if (quant == 1) { return "F16" }
     if (quant == 8) { return "Q8_0" }
@@ -331,12 +331,12 @@ kofGgufFindTensor(KofGgufBinModel m, String name): KofGgufBinTensor {
 }
 
 // tensor dataOffset absoluto (t.offset é relativo ao início do data section)
-fn kofGgufTensorAbsOff(KofGgufBinModel m, KofGgufBinTensor t): Long {
+Long kofGgufTensorAbsOff(KofGgufBinModel m, KofGgufBinTensor t) {
     return m.dataOff + t.offsetLo + t.offsetHi * 4294967296
 }
 
 // bytes totais do tensor
-fn kofGgufTensorBytes(KofGgufBinTensor t): Int {
+Int kofGgufTensorBytes(KofGgufBinTensor t) {
     if (t.quant == 1) { return t.nElems * 2 }
     if (t.quant == 0) { return t.nElems * 4 }
     return t.nElems / kofGgufQuantBlockElems(t.quant) * kofGgufQuantBlockSize(t.quant)
@@ -351,14 +351,14 @@ fn kofGgufTensorBytes(KofGgufBinTensor t): Int {
 //   d1 = d*sc(is); m1 = dmin*mn(is); d2 = d*sc(is+1); m2 = dmin*mn(is+1)
 //   32 low-nibble: y = d1*(q&0xF) - m1
 //   32 high-nibble: y = d2*(q>>4) - m2
-fn kofGgufK4Sc(Int[] sc, Int j): Int {
+Int kofGgufK4Sc(Int[] sc, Int j) {
     if (j < 4) {
         return sc[j] % 64
     }
     return (sc[j + 4] % 16) + (sc[j - 4] / 64) * 16
 }
 
-fn kofGgufK4Mn(Int[] sc, Int j): Int {
+Int kofGgufK4Mn(Int[] sc, Int j) {
     if (j < 4) {
         return sc[j + 4] % 64
     }
@@ -366,7 +366,7 @@ fn kofGgufK4Mn(Int[] sc, Int j): Int {
     return (sc[j + 4] / 16) + (sc[j] / 64) * 16
 }
 
-fn kofGgufQ4KDecodeBlock(Int[] b, Int off, Int[] out) {
+void kofGgufQ4KDecodeBlock(Int[] b, Int off, Int[] out) {
     var d = f16ToMicro(b[off] + b[off + 1] * 256)
     var dmin = f16ToMicro(b[off + 2] + b[off + 3] * 256)
     var sc = new Int[12]
@@ -439,7 +439,7 @@ kofGgufQ4KDecodeTensor(String path, KofGgufBinModel m, String name, Int maxElems
 // ── dequantização Q6_K (formato ggml REAL) ──────────────────────────────
 // Bloco de 256 elems = 210 bytes: f16 d (2B) + ql[128] + qh[64] + sc i8[16]
 // q = ((ql&0xF)|((qh>>s)&3)<<4) - 32; y = d * sc[is] * q (sc é int8)
-fn kofGgufQ6KDecodeBlock(Int[] b, Int off, Int[] out) {
+void kofGgufQ6KDecodeBlock(Int[] b, Int off, Int[] out) {
     // layout block_q6_K (ggml-common.h): ql[128] qh[64] scales[16] d f16 —
     // o d é o ÚLTIMO campo (não o primeiro!)
     var ql = off
@@ -632,7 +632,7 @@ kofGgufDecodeRows(String path, KofGgufBinModel m, String name, Int rowStart,
 
 // ── decoders NANO (pesos p/ matmul do forward M34; estados ficam MICRO) ─
 // bloco Q4_K → nano em Long[256]
-fn kofGgufQ4KDecodeBlockN(Int[] b, Int off, Long[] out) {
+void kofGgufQ4KDecodeBlockN(Int[] b, Int off, Long[] out) {
     var d: Long = f16ToNano(b[off] + b[off + 1] * 256)
     var dmin: Long = f16ToNano(b[off + 2] + b[off + 3] * 256)
     var sc = new Int[12]
@@ -668,7 +668,7 @@ fn kofGgufQ4KDecodeBlockN(Int[] b, Int off, Long[] out) {
 }
 
 // bloco Q6_K → nano em Long[256]
-fn kofGgufQ6KDecodeBlockN(Int[] b, Int off, Long[] out) {
+void kofGgufQ6KDecodeBlockN(Int[] b, Int off, Long[] out) {
     var ql = off
     var qh = ql + 128
     var scB = qh + 64
@@ -780,7 +780,7 @@ kofGgufF32DecodeRows(String path, KofGgufBinModel m, String name, Int rowStart,
 
 // f32 bits → micro (1e-6). IEEE754: sign 1, exp 8 (bias 127), man 23
 // f32 → MICRO em Long (sem clamp — p/ SPM scores que chegam a -29613)
-fn f32ToMicroLong(Long bits): Long {
+Long f32ToMicroLong(Long bits) {
     var sign = 0
     if (bits < 0) { sign = 1; bits = bits + 2147483648 }
     var exp = (bits / 8388608) % 256
@@ -801,7 +801,7 @@ fn f32ToMicroLong(Long bits): Long {
     return micro
 }
 
-fn f32ToMicro(Long bits): Int {
+Int f32ToMicro(Long bits) {
     var sign = 0
     if (bits < 0) { sign = 1; bits = bits + 2147483648 }
     var exp = (bits / 8388608) % 256

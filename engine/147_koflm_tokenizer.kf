@@ -2,7 +2,7 @@
 
 record SpecialToken(String name, Int id)
 
-fn kofSpecialTokens(): List<SpecialToken> {
+List<SpecialToken> kofSpecialTokens() {
     var l = listOf<SpecialToken>()
     l.add(SpecialToken("<kof>", 32000))
     l.add(SpecialToken("</kof>", 32001))
@@ -17,11 +17,11 @@ fn kofSpecialTokens(): List<SpecialToken> {
     return l
 }
 
-fn kofSpecialCount(): Int {
+Int kofSpecialCount() {
     return 10
 }
 
-fn kofTokenLookup(String name): Int {
+Int kofTokenLookup(String name) {
     var toks = kofSpecialTokens()
     var total = 10
     var i = 0

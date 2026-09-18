@@ -1,4 +1,11 @@
-record ExecTaskState(String taskId, String state)
+class ExecTaskState {
+    String taskId = ""
+    String state = ""
+    public constructor(String taskId, String state) {
+        this.taskId = taskId
+        this.state = state
+    }
+}
 record RepairAttemptRec(Int attempt, String diagCode)
 
 EXEC_READY(): String { return "READY" }

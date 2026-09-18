@@ -1,6 +1,6 @@
 // M31.2/.3: Q8_0 decode + Embedding Executor
 
-fn q80DecodeBlock(Int[] raw, Int off): Int {
+Int q80DecodeBlock(Int[] raw, Int off) {
     var scale = raw[off]
     var acc = 0
     var i = 1

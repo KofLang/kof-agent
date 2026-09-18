@@ -2,7 +2,7 @@
 
 record DsExample(String category, String inputText, String outputText, Int hash)
 
-fn dsHash(String s): Int {
+Int dsHash(String s) {
     var h = 0
     var i = 0
     while (i < s.length) {
@@ -12,7 +12,7 @@ fn dsHash(String s): Int {
     return h
 }
 
-fn dsCategoryFor(String path): String {
+String dsCategoryFor(String path) {
     if (path.contains("bugs")) { return "BUG" }
     if (path.contains("tests")) { return "TEST" }
     if (path.contains("specs")) { return "COMPILER" }

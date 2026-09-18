@@ -2,7 +2,7 @@
 
 record QuantBlock(Int scale, Int baseVal)
 
-fn q40DecodeBlock(Int[] raw, Int off): Int {
+Int q40DecodeBlock(Int[] raw, Int off) {
     var scale = raw[off]
     var acc = 0
     var i = 1

@@ -20,7 +20,7 @@ class CPUBackend {
     name(): String { return "cpu" }
 }
 
-fn detectVulkan(): Bool {
+Bool detectVulkan() {
     var f = File("/usr/share/vulkan/icd.d")
     if (!f.exists()) { return false }
     // icd.d é um diretório: listar .json em vez de readText (null/NPE)
@@ -37,12 +37,12 @@ fn detectVulkan(): Bool {
 
 // llvmpipe/lavapipe = rasterizador de software: compute neles é MAIS LENTO
 // que o CPU puro (comprovado no M32.1 — lvp nem escreve o resultado).
-fn isSoftwareVkIcd(name: String): Bool {
+Bool isSoftwareVkIcd(name: String) {
     return name.contains("lvp") || name.contains("swiftshader")
         || name.contains("virtio") || name.contains("gfxstream")
 }
 
-fn hasHardwareVk(): Bool {
+Bool hasHardwareVk() {
     var f = File("/usr/share/vulkan/icd.d")
     if (!f.exists()) { return false }
     var files = f.list()
@@ -56,7 +56,7 @@ fn hasHardwareVk(): Bool {
     return found
 }
 
-fn detectOpenGL(): Bool {
+Bool detectOpenGL() {
     // card[0-9] real (card1 = RX 550 no OptiPlex; card0 nem sempre existe)
     var i = 0
     while (i < 8) {
@@ -69,7 +69,7 @@ fn detectOpenGL(): Bool {
 
 // Override por ambiente (gpu-env.sh): KOF_GPU_BACKEND=vulkan|opengl|cpu.
 // secrets.get lê /proc/self/environ no nativo e System.getenv no JVM.
-fn envBackendOverride(): String {
+String envBackendOverride() {
     var v = secrets.get("KOF_GPU_BACKEND")
     if (v == null) { return "" }
     return v
