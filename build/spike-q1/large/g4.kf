@@ -1,4 +1,0 @@
-record L4(Int v)
-mainX4() {
-    var l = L4(1)
-}

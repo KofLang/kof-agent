@@ -1,6 +1,0 @@
-test "metadata typed read bos" {
-    var h = openGGUF("fixtures/tiny.gguf")
-    var mv = getMetadata(h, "tokenizer.bos_id")
-    var iv = mv.intVal
-    assert(iv == 1)
-}

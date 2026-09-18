@@ -1,4 +1,0 @@
-test "plugin permission bitmask deny" {
-    assert(!pluginAllowed(2, 1))
-    assert(!pluginAllowed(0, 4))
-}

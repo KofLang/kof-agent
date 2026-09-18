@@ -1,4 +1,0 @@
-test "bad version yields error" {
-    var h = openGGUF("fixtures/bad_version.gguf")
-    assert(ggufErrorCount(h) >= 1)
-}

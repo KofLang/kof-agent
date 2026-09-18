@@ -1,4 +1,0 @@
-record L49(Int v)
-mainX49() {
-    var l = L49(1)
-}

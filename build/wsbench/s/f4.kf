@@ -1,4 +1,0 @@
-record R4(Int v)
-
-main() {
-}

@@ -1,5 +1,0 @@
-test "plugin install unique name" {
-    var r = PluginRegistry()
-    var a = r.install("p1", "1.0", 3)
-    assert(a)
-}

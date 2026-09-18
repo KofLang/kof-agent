@@ -1,4 +1,0 @@
-record L11(Int v)
-mainX11() {
-    var l = L11(1)
-}

@@ -1,6 +1,0 @@
-test "dispatch counts requests" {
-    var svc = AgentService()
-    svc.dispatch("lsp.hover", 1)
-    var n = svc.requests
-    assert(n == 1)
-}

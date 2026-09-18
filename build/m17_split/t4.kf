@@ -1,6 +1,0 @@
-test "metadata missing kind -1" {
-    var h = openGGUF("fixtures/tiny.gguf")
-    var mv = getMetadata(h, "nope")
-    var k = mv.kind
-    assert(k == -1)
-}

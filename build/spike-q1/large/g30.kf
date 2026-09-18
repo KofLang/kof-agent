@@ -1,4 +1,0 @@
-record L30(Int v)
-mainX30() {
-    var l = L30(1)
-}

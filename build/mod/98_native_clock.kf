@@ -1,7 +1,0 @@
-class RealTimeClock implements TimeSource {
-    constructor() {
-    }
-    nowMs(): Long {
-        return now()
-    }
-}

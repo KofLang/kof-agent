@@ -1,5 +1,0 @@
-test "bos detection" {
-    var t = TokenizerEngine()
-    assert(t.isBos(1))
-    assert(!t.isBos(2))
-}

@@ -1,5 +1,0 @@
-test "corpus bug examples non empty" {
-    var l = corpusBugExamples()
-    var n = l.size()
-    assert(n >= 4)
-}

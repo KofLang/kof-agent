@@ -1,4 +1,0 @@
-record L26(Int v)
-mainX26() {
-    var l = L26(1)
-}

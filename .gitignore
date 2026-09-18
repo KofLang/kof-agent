@@ -7,3 +7,9 @@ tmp-*.kf
 tmp-entry/
 *.class
 tmpentry/
+
+# lixo de runtime/sistema
+*.log
+hs_err_pid*
+*.deb
+.kofargs

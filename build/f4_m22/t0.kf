@@ -1,4 +1,0 @@
-test "formatter indent depth" {
-    var l = fmtIndentLine("x()", 2)
-    assert(l.startsWith("        x()"))
-}

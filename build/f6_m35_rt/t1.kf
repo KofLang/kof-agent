@@ -1,5 +1,0 @@
-test "koflm cancel then not ready path safe" {
-    var k = KoflmRuntime()
-    k.cancel()
-    assert(!k.isReady())
-}

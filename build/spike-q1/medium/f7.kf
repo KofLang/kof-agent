@@ -1,5 +1,0 @@
-record M7(Int v)
-main() {
-    var m = M7(7)
-    println(m.v())
-}

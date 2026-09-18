@@ -1,8 +1,0 @@
-test "lora job lifecycle" {
-    var m = LoraManager()
-    assert(m.createJob())
-    m.tick()
-    m.tick()
-    m.tick()
-    assert(m.status() == 2)
-}
