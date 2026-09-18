@@ -32,7 +32,7 @@ run_unit() {
 
 KOF_TEST_BIN="$KOF"
 
-NATIVE_UNITS=(unit_core unit_logger unit_config unit_scheduler unit_eventbus unit_lifecycle unit_workspace integration_boot shutdown_safe)
+NATIVE_UNITS=(unit_core unit_logger unit_config unit_scheduler unit_eventbus unit_lifecycle unit_workspace integration_boot shutdown_safe unit_context unit_contract)
 WS_UNITS=(unit_ws_scan unit_ws_symbols unit_ws_deps unit_ws_persist unit_ws_diff)
 # WS suites rodam em JVM: logica identica, sem depender de now()/process;
 # native bloqueado pelo N10 (miscompile posicao-dependente, docs/compiler-bugs.md)

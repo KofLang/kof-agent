@@ -2,12 +2,12 @@
 # Recarregado por CONTEUDO a cada turno: editar este arquivo = trocar o
 # comportamento sem recompilar nem retreinar. O hash vai no journal.
 persona: kof-tool
-intencao_atual: "consolidar port 0.4.0-beta e abrir E1-E5"
+intencao_atual: "E3(b): dispatch gpu.cl.* no compilador + ICD Rusticl para o harness"
 estado:
-  - "repo limpo/reorganizado; port 0.4.0 ok; N24 bloqueia ws no JVM (upstream)"
+  - "E1,E2,E4,E5 e E3(a) commitados; 13/18 nativo; N24 segue bloqueando ws no JVM (upstream)"
 pendencias:
-  - "E3 opencl: kernels .cl + liboclchain"
-  - "E2 dataset v4 minimo/ASK/RECUSA"
+  - "E3(b): ICD Rusticl na maquina + integracao gpu.cl.* (lane Kof4j)"
+  - "treinar adapter no v4 e rodar eval rotulada (gate 95%)"
 regras_vivas:
   perguntar_se_confianca: 0.7
   max_explicacao_linhas: 2
