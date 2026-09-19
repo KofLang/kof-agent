@@ -12,6 +12,7 @@ usageText(): String {
     u = u + "  kof-agent doctor [--root DIR] [--json]\n"
     u = u + "  kof-agent ask [--root DIR] [--json] <pedido>
   kof-agent config show [--file PATH] [--json]\n"
+    u = u + "  kof-agent quant --file IN --out OUT\n"
     u = u + "\n"
     u = u + "exit codes: 0 ok · 1 usage · 2 failure\n"
     return u
@@ -24,6 +25,7 @@ class CliOpts {
     String root = "."
     String file = ""
     String text = ""
+    String out = ""
     Int epochs = 15
 }
 
@@ -43,6 +45,11 @@ parseOptsList(List<String> raw): CliOpts {
             i = i + 1
             if (i < raw.size) {
                 o.file = raw.get(i)
+            }
+        } else if (a == "--out") {
+            i = i + 1
+            if (i < raw.size) {
+                o.out = raw.get(i)
             }
         } else if (a == "--epochs") {
             i = i + 1
@@ -313,6 +320,22 @@ cmdConfMilli(CliOpts o): Int {
     return c.confiancaMin
 }
 
+cmdQuant(CliOpts o): Int {
+    var src = o.file
+    if (src == "") {
+        println("quant: use --file <in.gguf>")
+        return 1
+    }
+    var dst = o.out
+    if (dst == "") {
+        println("quant: use --out <in.gguf>")
+        return 1
+    }
+    println("quantizando " + src + " -> " + dst + " (Q4_K em Kof)...")
+    println(kofqGguf(src, dst))
+    return 0
+}
+
 cmdTrain(CliOpts o): Int {
     var m = kflLoadModel(joinPath(o.root, "build/koflearn.w"))
     if (!m.ready()) {
@@ -368,6 +391,8 @@ main() {
             code = cmdTrain(o)
         } else if (o.cmd == "eval") {
             code = cmdEval(o)
+        } else if (o.cmd == "quant") {
+            code = cmdQuant(o)
         } else if (o.cmd == "ask") {
             if (o.text == "") {
                 println("ask: pedido vazio")

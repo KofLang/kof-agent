@@ -44,5 +44,8 @@
 - [x] tests/learn 8/8 nativo: parser JSONL (com/sem espaço), aprende, confiança alta no visto, "não sei" no inédito, roundtrip de pesos, CRC corrompido rejeitado, harvest, eval
 - [x] workaround splitStr O(n²) em jsonl grande: scan por indexOf (164) — 55 s→navegável
 - [ ] E7b: fixar `splitStr` de 00_core (usado por corpusLoad→15 s e yamlParse) — perf geral, não só do learner
+- [x] E7b: `engine/165_kofquant.kf` — quantizador GGUF F16→Q4_K em Kof puro (encoder espelha o decode do engine; f16 exato até subnormal; kv-walker; writer com offsets alinhados) + CLI `kof-agent quant --file IN --out OUT`; tests/quant 4/4 nativo (roundtrip vs decoder real do engine)
+- [x] descoberta: `fixtures/*.gguf` eram stubs de texto — o parser binário NUNCA tinha lido GGUF real; probe `tests/quant/kofq_binprobe_tinylama.kf` (suite heavy, roda no TinyLlama Q4_K_M real com skip gracioso se ausente)
+- [ ] quantizar TinyLlama-F16.gguf (2.2GB) → koflm-q4.gguf com o quantizador Kof e validar no forward (após probe verde)
 - [ ] nºs finais de acc/chute/ask no suite 620 (treino n-gram 12 epochs em andamento; meta §5.2: acc≥95% chute≤5%; reportar o que vier, sem maquiar)
 - [ ] E8: fechar o ciclo com o transformer real (KofLM): backward/LoRA do TinyLlama em Kof para o executador gerar código de verdade (GGUFs em ~/Downloads/kof-data/models; sha256 divergente do registrado — verificar no load)

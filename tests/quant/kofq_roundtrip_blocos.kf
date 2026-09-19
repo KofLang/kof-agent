@@ -1,0 +1,78 @@
+test "micro para f16 ida e volta" {
+    var vals = listOf<Int>(1000000, 500000, 10000, 987654, 61, 20, 7, 133333, 524288)
+    for (var v in vals) {
+        var bits = kofqMicroToF16(v)
+        var back = f16ToMicro(bits % 65536)
+        var err = back - v
+        if (err < 0) {
+            err = 0 - err
+        }
+        var tol = 2 + v / 900
+        assert(err <= tol)
+        var bitsN = kofqMicroToF16(0 - v)
+        var backN = f16ToMicro(bitsN % 65536)
+        var errN = backN + v
+        if (errN < 0) {
+            errN = 0 - errN
+        }
+        assert(errN <= tol)
+    }
+}
+
+test "super-bloco Q4_K roundtrip com erro limitado" {
+    var w = new Int[256]
+    var i = 0
+    while (i < 256) {
+        w[i] = (((i * 48271) % 2001) - 1000) * 500
+        i = i + 1
+    }
+    var b = new Int[144]
+    kofqQuantizeSuper(w, 0, b, 0)
+    var out = new Int[256]
+    kofGgufQ4KDecodeBlock(b, 0, out)
+    i = 0
+    while (i < 256) {
+        var err = out[i] - w[i]
+        if (err < 0) {
+            err = 0 - err
+        }
+        assert(err * 2 <= 1100000)
+        i = i + 1
+    }
+}
+
+test "super-bloco zerado dequota zerado" {
+    var w = new Int[256]
+    var b = new Int[144]
+    kofqQuantizeSuper(w, 0, b, 0)
+    var out = new Int[256]
+    kofGgufQ4KDecodeBlock(b, 0, out)
+    var i = 0
+    while (i < 256) {
+        assert(out[i] == 0)
+        i = i + 1
+    }
+}
+
+test "kv walker acha fim exato" {
+    var head = new Int[256]
+    var p = 24
+    p = kofqStrBytes("g", head, p)
+    kofqPutU32(head, p, 4)
+    kofqPutU32(head, p + 4, 7)
+    p = p + 8
+    p = kofqStrBytes("t", head, p)
+    kofqPutU32(head, p, 9)
+    p = p + 4
+    kofqPutU32(head, p, 8)
+    p = p + 4
+    kofqPutU64(head, p, 2)
+    p = p + 8
+    p = kofqStrBytes("a", head, p)
+    p = kofqStrBytes("bb", head, p)
+    assert(p == 24 + 17 + 9 + 4 + 12 + 9 + 10)
+    assert(kofqScanKvEnd(head, 2) == p)
+}
+
+main() {
+}

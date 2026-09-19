@@ -63,6 +63,7 @@ PARTS=(
   engine/161_contract.kf
   engine/163_koflm_intent.kf
   engine/164_koflearn.kf
+  engine/165_kofquant.kf
 )
 
 # usage: build.sh <entry.kf> <out.kf> [--with-gateway]

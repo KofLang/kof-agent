@@ -1,0 +1,58 @@
+// Abre o TinyLlama GGUF REAL com o parser binario do engine (nunca exercitado
+// antes — os fixtures eram stubs de texto). Pula com sucesso se a maquina nao
+// tem o arquivo.
+
+KQ_TL(): String { return "/home/mel/Downloads/kof-data/models/TinyLlama-Q4_K_M.gguf" }
+
+test "parser binario le GGUF real sem erro" {
+    var f = File(KQ_TL())
+    if (!f.exists()) {
+        assert(true)
+        return
+    }
+    var m = kofGgufBinOpen(KQ_TL())
+    assert(m.errorCount == 0)
+    assert(m.header.tensorCount > 100)
+    assert(m.header.kvCount > 10)
+    assert(m.tensors.size > 100)
+}
+
+test "cfg sai dos kv do arquivo real" {
+    var f = File(KQ_TL())
+    if (!f.exists()) {
+        assert(true)
+        return
+    }
+    var m = kofGgufBinOpen(KQ_TL())
+    var cfg = kofLmCfgFromKv(m)
+    assert(cfg.layers == 22)
+    assert(cfg.embd == 2048)
+    assert(cfg.vocab > 30000)
+}
+
+test "vocab do tokenizer real carrega" {
+    var f = File(KQ_TL())
+    if (!f.exists()) {
+        assert(true)
+        return
+    }
+    var m = kofGgufBinOpen(KQ_TL())
+    var v = kofLmTokLoadVocab(KQ_TL(), m)
+    assert(v.tokens.length > 30000)
+    assert(v.scores.length == v.tokens.length)
+}
+
+test "forward smoke de 1 token no modelo real" {
+    var f = File(KQ_TL())
+    if (!f.exists()) {
+        assert(true)
+        return
+    }
+    var rep = kofLmForwardSmoke(KQ_TL())
+    println("SMOKE: " + rep)
+    assert(!rep.contains("ERR"))
+    assert(rep.contains("2048/22"))
+}
+
+main() {
+}

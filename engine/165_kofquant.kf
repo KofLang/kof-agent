@@ -1,0 +1,399 @@
+// E8: kofquant — quantiza GGUF F16 -> Q4_K em Kof puro. Blocos no layout
+// exato do ggml (espelho do decode do engine em koflama_gguf.kf), metadados
+// copiados byte a byte. Sai um GGUF lido pelo nosso forward e (pelo layout)
+// por qualquer llama.cpp.
+
+KQ_ALIGN(): Int { return 64 }
+
+Int kofqDivRound(Int a, Int b) {
+    if (a < 0) {
+        return 0 - kofqDivRound(0 - a, b)
+    }
+    return (2 * a + b) / (2 * b)
+}
+
+// micro/milli (<= ~20000 p/ pesos) -> bits f16; busca expoente por tabela T(e)
+Int kofqMicroToF16(Int micro) {
+    var sign = 0
+    var a = micro
+    if (micro < 0) {
+        sign = 1
+        a = 0 - micro
+    }
+    if (a == 0) {
+        return sign * 32768
+    }
+    var ee = 0
+    var u = a
+    if (a >= 2000000) {
+        while (u >= 2000000 && ee < 15) {
+            u = u / 2
+            ee = ee + 1
+        }
+    } else {
+        if (a < 1000000) {
+            while (u < 1000000 && ee > 0 - 14) {
+                u = u * 2
+                ee = ee - 1
+            }
+            if (u < 1000000) {
+                var ms = (a * 16777216 + 500000) / 1000000
+                if (ms >= 1024) {
+                    ms = 1023
+                }
+                if (sign == 1) {
+                    return 32768 + ms
+                }
+                return ms
+            }
+        }
+    }
+    var m = (u * 1024 + 500000) / 1000000
+    if (m >= 2048) {
+        m = 1024
+        ee = ee + 1
+    }
+    var bits = (ee + 15) * 1024 + (m - 1024)
+    if (sign == 1) {
+        bits = bits + 32768
+    }
+    return bits
+}
+
+// um super-bloco de 256 valores (milésimos) -> 144 bytes Q4_K no buf
+void kofqQuantizeSuper(Int[] w, Int wo, Int[] b, Int bo) {
+    var mx = new Int[8]
+    var mn = new Int[8]
+    var j = 0
+    while (j < 8) {
+        var lo = 0 - 2147483647 - 1
+        var hi = 2147483647
+        var i = 0
+        while (i < 32) {
+            var v = w[wo + j * 32 + i]
+            if (v > lo) {
+                lo = v
+            }
+            if (v < hi) {
+                hi = v
+            }
+            i = i + 1
+        }
+        if (lo < 0) {
+            lo = 0
+        }
+        mx[j] = lo
+        var mabs = 0 - hi
+        if (mabs < 0) {
+            mabs = 0
+        }
+        mn[j] = mabs
+        j = j + 1
+    }
+    var s = 1
+    var s2 = 1
+    j = 0
+    while (j < 8) {
+        if (mx[j] > s) {
+            s = mx[j]
+        }
+        if (mn[j] > s2) {
+            s2 = mn[j]
+        }
+        j = j + 1
+    }
+    var d = kofqDivRound(s, 15)
+    if (d < 1) {
+        d = 1
+    }
+    var dm = kofqDivRound(s2, 15)
+    if (dm < 1) {
+        dm = 1
+    }
+    var sc = new Int[8]
+    var mns = new Int[8]
+    j = 0
+    while (j < 8) {
+        var q = kofqDivRound(mx[j], d)
+        if (q > 63) {
+            q = 63
+        }
+        sc[j] = q
+        var qm = kofqDivRound(mn[j], dm)
+        if (qm > 63) {
+            qm = 63
+        }
+        mns[j] = qm
+        j = j + 1
+    }
+    var db = kofqMicroToF16(d)
+    b[bo] = db % 256
+    b[bo + 1] = db / 256
+    var dmb = kofqMicroToF16(dm)
+    b[bo + 2] = dmb % 256
+    b[bo + 3] = dmb / 256
+    j = 0
+    while (j < 4) {
+        b[bo + 4 + j] = sc[j] + (sc[j + 4] / 16) * 64
+        b[bo + 8 + j] = mns[j] + (mns[j + 4] / 16) * 64
+        b[bo + 12 + j] = (sc[j + 4] % 16) + (mns[j + 4] % 16) * 16
+        j = j + 1
+    }
+    var chunk = 0
+    while (chunk < 4) {
+        var l = 0
+        while (l < 32) {
+            var q1 = kofqQuantVal(w[wo + chunk * 64 + l], d, sc[chunk * 2], dm, mns[chunk * 2])
+            var q2 = kofqQuantVal(w[wo + chunk * 64 + 32 + l], d, sc[chunk * 2 + 1], dm, mns[chunk * 2 + 1])
+            b[bo + 16 + chunk * 32 + l] = q1 + q2 * 16
+            l = l + 1
+        }
+        chunk = chunk + 1
+    }
+}
+
+Int kofqQuantVal(Int v, Int d, Int scj, Int dm, Int mnj) {
+    var step = d * scj
+    if (step < 1) {
+        step = 1
+    }
+    var base = dm * mnj
+    var q = kofqDivRound(v + base, step)
+    if (q < 0) {
+        return 0
+    }
+    if (q > 15) {
+        return 15
+    }
+    return q
+}
+
+// empacota 64-bit LE num Int[] de bytes
+void kofqPutU64(Int[] b, Int p, Long v) {
+    var i = 0
+    while (i < 8) {
+        b[p + i] = (v / (1 << (i * 8))) % 256
+        i = i + 1
+    }
+}
+
+void kofqPutU32(Int[] b, Int p, Int v) {
+    var i = 0
+    while (i < 4) {
+        b[p + i] = (v / (1 << (i * 8))) % 256
+        i = i + 1
+    }
+}
+
+Int kofqStrLen(Int len): Int { return len + 8 }
+
+Int kofqStrBytes(String s, Int[] out, Int p): Int {
+    var n = s.length
+    kofqPutU64(out, p, n)
+    var i = 0
+    while (i < n) {
+        out[p + 8 + i] = s.charAt(i)
+        i = i + 1
+    }
+    return p + 8 + n
+}
+
+// tamanho em bytes de um valor de metadata (recursivo p/ arrays); -1 = fora da janela
+Int kofqValSize(Int[] b, Int p, Int kind): Int {
+    if (kind == 0 || kind == 1 || kind == 7) { return p + 1 }
+    if (kind == 2 || kind == 3) { return p + 2 }
+    if (kind == 4 || kind == 5 || kind == 6) { return p + 4 }
+    if (kind == 10 || kind == 11 || kind == 12) { return p + 8 }
+    if (kind == 8) {
+        if (p + 8 > b.length) { return 0 - 1 }
+        var n = kofGgufU64Low(b, p)
+        if (p + 8 + n > b.length) { return 0 - 1 }
+        return p + 8 + n
+    }
+    if (kind == 9) {
+        var et = kofGgufU32(b, p)
+        var n = kofGgufU64Low(b, p + 4)
+        var q = p + 12
+        if (et != 8) {
+            var es = kofGgufArrayElemSize(et)
+            return q + es * n
+        }
+        var i = 0
+        while (i < n) {
+            var r = kofqValSize(b, q, 8)
+            if (r < 0) { return 0 - 1 }
+            q = r
+            i = i + 1
+        }
+        return q
+    }
+    return 0 - 1
+}
+
+// fim da secao de kvs (inicio do tensor dir) — mesma gramatica do parser do engine
+Int kofqScanKvEnd(Int[] head, Int nKv): Int {
+    var p = 24
+    var i = 0
+    while (i < nKv) {
+        p = kofqValSize(head, p, 8)
+        if (p < 0) { return 0 - 1 }
+        var kind = kofGgufU32(head, p)
+        p = kofqValSize(head, p + 4, kind)
+        if (p < 0) { return 0 - 1 }
+        i = i + 1
+    }
+    return p
+}
+
+Int kofqAlignUp(Int v, Int a): Int {
+    var r = v % a
+    if (r == 0) {
+        return v
+    }
+    return v + (a - r)
+}
+
+// true se o tensor pode virar Q4_K (f16/f32 multiplo de 256)
+Bool kqQuantizable(KofGgufBinTensor t): Bool {
+    if (t.quant != 1) {
+        return false
+    }
+    if (t.nElems % 256 != 0) {
+        return false
+    }
+    return t.nElems > 0
+}
+
+Int kofqOutBytes(KofGgufBinTensor t, Bool quantized): Int {
+    if (!quantized) {
+        if (t.quant == 1) { return t.nElems * 2 }
+        return t.nElems * 4
+    }
+    return t.nElems / 256 * 144
+}
+
+// pipeline completo: src F16 -> dst Q4_K. Resumo em string.
+kofqGguf(String src, String dst): String {
+    var m = kofGgufBinOpen(src)
+    if (m.errorCount != 0) {
+        return "ERR:" + m.errorCode
+    }
+    var fs = File(src)
+    var align = m.header.alignment
+    if (align < 32) {
+        align = KQ_ALIGN()
+    }
+    var head = fs.readRange(0, 2097152)
+    if (head == null) {
+        return "ERR:HEAD"
+    }
+    var kvEnd = kofqScanKvEnd(head, m.header.kvCount)
+    if (kvEnd < 0) {
+        return "ERR:KVSCAN"
+    }
+    // monta tensor dir novo
+    var infos = listOf<Int>()
+    var cum = 0
+    var nq = 0
+    for (var t in m.tensors) {
+        var quantize = kqQuantizable(t)
+        var qt = t.quant
+        if (quantize) {
+            qt = 12
+            nq = nq + 1
+        }
+        var nameB = t.name
+        var need = kofqStrLen(nameB.length) + 4 + 8 * 2 + 4 + 8
+        var buf = new Int[need]
+        var p = kofqStrBytes(nameB, buf, 0)
+        kofqPutU32(buf, p, 2)
+        p = p + 4
+        kofqPutU64(buf, p, t.d0)
+        kofqPutU64(buf, p + 8, t.d1)
+        p = p + 16
+        kofqPutU32(buf, p, qt)
+        p = p + 4
+        cum = kofqAlignUp(cum, align)
+        kofqPutU64(buf, p, cum)
+        var k = 0
+        while (k < buf.length) {
+            infos.add(buf[k])
+            k = k + 1
+        }
+        cum = cum + kofqOutBytes(t, quantize)
+    }
+    var dirLen = infos.size
+    var pad = kofqAlignUp(kvEnd + dirLen, align) - (kvEnd + dirLen)
+    // primeiro buffer: cabecalho+kv copiado + infos + pad
+    var out0 = new Int[kvEnd + dirLen + pad]
+    var i = 0
+    while (i < kvEnd) {
+        out0[i] = head[i]
+        i = i + 1
+    }
+    i = 0
+    while (i < dirLen) {
+        out0[kvEnd + i] = infos.get(i)
+        i = i + 1
+    }
+    var fd = File(dst)
+    if (fd.exists()) {
+        fd.delete()
+    }
+    if (!fd.writeBytes(out0)) {
+        return "ERR:WRITE"
+    }
+    // dados tensor a tensor (janelas de ~4MB)
+    var done = 0
+    var total = m.dataOff
+    for (var t in m.tensors) {
+        var quantize = kqQuantizable(t)
+        var abs = kofGgufTensorAbsOff(m, t)
+        var cur = kofqAlignUp(done, align)
+        var gap = cur - done
+        if (gap > 0) {
+            fd.appendBytes(new Int[gap])
+        }
+        done = cur
+        if (!quantize) {
+            var nBytes = kofqOutBytes(t, false)
+            var off = 0
+            while (off < nBytes) {
+                var n = 4194304
+                if (off + n > nBytes) {
+                    n = nBytes - off
+                }
+                var chunk = fs.readRange(abs + off, n)
+                if (chunk == null) {
+                    return "ERR:READ"
+                }
+                fd.appendBytes(chunk)
+                off = off + n
+            }
+            done = done + nBytes
+            total = total + nBytes + gap
+            continue
+        }
+        var vals = kofGgufDecodeTensor(src, m, t.name, t.nElems)
+        if (vals.length != t.nElems) {
+            return "ERR:DECODE:" + t.name
+        }
+        var nBlocks = t.nElems / 256
+        var blk = new Int[144]
+        var bw = new Int[nBlocks * 144]
+        var b = 0
+        while (b < nBlocks) {
+            kofqQuantizeSuper(vals, b * 256, blk, 0)
+            var k = 0
+            while (k < 144) {
+                bw[b * 144 + k] = blk[k]
+                k = k + 1
+            }
+            b = b + 1
+        }
+        fd.appendBytes(bw)
+        done = done + bw.length
+        total = total + bw.length + gap
+    }
+    return "ok tensors=" + nq + " bytes=" + total
+}
