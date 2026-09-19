@@ -1,0 +1,98 @@
+kflTmp(): String {
+    var d = Directory("build/kfltest")
+    if (!d.exists()) {
+        d.createDirectories()
+    }
+    return "build/kfltest"
+}
+
+kflMini(KflModel m) {
+    var e = 0
+    while (e < 250) {
+        kflTrainStep(m, "crie um site agora", KFL_EXEC())
+        kflTrainStep(m, "gere uma pagina nova", KFL_EXEC())
+        kflTrainStep(m, "o que voce quer dizer exatamente", KFL_ASK())
+        kflTrainStep(m, "poderia esclarecer o pedido", KFL_ASK())
+        kflTrainStep(m, "escreva codigo java limpo", KFL_REFUSE())
+        kflTrainStep(m, "implemente em python agora", KFL_REFUSE())
+        e = e + 1
+    }
+}
+
+test "json field com e sem espaco" {
+    assert(kflJsonField("{\"action\":\"ASK\"}", "action") == "ASK")
+    assert(kflJsonField("{\"action\": \"ASK\", \"x\": 1}", "action") == "ASK")
+    assert(kflJsonField("{\"a\":\"b\"}", "action") == "")
+    assert(kflJsonField("{\"instruction\":\"oi \\\"voce\\\"\"}", "instruction") == "oi \"voce\"")
+}
+
+test "aprende exemplo sintetico" {
+    var m = KflModel()
+    m.init(KFL_NFEAT())
+    kflMini(m)
+    assert(kflPredict(m, "crie um site novo hoje") == KFL_EXEC())
+    assert(kflPredict(m, "esclareca o que deseja") == KFL_ASK())
+    assert(kflPredict(m, "escreva java limpo ai") == KFL_REFUSE())
+}
+
+test "confianca alta no que aprendeu" {
+    var m = KflModel()
+    m.init(KFL_NFEAT())
+    kflMini(m)
+    assert(kflConfMicro(m, "gere uma pagina nova") > 200000)
+}
+
+test "nao sei em texto nunca visto" {
+    var m = KflModel()
+    m.init(KFL_NFEAT())
+    kflMini(m)
+    assert(kflConfMicro(m, "zzx qwp vtr fjg") < 150000)
+}
+
+test "salvar e carregar pesos" {
+    var m = KflModel()
+    m.init(KFL_NFEAT())
+    kflMini(m)
+    assert(kflSaveModel(joinPath(kflTmp(), "mini.w"), m))
+    var l = kflLoadModel(joinPath(kflTmp(), "mini.w"))
+    assert(l.ready())
+    assert(kflPredict(l, "crie um site novo hoje") == KFL_EXEC())
+    assert(kflPredict(l, "escreva java limpo ai") == KFL_REFUSE())
+}
+
+test "carga corrompida nao confunde" {
+    var f = File(joinPath(kflTmp(), "bad.w"))
+    f.writeText("KFLR|1|0\nlixo,total")
+    var l = kflLoadModel(joinPath(kflTmp(), "bad.w"))
+    assert(!l.ready())
+}
+
+test "harvest coleta erro para proximo treino" {
+    var r = kflTmp()
+    kflHarvest(r, "comando estranho", KFL_EXEC(), 421)
+    var f = File(joinPath(r, "datasets/jsonl/koflm-errors.jsonl"))
+    assert(f.exists())
+    var t = f.readText()
+    assert(t.contains("comando estranho"))
+    assert(t.contains("\"EXECUTE\""))
+}
+
+test "eval mede o conjunto rotulado" {
+    var rep = kflEvalFile(kflLoaded(), joinPath(kflTmp(), "mini-eval.jsonl"), 150)
+    assert(rep.contains("total=3"))
+    assert(rep.contains("acc=100%"))
+}
+
+kflLoaded(): KflModel {
+    var m = KflModel()
+    m.init(KFL_NFEAT())
+    kflMini(m)
+    var g = File(joinPath(kflTmp(), "mini-eval.jsonl"))
+    g.writeText("{\"instruction\": \"crie um site agora\", \"expected_action\": \"EXECUTE\"}\n")
+    g.appendText("{\"instruction\": \"o que voce quer dizer exatamente\", \"expected_action\": \"ASK\"}\n")
+    g.appendText("{\"instruction\": \"escreva java limpo\", \"expected_action\": \"REFUSE\"}\n")
+    return m
+}
+
+main() {
+}

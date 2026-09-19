@@ -1,0 +1,65 @@
+// E7: intencao via KofLM (o SLM), nao via keyword matcher.
+// Classificacao restrita aos 3 rotulos do dataset v4: pega o logit maximo
+// entre os tokens EXECUTE/ASK/REFUSE na ultima posicao do prompt.
+// Forward real: tokenizer SPM + kofLmForward (M33–M40), greedy, deterministico.
+
+KOFLM_DEFAULT_MODEL(): String { return "models/gguf/koflm-v1-q4.gguf" }
+
+koflmPickLabel(Long[] logits, Int idExec, Int idAsk, Int idRef): String {
+    var best = -9223372036854775000 - 1
+    var out = ""
+    if (idExec >= 0 && logits[idExec] > best) {
+        best = logits[idExec]
+        out = "EXECUTE"
+    }
+    if (idAsk >= 0 && logits[idAsk] > best) {
+        best = logits[idAsk]
+        out = "ASK"
+    }
+    if (idRef >= 0 && logits[idRef] > best) {
+        out = "REFUSE"
+    }
+    return out
+}
+
+koflmLabelId(String[] vocab, Long[] scores, String label): Int {
+    var ids = kofLmTokEncode(vocab, scores, label, 1)
+    if (ids.length == 0) {
+        return -1
+    }
+    return ids[0]
+}
+
+// Retorna EXECUTE|ASK|REFUSE (modelo decide) ou codigo de indisponibilidade:
+// NO-MODEL (pesos ausentes) | NO-VOCAB | ERR:<ggufcode>.
+koflmIntent(String modelPath, String prompt): String {
+    var f = File(modelPath)
+    if (!f.exists() || !f.isFile()) {
+        return "NO-MODEL"
+    }
+    var m = kofGgufBinOpen(modelPath)
+    if (m.errorCount > 0) {
+        return "ERR:" + m.errorCode
+    }
+    var tv = kofLmTokLoadVocab(modelPath, m)
+    if (tv.tokens.length == 0) {
+        return "NO-VOCAB"
+    }
+    var cfg = kofLmCfgFromKv(m)
+    var ids = kofLmTokEncode(tv.tokens, tv.scores, prompt, 1)
+    if (ids.length == 0) {
+        return "NO-VOCAB"
+    }
+    var n = ids.length
+    if (n > 256) {
+        n = 256
+    }
+    var cache = listOf<List<KofLmKv>>()
+    var logits = new Long[cfg.vocab]
+    var i = 0
+    while (i < n) {
+        logits = kofLmForward(modelPath, m, cfg, ids[i], i, cache)
+        i = i + 1
+    }
+    return koflmPickLabel(logits, koflmLabelId(tv.tokens, tv.scores, "EXECUTE"), koflmLabelId(tv.tokens, tv.scores, "ASK"), koflmLabelId(tv.tokens, tv.scores, "REFUSE"))
+}

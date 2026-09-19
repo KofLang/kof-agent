@@ -1,0 +1,342 @@
+// E8: KofLearn — modelo de intencao TREINAVEL em Kof puro (int64 fixo, micro
+// 1e6). Bag-of-tokens hash + 3 celulas sigmoid (EXECUTE/ASK/REFUSE), SGD
+// one-vs-rest. E aprendizado de verdade: pesos iniciam em zero e mudam a
+// cada exemplo. Confianca baixa = "nao sei, me ensine" (comportamento
+// emergente do treino, nao if de vocabulario).
+
+KFL_NFEAT(): Int { return 8192 }
+KFL_MICRO(): Long { return 1000000 }
+
+KFL_EXEC(): Int { return 0 }
+KFL_ASK(): Int { return 1 }
+KFL_REFUSE(): Int { return 2 }
+
+class KflModel {
+    Long[] w = new Long[0]
+    Long[] bias = new Long[3]
+    Int nfeat = 0
+
+    init(Int n) {
+        nfeat = n
+        w = new Long[n * 3]
+        bias = new Long[3]
+    }
+
+    ready(): Bool { return nfeat > 0 && w.length == nfeat * 3 }
+}
+
+kflLabelCode(String action): Int {
+    if (action == "EXECUTE") {
+        return KFL_EXEC()
+    }
+    if (action == "ASK") {
+        return KFL_ASK()
+    }
+    if (action == "REFUSE") {
+        return KFL_REFUSE()
+    }
+    return 0 - 1
+}
+
+kflLabelName(Int c): String {
+    if (c == KFL_EXEC()) {
+        return "EXECUTE"
+    }
+    if (c == KFL_ASK()) {
+        return "ASK"
+    }
+    if (c == KFL_REFUSE()) {
+        return "REFUSE"
+    }
+    return "?"
+}
+
+// campos "chave":"valor" de uma linha JSONL, respeitando \" escapado
+kflJsonField(String line, String key): String {
+    var at = line.indexOf("\"" + key + "\"")
+    if (at < 0) {
+        return ""
+    }
+    var i = at + key.length + 2
+    var n = line.length
+    while (i < n && (line.charAt(i) == 32 || line.charAt(i) == 58)) {
+        i = i + 1
+    }
+    if (i >= n || line.charAt(i) != 34) {
+        return ""
+    }
+    i = i + 1
+    var out = ""
+    while (i < n) {
+        var ch = line.charAt(i)
+        if (ch == 92) {
+            if (i + 1 < n) {
+                out = out + line.substring(i + 1, i + 2)
+            }
+            i = i + 2
+        } else {
+            if (ch == 34) {
+                return out
+            }
+            out = out + line.substring(i, i + 1)
+            i = i + 1
+        }
+    }
+    return out
+}
+
+// features: tokens alfanumericos minusculados -> balde djb2 (ctxTextHash, 160)
+kflAddFeat(String tok, List<Int> idx) {
+    var h = ctxTextHash(tok)
+    if (h < 0) {
+        h = 0 - h
+    }
+    idx.add(h % KFL_NFEAT())
+}
+
+kflFeatures(String text, List<Int> idx) {
+    var toks = retTokenize(text)
+    for (var t in toks) {
+        var w = retLower(t)
+        kflAddFeat(w, idx)
+        if (w.length > 3) {
+            var i = 0
+            while (i + 3 <= w.length) {
+                kflAddFeat(w.substring(i, i + 3), idx)
+                i = i + 1
+            }
+        }
+    }
+}
+
+kflScore(KflModel m, List<Int> idx, Int cls): Long {
+    var s = m.bias[cls]
+    var i = 0
+    while (i < idx.size) {
+        s = s + m.w[idx.get(i) * 3 + cls]
+        i = i + 1
+    }
+    return s
+}
+
+// um passo SGD; retorna as 3 probabilidades micro em ps (chamador decide)
+kflTrainStep(KflModel m, String text, Int label): Long {
+    var idx = listOf<Int>()
+    kflFeatures(text, idx)
+    if (idx.size == 0) {
+        return 0
+    }
+    var n = idx.size
+    var top: Long = 0
+    var c = 0
+    while (c < 3) {
+        var p = kofLmSigmoid(kflScore(m, idx, c))
+        var one = 0
+        if (c == label) {
+            one = 1
+        }
+        var grad = (one * KFL_MICRO() - p) / n
+        var dw = grad * 60000 / KFL_MICRO()
+        var i = 0
+        while (i < n) {
+            var at = idx.get(i) * 3 + c
+            m.w[at] = m.w[at] + dw
+            i = i + 1
+        }
+        m.bias[c] = m.bias[c] + dw
+        if (p > top) {
+            top = p
+        }
+        c = c + 1
+    }
+    return top
+}
+
+kflPredict(KflModel m, String text): Int {
+    var idx = listOf<Int>()
+    kflFeatures(text, idx)
+    var best = KFL_EXEC()
+    var bestP = 0 - KFL_MICRO()
+    var c = 0
+    while (c < 3) {
+        var p = kofLmSigmoid(kflScore(m, idx, c))
+        if (p > bestP) {
+            bestP = p
+            best = c
+        }
+        c = c + 1
+    }
+    return best
+}
+
+kflConfMicro(KflModel m, String text): Long {
+    var idx = listOf<Int>()
+    kflFeatures(text, idx)
+    var top: Long = 0 - KFL_MICRO()
+    var seg: Long = 0 - KFL_MICRO()
+    var c = 0
+    while (c < 3) {
+        var p = kofLmSigmoid(kflScore(m, idx, c))
+        if (p > top) {
+            seg = top
+            top = p
+        } else {
+            if (p > seg) {
+                seg = p
+            }
+        }
+        c = c + 1
+    }
+    if (top - seg < 0) {
+        return 0
+    }
+    return top - seg
+}
+
+// treina um arquivo jsonl (campos instruction + action); retorna exemplos vistos
+kflTrainFile(KflModel m, String path, Int epochs): Int {
+    var f = File(path)
+    if (!f.exists() || !f.isFile()) {
+        return 0
+    }
+    var seen = 0
+    var e = 0
+    while (e < epochs) {
+        var txt = f.readText()
+        var pos = 0
+        while (pos < txt.length) {
+            var nl = txt.indexOf("\n", pos)
+            var ln = ""
+            if (nl < 0) {
+                ln = txt.substring(pos, txt.length)
+                pos = txt.length
+            } else {
+                ln = txt.substring(pos, nl)
+                pos = nl + 1
+            }
+            var lab = kflLabelCode(kflJsonField(ln, "action"))
+            var ins = kflJsonField(ln, "instruction")
+            if (lab >= 0 && ins.length > 0) {
+                kflTrainStep(m, ins, lab)
+                seen = seen + 1
+            }
+        }
+        e = e + 1
+    }
+    return seen
+}
+
+// eval rotulado (instruction + expected_action): acc, chute errado, nao-sei
+kflEvalFile(KflModel m, String path, Int confMinMilli): String {
+    var f = File(path)
+    if (!f.exists() || !m.ready()) {
+        return "ERR"
+    }
+    var total = 0
+    var okc = 0
+    var chute = 0
+    var perguntou = 0
+    var txt = f.readText()
+    var pos = 0
+    while (pos < txt.length) {
+        var nl = txt.indexOf("\n", pos)
+        var ln = ""
+        if (nl < 0) {
+            ln = txt.substring(pos, txt.length)
+            pos = txt.length
+        } else {
+            ln = txt.substring(pos, nl)
+            pos = nl + 1
+        }
+        var ea = kflJsonField(ln, "expected_action")
+        if (ea == "") {
+            ea = kflJsonField(ln, "action")
+        }
+        var gold = kflLabelCode(ea)
+        var ins = kflJsonField(ln, "instruction")
+        if (gold >= 0 && ins.length > 0) {
+            total = total + 1
+            var pred = kflPredict(m, ins)
+            var conf = kflConfMicro(m, ins) * 1000 / KFL_MICRO()
+            if (conf < confMinMilli) {
+                perguntou = perguntou + 1
+                if (gold == KFL_ASK()) {
+                    okc = okc + 1
+                }
+            } else {
+                if (pred != gold && gold != KFL_ASK()) {
+                    chute = chute + 1
+                }
+                if (pred == gold) {
+                    okc = okc + 1
+                }
+            }
+        }
+    }
+    var accPct = 0
+    if (total > 0) {
+        accPct = okc * 100 / total
+    }
+    var chutePct = 0
+    if (total > 0) {
+        chutePct = chute * 100 / total
+    }
+    return "total=" + total + " acc=" + accPct + "% chute=" + chutePct + "% perguntou=" + perguntou
+}
+
+kflSerialize(KflModel m): String {
+    var out = ""
+    var i = 0
+    while (i < m.w.length) {
+        out = out + m.w[i]
+        if (i + 1 < m.w.length) {
+            out = out + ","
+        }
+        i = i + 1
+    }
+    out = out + ";" + m.bias[0] + "," + m.bias[1] + "," + m.bias[2]
+    return out
+}
+
+kflLoadModel(String path): KflModel {
+    var m = KflModel()
+    var body = wsReadVersioned(path, "KFLR")
+    if (body == "") {
+        return m
+    }
+    var sp = splitStr(body, ";")
+    if (sp.size() != 2) {
+        return m
+    }
+    var ws = splitStr(sp.get(0), ",")
+    var bs = splitStr(sp.get(1), ",")
+    if (bs.size() != 3) {
+        return m
+    }
+    m.init(ws.size() / 3)
+    var i = 0
+    while (i < ws.size() && i < m.w.length) {
+        m.w[i] = parseLongSafe(ws.get(i))
+        i = i + 1
+    }
+    m.bias[0] = parseLongSafe(bs.get(0))
+    m.bias[1] = parseLongSafe(bs.get(1))
+    m.bias[2] = parseLongSafe(bs.get(2))
+    return m
+}
+
+kflSaveModel(String path, KflModel m): Bool {
+    return wsWriteVersioned(path, "KFLR", 1, kflSerialize(m))
+}
+
+// colheu exemplo que ele nao soube classificar — insumo do proximo treino
+kflHarvest(String root, String text, Int pred, Long confMilli) {
+    var path = joinPath(root, "datasets/jsonl/koflm-errors.jsonl")
+    var line = "{\"instruction\":\"" + escapeJson(text) + "\",\"predicted\":\"" + kflLabelName(pred) + "\",\"confidence\":" + confMilli + ",\"action\":\"\"}"
+    var f = File(path)
+    if (!f.exists()) {
+        mkFile(path, line + "\n")
+        return
+    }
+    f.appendText(line + "\n")
+}

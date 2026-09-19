@@ -36,4 +36,13 @@
 ## E5 — CLI no contrato §2
 - [x] engine/161_contract.kf: outFmt/outAsk/outRefuse/outFromCtx (unit_contract 5/5)
 - [x] clamp/regras do YAML no contrato (unit_contract 5/5)
-- [ ] modo ASK quando confiança < limiar no loop do orquestrador (contrato `outAsk` pronto; gatilho falta)
+- [x] modo ASK quando confiança < limiar: gatilho real em koflearn (confiança = margem top−2º; `perguntar_se_confianca: 0.15`), com harvest em `datasets/jsonl/koflm-errors.jsonl` p/ próximo treino (medição real: "crie um site sobre kof em html" conf 429→ASK honesto)
+
+## E7 — KofLearn: modelo treinável em Kof puro (aberto 18/09)
+- [x] engine/164_koflearn.kf: bag-of-features (tokens + 3-gramas) + 3 sigmoides int64-micro (SGD one-vs-rest, lr 0.06), treino/eval/predict 100% Kof, pesos serializados "KFLR" com CRC (45_windex)
+- [x] CLI `train` (incremental: carrega pesos existentes, soma epochs, consome errors.jsonl) e `eval` (suite PT-BR, rc 2 se ruim)
+- [x] tests/learn 8/8 nativo: parser JSONL (com/sem espaço), aprende, confiança alta no visto, "não sei" no inédito, roundtrip de pesos, CRC corrompido rejeitado, harvest, eval
+- [x] workaround splitStr O(n²) em jsonl grande: scan por indexOf (164) — 55 s→navegável
+- [ ] E7b: fixar `splitStr` de 00_core (usado por corpusLoad→15 s e yamlParse) — perf geral, não só do learner
+- [ ] nºs finais de acc/chute/ask no suite 620 (treino n-gram 12 epochs em andamento; meta §5.2: acc≥95% chute≤5%; reportar o que vier, sem maquiar)
+- [ ] E8: fechar o ciclo com o transformer real (KofLM): backward/LoRA do TinyLlama em Kof para o executador gerar código de verdade (GGUFs em ~/Downloads/kof-data/models; sha256 divergente do registrado — verificar no load)

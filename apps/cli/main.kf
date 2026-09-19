@@ -24,6 +24,7 @@ class CliOpts {
     String root = "."
     String file = ""
     String text = ""
+    Int epochs = 15
 }
 
 parseOptsList(List<String> raw): CliOpts {
@@ -42,6 +43,11 @@ parseOptsList(List<String> raw): CliOpts {
             i = i + 1
             if (i < raw.size) {
                 o.file = raw.get(i)
+            }
+        } else if (a == "--epochs") {
+            i = i + 1
+            if (i < raw.size) {
+                o.epochs = parseIntStr(raw.get(i))
             }
         } else if (o.cmd == "help") {
             o.cmd = a
@@ -243,6 +249,46 @@ cmdAsk(CliOpts o): Int {
         ix = corpusLoad(ctx.bus, joinPath(o.root, "corpus"), ctx.clock)
     }
     var c = ctxLoad(joinPath(o.root, "workspace/context.yaml"))
+    var km = kflLoadModel(joinPath(o.root, "build/koflearn.w"))
+    if (km.ready()) {
+        var pred = kflPredict(km, o.text)
+        var conf = kflConfMicro(km, o.text) * 1000 / KFL_MICRO()
+        if (conf < c.confiancaMin) {
+            kflHarvest(o.root, o.text, pred, conf)
+            ctx.shutdownGraceful()
+            println(outAsk("nao sei classificar isso (conf=" + conf + "/1000) — me ensine: o que deveria ser? colhido em koflm-errors.jsonl"))
+            return 2
+        }
+        if (pred == KFL_ASK()) {
+            ctx.shutdownGraceful()
+            println(outAsk("o que exatamente devo mudar? aponte arquivo/acao."))
+            return 2
+        }
+        if (pred == KFL_REFUSE()) {
+            ctx.shutdownGraceful()
+            println(outRefuse("o modelo classificou REFUSE (pedido fora do escopo Kof)"))
+            return 2
+        }
+        var planK = brainProcess(ctx.bus, ix, o.text, listOf<String>(), listOf<String>())
+        ctx.shutdownGraceful()
+        println(outFmt("intent=" + planK.intent + " tools=" + planK.candidateToolsCsv + " via=koflearn conf=" + conf, "intencao decidida pelo modelo treinado em Kof (E8); execucao real pending executor", c.linhasMax))
+        return 0
+    }
+    var label = koflmIntent(joinPath(o.root, "models/gguf/koflm-v1-q4.gguf"), o.text)
+    if (label == "EXECUTE" || label == "ASK" || label == "REFUSE") {
+        ctx.shutdownGraceful()
+        if (label == "ASK") {
+            println(outAsk("o modelo pediu esclarecimento: reformule com arquivo/acao especificos."))
+            return 2
+        }
+        if (label == "REFUSE") {
+            println(outRefuse("o modelo classificou o pedido como fora do escopo Kof."))
+            return 2
+        }
+        var plan = brainProcess(ctx.bus, ix, o.text, listOf<String>(), listOf<String>())
+        println(outFmt("intent=" + plan.intent + " conf=" + plan.confidence + " tools=" + plan.candidateToolsCsv + " via=koflm", "EXECUTE decidido por KofLM; execucao real pending executor", c.linhasMax))
+        return 0
+    }
     var plan = brainProcess(ctx.bus, ix, o.text, listOf<String>(), listOf<String>())
     ctx.shutdownGraceful()
     if (o.jsonFlag) {
@@ -258,8 +304,48 @@ cmdAsk(CliOpts o): Int {
         println(outAsk(q))
         return 2
     }
-    println(outFmt("intent=" + plan.intent + " conf=" + plan.confidence + " tools=" + plan.candidateToolsCsv, "planejamento sem execucao: executor ainda nao ligado ao ask", c.linhasMax))
+    println(outFmt("intent=" + plan.intent + " conf=" + plan.confidence + " tools=" + plan.candidateToolsCsv + " via=matcher:" + label, "KofLM indisponivel (" + label + "); usei o matcher de bootstrapping — nao e entendimento real", c.linhasMax))
     return 0
+}
+
+cmdConfMilli(CliOpts o): Int {
+    var c = ctxLoad(joinPath(o.root, "workspace/context.yaml"))
+    return c.confiancaMin
+}
+
+cmdTrain(CliOpts o): Int {
+    var m = kflLoadModel(joinPath(o.root, "build/koflearn.w"))
+    if (!m.ready()) {
+        m.init(KFL_NFEAT())
+    }
+    var ds = o.file
+    if (ds == "") {
+        ds = joinPath(o.root, "datasets/jsonl/koflm-v4.jsonl")
+    }
+    var seen = kflTrainFile(m, ds, o.epochs)
+    seen = seen + kflTrainFile(m, joinPath(o.root, "datasets/jsonl/koflm-errors.jsonl"), o.epochs)
+    var ok = kflSaveModel(joinPath(o.root, "build/koflearn.w"), m)
+    println("treino: exemplos=" + seen + " epochs=" + o.epochs + " salvo=" + ok)
+    println("eval: " + kflEvalFile(m, joinPath(o.root, "eval/ptbr-suite-v4.jsonl"), cmdConfMilli(o)))
+    return 0
+}
+
+cmdEval(CliOpts o): Int {
+    var m = kflLoadModel(joinPath(o.root, "build/koflearn.w"))
+    if (!m.ready()) {
+        println("eval: sem pesos — rode: kof-agent train")
+        return 2
+    }
+    var file = o.file
+    if (file == "") {
+        file = joinPath(o.root, "eval/ptbr-suite-v4.jsonl")
+    }
+    var r = kflEvalFile(m, file, cmdConfMilli(o))
+    println("eval: " + r)
+    if (r.contains("acc=100%") || r.contains("acc=9") || r.contains("acc=8")) {
+        return 0
+    }
+    return 2
 }
 
 main() {
@@ -278,6 +364,10 @@ main() {
             code = cmdDoctor(o)
         } else if (o.cmd == "config") {
             code = cmdConfigShow(o)
+        } else if (o.cmd == "train") {
+            code = cmdTrain(o)
+        } else if (o.cmd == "eval") {
+            code = cmdEval(o)
         } else if (o.cmd == "ask") {
             if (o.text == "") {
                 println("ask: pedido vazio")

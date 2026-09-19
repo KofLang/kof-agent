@@ -12,5 +12,5 @@ pendencias:
   - "treinar adapter no v4 e rodar eval rotulada (gate 95%)"
   - "ligar executor (71) ao ask para EXECUTE de verdade"
 regras_vivas:
-  perguntar_se_confianca: 0.7
+  perguntar_se_confianca: 0.45
   max_explicacao_linhas: 2

@@ -7,22 +7,25 @@ brainSynonymIntent(String token): String {
     if (s == "crie" || s == "cria" || s == "criar" || s == "faz" || s == "fazer" || s == "gera" || s == "gere" || s == "gerar") {
         return "create"
     }
-    if (s == "edite" || s == "edita" || s == "editar" || s == "mude" || s == "mudar" || s == "altere") {
+    if (s == "edite" || s == "edita" || s == "editar" || s == "mude" || s == "mudar" || s == "altere" || s == "adicione" || s == "adicionar" || s == "inclua" || s == "incluir") {
         return "edit"
     }
     if (s == "arruma" || s == "arrumar" || s == "corrija" || s == "corrigir" || s == "conserta") {
         return "repair"
     }
-    if (s == "explique" || s == "explicar" || s == "o-que-e") {
+    if (s == "explique" || s == "explicar" || s == "o-que-e" || s == "descreva" || s == "descrever" || s == "declare" || s == "declarar" || s == "compare" || s == "comparar" || s == "como" || s == "qual") {
         return "explain"
     }
-    if (s == "refatore" || s == "refatorar") {
+    if (s == "abra" || s == "abrir" || s == "leia" || s == "ler") {
+        return "open"
+    }
+    if (s == "refatore" || s == "refatorar" || s == "reescreva" || s == "reescrever") {
         return "refactor"
     }
     if (s == "converta" || s == "converte" || s == "converter" || s == "migre" || s == "migrar" || s == "traduza" || s == "traduzir") {
         return "create"
     }
-    if (s == "busque" || s == "buscar" || s == "procure" || s == "procurar" || s == "liste" || s == "lista" || s == "listar" || s == "mostre" || s == "mostrar" || s == "encontre" || s == "encontrar") {
+    if (s == "busque" || s == "buscar" || s == "procure" || s == "procurar" || s == "liste" || s == "lista" || s == "listar" || s == "mostre" || s == "mostrar" || s == "encontre" || s == "encontrar" || s == "quais" || s == "onde") {
         return "search"
     }
     if (s == "rode" || s == "rodar" || s == "teste" || s == "testar" || s == "execute") {
@@ -107,6 +110,9 @@ brainResolveIntent(List<String> tokens): String {
     if (obj == "Docs") {
         return "GenerateDocs"
     }
+    if (verb == "open") {
+        return "OpenFile"
+    }
     if (verb == "create") {
         return "CreateFeature"
     }
@@ -162,7 +168,7 @@ brainRequiredEntity(String intent): String {
     if (intent == "EditWebsite" || intent == "EditFeature" || intent == "Refactor") {
         return "path"
     }
-    if (intent == "CreateFromJava") {
+    if (intent == "CreateFromJava" || intent == "OpenFile") {
         return "path"
     }
     return ""
@@ -173,7 +179,7 @@ brainConfidence(String intent, Bool hasVerb, Bool hasObj, Int ctxItems): Int {
     if (hasVerb) {
         score = score + 30
     }
-    if (intent != B_INTENT_UNKNOWN() && intent.contains("Create") || intent.contains("Edit") || intent.contains("Repair") || intent.contains("Search") || intent.contains("Run")) {
+    if (intent.contains("Create") || intent.contains("Edit") || intent.contains("Repair") || intent.contains("Search") || intent.contains("Run") || intent.contains("Open") || intent.contains("Explain")) {
         score = score + 25
     }
     if (ctxItems > 0) {
@@ -197,6 +203,9 @@ brainCandidateTools(String intent): String {
     }
     if (intent == "CreateFromJava") {
         return "fs.write,compiler.check"
+    }
+    if (intent == "OpenFile") {
+        return "fs.read,ws.open,search.text"
     }
     if (intent == "SearchSymbol") {
         return "search.symbol"
