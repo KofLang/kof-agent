@@ -8,7 +8,7 @@ while IFS= read -r u; do
   case "$u" in *.kf) tu="$u";; *) tu="$u.kf";; esac
   [ -z "$u" ] && continue
   rm -rf "$ROOT/build/kfltest"
-  "$ROOT/scripts/build.sh" "tests/learn/$u" "build/tests_learn/$u" --native-clock >/dev/null 2>&1
+  "$ROOT/scripts/build.sh" "tests/learn/$u" "build/tests_learn/$u" --native-clock --with-lm >/dev/null 2>&1
   if (cd "$ROOT" && "$KOF" test "build/tests_learn/$tu" --target native >/dev/null 2>&1); then
     pass=$((pass+1))
   else

@@ -48,4 +48,5 @@
 - [x] descoberta: `fixtures/*.gguf` eram stubs de texto — o parser binário NUNCA tinha lido GGUF real; probe `tests/quant/kofq_binprobe_tinylama.kf` (suite heavy, roda no TinyLlama Q4_K_M real com skip gracioso se ausente)
 - [ ] quantizar TinyLlama-F16.gguf (2.2GB) → koflm-q4.gguf com o quantizador Kof e validar no forward (após probe verde)
 - [ ] nºs finais de acc/chute/ask no suite 620 (treino n-gram 12 epochs em andamento; meta §5.2: acc≥95% chute≤5%; reportar o que vier, sem maquiar)
-- [ ] E8: fechar o ciclo com o transformer real (KofLM): backward/LoRA do TinyLlama em Kof para o executador gerar código de verdade (GGUFs em ~/Downloads/kof-data/models; sha256 divergente do registrado — verificar no load)
+- [x] E8a: forward REAL do TinyLlama-1.1B-Q4_K_M em Kof nativo puro (pesos residentes Int32, 100s/token CPU, tokens 233/262 deterministicos byte-a-byte entre jars 0.4.0/0.4.6; sem GPU, sem C, sem Python)
+- [ ] E8b: backward/LoRA do TinyLlama em Kof para o executador gerar código de verdade (GGUFs em ~/Downloads/kof-data/models; sha256 divergente do registrado — verificar no load)
