@@ -18,7 +18,7 @@ TL="${LOG:-/dev/null}"
 note() { printf '%s\n' "$*"; printf '%s\n' "$*" >> "$TL"; }
 turn() {
   local line="$1" out rc
-  note "kof> $line"
+  if [ -n "$FIFO" ]; then note "kof> $line"; fi
   case "$line" in
     "") ;;
     sair|exit|quit) note "sessao encerrada"; return 99 ;;
@@ -36,5 +36,5 @@ if [ -n "$FIFO" ]; then
   exec 3<>"$FIFO"
   while IFS= read -r l <&3; do turn "$l" || break; done
 else
-  while IFS= read -r l; do turn "$l" || break; done
+  while IFS= read -r -p "kof> " l || break; do turn "$l" || break; done
 fi
