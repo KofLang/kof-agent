@@ -29,27 +29,6 @@ main() {
     var t2 = now()
     var lg2 = kofLmForwardW(W, cfg, ids[1], 1, cache)
     dbg("fwd2 ms=" + (now() - t2) + " argmax=" + kofLmArgmax(lg2, cfg.vocab))
-    var mx = 0
-    var mi = 0
-    var li = 0
-    while (li < cfg.vocab) {
-        if (lg[li] > mx) { mx = lg[li]; mi = li }
-        li = li + 1
-    }
-    dbg("top1=" + mi + " " + v.tokens[mi] + " v=" + mx + " zero_cnt")
-    var zc = 0
-    li = 0
-    while (li < cfg.vocab) {
-        if (lg[li] == 0) { zc = zc + 1 }
-        if (lg[li] < 0 - 1000000) { zc = zc + 1 }
-        li = li + 1
-    }
-    dbg("zero/neg-mio=" + zc + " lg0=" + lg[0] + " lg1=" + lg[1] + " lg48=" + lg[48])
-    var neg = 0
-    li = 0
-    while (li < cfg.vocab) {
-        if (lg[li] < 0) { neg = neg + 1 }
-        li = li + 1
-    }
-    dbg("neg=" + neg)
+    var a0 = kofLmArgmax(lg, cfg.vocab)
+    dbg("amax=" + a0 + " lg0=" + lg[0] + " lg1=" + lg[1])
 }

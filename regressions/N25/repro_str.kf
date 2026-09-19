@@ -1,0 +1,9 @@
+main() {
+    var mp = new Map<String, Int>()
+    var i = 0
+    while (i < 1000) {
+        mp.put("chave_" + i, i)
+        i = i + 1
+    }
+    println("size=" + mp.size())
+}

@@ -1,0 +1,20 @@
+dbg(String s) {
+    var f = File("/tmp/opencode/m1dbg.log")
+    if (f.exists()) { f.appendText(s + "\n") } else { f.writeText(s + "\n") }
+}
+
+main() {
+    var path = "/home/mel/Downloads/kof-data/models/TinyLlama-Q4_K_M.gguf"
+    dbg("A")
+    var f = File(path)
+    var b1 = f.readRange(94031168, 4096)
+    dbg("B " + b1.length)
+    var big = new Int[65536000]
+    dbg("C " + big.length)
+    var b2 = f.readRange(94031168, 2359296)
+    dbg("D " + b2.length)
+    big[10] = 7
+    dbg("E " + big[10])
+    var b3 = f.readRange(94031168, 2359296)
+    dbg("F " + b3.length + " " + b3[10])
+}

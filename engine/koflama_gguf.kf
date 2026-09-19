@@ -730,7 +730,6 @@ void kofGgufDecodeRowsNTo(String path, KofGgufBinModel m, String name, Int rowSt
             }
             r = r + 1
         }
-        time.collect()
         return
     }
     if (t.quant == 14) {
@@ -757,7 +756,6 @@ void kofGgufDecodeRowsNTo(String path, KofGgufBinModel m, String name, Int rowSt
             }
             r2 = r2 + 1
         }
-        time.collect()
         return
     }
     if (t.quant == 1) {
@@ -773,7 +771,6 @@ void kofGgufDecodeRowsNTo(String path, KofGgufBinModel m, String name, Int rowSt
             }
             r3 = r3 + 1
         }
-        time.collect()
     }
 }
 
@@ -840,7 +837,6 @@ kofGgufDecodeRowsN(String path, KofGgufBinModel m, String name, Int rowStart,
             }
             r3 = r3 + 1
         }
-        time.collect()
     }
     return out
 }

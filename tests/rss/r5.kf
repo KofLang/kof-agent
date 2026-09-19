@@ -1,0 +1,54 @@
+dbg(String s) {
+    var f = File("/tmp/opencode/r5dbg.log")
+    if (f.exists()) { f.appendText(s + "\n") } else { f.writeText(s + "\n") }
+}
+
+main() {
+    var path = "/home/mel/Downloads/kof-data/models/TinyLlama-Q4_K_M.gguf"
+    var m = kofGgufBinOpen(path)
+    var t1 = kofGgufFindTensor(m, "token_embd.weight")
+    dbg("embd null? " + (t1 == null))
+    var t2 = kofGgufFindTensor(m, "blk.0.attn_q.weight")
+    dbg("q0 null? " + (t2 == null))
+    if (t2 != null) { dbg("q0 quant=" + t2.quant + " elems=" + t2.nElems + " offLo=" + t2.offsetLo) }
+    var t3 = kofGgufFindTensor(m, "blk.21.ffn_up.weight")
+    if (t3 != null) { dbg("ffn21 quant=" + t3.quant + " elems=" + t3.nElems) }
+    if (t2 != null) {
+        var ao = kofGgufTensorAbsOff(m, t2)
+        dbg("q0 abs=" + ao)
+        var f = File(path)
+        var bb = f.readRange(ao, 32)
+        var line = "bytes: "
+        var bi = 0
+        while (bi < 16) {
+            line = line + "" + bb[bi] + ","
+            bi = bi + 1
+        }
+        dbg(line)
+        var outq = new Int[2048 * 2048]
+        var win2 = new Int[11000000]
+        var tmq = new Long[256]
+        kofGgufDecodeRowsNTo(path, m, "blk.0.attn_q.weight", 0, 2048, 2048, outq, win2, tmq)
+        dbg("direct q[5]=" + outq[5] + " q[300]=" + outq[300])
+        var bigN = 65536000
+        if (File("/tmp/opencode/big200.flag").exists()) { bigN = 25000000 }
+        var big = new Int[bigN]
+        var bsm = f.readRange(ao, 4096)
+        var bnsm = 0
+        if (bsm != null) { bnsm = bsm.length }
+        dbg("post-big small readRange len=" + bnsm)
+        var bcheck = f.readRange(ao, 2359296)
+        var bn2 = 0
+        if (bcheck != null) { bn2 = bcheck.length }
+        dbg("post-big-alloc readRange18M len=" + bn2)
+        var mtest = new Int[2359296]
+        dbg("post-big alloc18M ok " + mtest.length)
+        var outq2 = new Int[2048 * 2048]
+        var win3 = new Int[11000000]
+        var tmq3 = new Long[256]
+        kofGgufDecodeRowsNTo(path, m, "blk.0.attn_q.weight", 0, 2048, 2048, outq2, win3, tmq3)
+        dbg("post-big q2[5]=" + outq2[5])
+        big[0] = 9
+        dbg("alive " + big[0])
+    }
+}

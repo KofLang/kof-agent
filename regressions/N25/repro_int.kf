@@ -1,0 +1,9 @@
+main() {
+    var mp = new Map<Int, Int>()
+    var i = 0
+    while (i < 1500) {
+        mp.put(i * 7, i)
+        i = i + 1
+    }
+    println("size=" + mp.size())
+}
