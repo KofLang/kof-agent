@@ -1,0 +1,18 @@
+main() {
+    var f = File("/home/mel/Downloads/kof-data/models/TinyLlama-Q4_K_M.gguf")
+    var t0 = now()
+    var buf = f.readRange(795, 524288)
+    var t1 = now()
+    var p = 8 + 21
+    var si = 0
+    var acc = 0
+    while (si < 32000) {
+        var st = kofGgufReadStr(buf, p)
+        p = p + 8 + st.len
+        acc = acc + st.len
+        si = si + 1
+        if (si % 2000 == 0) { time.collect() }
+    }
+    var t2 = now()
+    File("/tmp/opencode/p4.log").writeText("read=" + (t1 - t0) + " strloop=" + (t2 - t1) + " acc=" + acc + " p=" + p + "\n")
+}

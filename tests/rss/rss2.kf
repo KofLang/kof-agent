@@ -1,0 +1,35 @@
+GGDBG(s: String) {
+    File("/tmp/opencode/p2.log").appendText(s + "\n")
+}
+
+Int kofGgufBufLen(Int[] b): Int {
+    if (b == null) { return 0 - 1 }
+    return b.length
+}
+
+main() {
+    var f = File("/home/mel/Downloads/kof-data/models/TinyLlama-Q4_K_M.gguf")
+    var a = f.readRange(795, 524288)
+    var o = 795 + 351797
+    var b = f.readRange(o, 40)
+    var a2 = f.readRange(350000, 8192)
+    var line = "win512k@p: "
+    var i = 0
+    while (i < 10) {
+        line = line + "" + a[351797 + i] + ","
+        i = i + 1
+    }
+    line = line + " | small@o: "
+    i = 0
+    while (i < 10) {
+        line = line + "" + b[i] + ","
+        i = i + 1
+    }
+    line = line + " | 8k@350000: "
+    i = 0
+    while (i < 10) {
+        line = line + "" + a2[2597 + i] + ","
+        i = i + 1
+    }
+    File("/tmp/opencode/p3.log").writeText(line + "\n")
+}
