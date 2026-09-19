@@ -1,0 +1,22 @@
+main() {
+    var i = 0
+    var acc = 0
+    time.collect()
+    var t0 = now()
+    var LIM = 2000
+    if (File("/tmp/opencode/big.flag").exists()) { LIM = 20000 }
+    while (i < LIM) {
+        var b = new Int[8]
+        acc = acc + b[3]
+        i = i + 1
+    }
+    var t1 = now()
+    i = 0
+    var l = listOf<Int>()
+    while (i < 5000) {
+        l.add(i)
+        i = i + 1
+    }
+    var t2 = now()
+    File("/tmp/opencode/p5.log").appendText("alloc20k=" + (t1 - t0) + " list5k=" + (t2 - t1) + " acc=" + acc + " l=" + l.size() + "\n")
+}

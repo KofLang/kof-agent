@@ -1,0 +1,59 @@
+dbg(String s) {
+    var f = File("/tmp/opencode/r2dbg.log")
+    if (f.exists()) { f.appendText(s + "\n") } else { f.writeText(s + "\n") }
+}
+
+main() {
+    var path = "/home/mel/Downloads/kof-data/models/TinyLlama-Q4_K_M.gguf"
+    var m = kofGgufBinOpen(path)
+    var cfg = kofLmCfgFromKv(m)
+    dbg("cfg ok")
+    var win = new Int[11000000]
+    var ltmp = new Long[256]
+    var embd = new Int[cfg.vocab * cfg.embd]
+    dbg("embd alloc")
+    var r0 = 0
+    while (r0 < 256) {
+        kofGgufDecodeRowsNTo(path, m, "token_embd.weight", r0, 128, cfg.embd, embd, win, ltmp)
+        r0 = r0 + 128
+    }
+    dbg("embd slice0 ok v=" + embd[2050])
+    r0 = 256
+    while (r0 < cfg.vocab) {
+        kofGgufDecodeRowsNTo(path, m, "token_embd.weight", r0, 4096, cfg.embd, embd, win, ltmp)
+        r0 = r0 + 4096
+    }
+    dbg("embd full ok")
+    var lmw = new Int[cfg.vocab * cfg.embd]
+    r0 = 0
+    while (r0 < cfg.vocab) {
+        kofGgufDecodeRowsNTo(path, m, "output.weight", r0, 4096, cfg.embd, lmw, win, ltmp)
+        r0 = r0 + 4096
+    }
+    dbg("lm full ok")
+    var P = "blk.0."
+    var Ly = KofLmLayer()
+    var kv = cfg.kvHeads * cfg.headDim
+    Ly.q = new Int[cfg.embd * cfg.embd]
+    dbg("q alloc")
+    kofGgufDecodeRowsNTo(path, m, P + "attn_q.weight", 0, cfg.embd, cfg.embd, Ly.q, win, ltmp)
+    dbg("q ok v=" + Ly.q[100])
+    var an = kofGgufF32DecodeRows(path, m, P + "attn_norm.weight", 0, 1, cfg.embd)
+    dbg("norm ok n=" + an.length)
+    Ly.n1 = new Int[cfg.embd]
+    var ni = 0
+    while (ni < cfg.embd) {
+        Ly.n1[ni] = (an[ni] * 1000)
+        ni = ni + 1
+    }
+    dbg("n1 ok")
+    var layers = new KofLmLayer[22]
+    layers[0] = Ly
+    dbg("arr ok")
+    var W = KofLmWeights()
+    W.layers = new KofLmLayer[cfg.layers]
+    W.layers[3] = Ly
+    dbg("weights ok " + W.layers[3].q[100])
+    var W2 = kofLmWeightsLoad(path, m, cfg)
+    dbg("W2 ok")
+}

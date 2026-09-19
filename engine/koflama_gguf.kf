@@ -11,7 +11,7 @@ record KofGgufBinHeader(Int version, Int tensorCount, Int kvCount, Int alignment
 record KofGgufBinKv(String key, Int kind, Int intVal, String strVal)
 record KofGgufBinTensor(String name, Int nDims, Int d0, Int d1, Int quant, Int offsetLo, Int offsetHi, Int nElems)
 record KofGgufBinModel(KofGgufBinHeader header, List<KofGgufBinKv> kv, List<KofGgufBinTensor> tensors, Int errorCount, String errorCode, Long dataOff)
-record GgufBinStr(Int len, Int[] chars)
+record GgufBinStr(Int len, Int off)
 
 // ── leitura little-endian de um Int[] de bytes ──────────────────────────
 Int kofGgufU32(Int[] b, Int off) {
@@ -52,13 +52,7 @@ GgufBinStr kofGgufReadStr(Int[] b, Int off) {
     var avail = kofGgufStrAvail(b, off)
     if (len > avail) { len = avail }
     if (len < 0) { len = 0 }
-    var chars = new Int[len]
-    var i = 0
-    while (i < len) {
-        chars[i] = b[off + 8 + i]
-        i = i + 1
-    }
-    return GgufBinStr(len, chars)
+    return GgufBinStr(len, off + 8)
 }
 
 // byte → String com decode UTF-8 (ASCII 1B, cont 2B/3B/4B). O Kof
@@ -68,18 +62,18 @@ String kofGgufStr(Int[] b, Int off) {
     var st = kofGgufReadStr(b, off)
     var i = 0
     while (i < st.len) {
-        var c = st.chars[i]
+        var c = b[st.off + i]
         var cp = 0
         if (c < 0x80) {
             cp = c
         } else if (c >= 0xC0 && c < 0xE0 && i + 1 < st.len) {
-            cp = (c - 0xC0) * 64 + (st.chars[i + 1] - 0x80)
+            cp = (c - 0xC0) * 64 + (b[st.off + i + 1] - 0x80)
             i = i + 1
         } else if (c >= 0xE0 && c < 0xF0 && i + 2 < st.len) {
-            cp = (c - 0xE0) * 4096 + (st.chars[i + 1] - 0x80) * 64 + (st.chars[i + 2] - 0x80)
+            cp = (c - 0xE0) * 4096 + (b[st.off + i + 1] - 0x80) * 64 + (b[st.off + i + 2] - 0x80)
             i = i + 2
         } else if (c >= 0xF0 && i + 3 < st.len) {
-            cp = (c - 0xF0) * 262144 + (st.chars[i + 1] - 0x80) * 4096 + (st.chars[i + 2] - 0x80) * 64 + (st.chars[i + 3] - 0x80)
+            cp = (c - 0xF0) * 262144 + (b[st.off + i + 1] - 0x80) * 4096 + (b[st.off + i + 2] - 0x80) * 64 + (b[st.off + i + 3] - 0x80)
             i = i + 3
         } else {
             cp = 0xFFFD
@@ -632,10 +626,9 @@ kofGgufDecodeRows(String path, KofGgufBinModel m, String name, Int rowStart,
 
 // ── decoders NANO (pesos p/ matmul do forward M34; estados ficam MICRO) ─
 // bloco Q4_K → nano em Long[256]
-void kofGgufQ4KDecodeBlockN(Int[] b, Int off, Long[] out) {
+void kofGgufQ4KDecodeBlockN(Int[] b, Int off, Long[] out, Int[] sc) {
     var d: Long = f16ToNano(b[off] + b[off + 1] * 256)
     var dmin: Long = f16ToNano(b[off + 2] + b[off + 3] * 256)
-    var sc = new Int[12]
     var i = 0
     while (i < 12) {
         sc[i] = b[off + 4 + i]
@@ -709,6 +702,7 @@ void kofGgufQ6KDecodeBlockN(Int[] b, Int off, Long[] out) {
 // mesma gramatica de RowsN, mas ESCREVE num out[] existente (scratch reusado)
 void kofGgufDecodeRowsNTo(String path, KofGgufBinModel m, String name, Int rowStart,
                           Int nRows, Int kdim, Int[] out, Int[] win, Long[] tmp) {
+    var scbuf = new Int[12]
     var t = kofGgufFindTensor(m, name)
     if (t == null) { return }
     var f = File(path)
@@ -726,7 +720,7 @@ void kofGgufDecodeRowsNTo(String path, KofGgufBinModel m, String name, Int rowSt
         while (r < nRows) {
             var k = 0
             while (k < blocksPerRow) {
-                kofGgufQ4KDecodeBlockN(win, (r * blocksPerRow + k) * 144, tmp)
+                kofGgufQ4KDecodeBlockN(win, (r * blocksPerRow + k) * 144, tmp, scbuf)
                 var e = 0
                 while (e < 256) {
                     out[r * kdim + k * 256 + e] = tmp[e]
@@ -791,6 +785,7 @@ kofGgufDecodeRowsN(String path, KofGgufBinModel m, String name, Int rowStart,
     var out = new Long[nRows * kdim]
     var f = File(path)
     var tmp = new Long[256]
+    var scbuf = new Int[12]
     if (t.quant == 12) {
         var blocksPerRow = kdim / 256
         var r = 0
@@ -800,7 +795,7 @@ kofGgufDecodeRowsN(String path, KofGgufBinModel m, String name, Int rowStart,
             if (bytes == null) { return out }
             var k = 0
             while (k < blocksPerRow) {
-                kofGgufQ4KDecodeBlockN(bytes, k * 144, tmp)
+                kofGgufQ4KDecodeBlockN(bytes, k * 144, tmp, scbuf)
                 var e = 0
                 while (e < 256) {
                     out[r * kdim + k * 256 + e] = tmp[e]

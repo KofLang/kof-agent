@@ -1,0 +1,17 @@
+dbg(String s) {
+    var f = File("/tmp/opencode/r3dbg.log")
+    if (f.exists()) { f.appendText(s + "\n") } else { f.writeText(s + "\n") }
+}
+
+main() {
+    var path = "/home/mel/Downloads/kof-data/models/TinyLlama-Q4_K_M.gguf"
+    var m = kofGgufBinOpen(path)
+    var cfg = kofLmCfgFromKv(m)
+    var v = kofLmTokLoadVocab(path, m)
+    dbg("vocab ok n=" + v.tokens.length)
+    var t0 = now()
+    var W = kofLmWeightsLoad(path, m, cfg)
+    dbg("embd v1 " + W.embd[1000] + " vocab ref " + v.tokens[7].length())
+    dbg("load ms=" + (now() - t0))
+    dbg("done")
+}

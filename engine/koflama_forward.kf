@@ -697,8 +697,18 @@ void kofLmLoadInto(String path, KofGgufBinModel m, String tensor, Int rows, Int 
     }
 }
 
+void kofLmLoadTrace(String s) {
+    var f = File("/tmp/opencode/load.log")
+    if (f.exists()) {
+        f.appendText(s + "\n")
+    } else {
+        f.writeText(s + "\n")
+    }
+}
+
 KofLmWeights kofLmWeightsLoad(String path, KofGgufBinModel m, KofLmCfg cfg) {
     var W = KofLmWeights()
+    kofLmLoadTrace("begin")
     var win = new Int[11000000]
     var kv = cfg.kvHeads * cfg.headDim
     W.embd = new Int[cfg.vocab * cfg.embd]
@@ -713,6 +723,7 @@ KofLmWeights kofLmWeightsLoad(String path, KofGgufBinModel m, KofLmCfg cfg) {
         fi = fi + 1
     }
     W.layers = new KofLmLayer[cfg.layers]
+    kofLmLoadTrace("embd+lm")
     var l = 0
     while (l < cfg.layers) {
         var P = "blk." + l + "."
@@ -751,6 +762,7 @@ KofLmWeights kofLmWeightsLoad(String path, KofGgufBinModel m, KofLmCfg cfg) {
             ni = ni + 1
         }
         W.layers[l] = Ly
+        kofLmLoadTrace("layer " + l)
         l = l + 1
     }
     return W

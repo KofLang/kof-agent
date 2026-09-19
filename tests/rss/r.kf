@@ -15,15 +15,13 @@ main() {
     var cfg = kofLmCfgFromKv(m)
     dbg("T cfg embd=" + cfg.embd + " layers=" + cfg.layers + " ffn=" + cfg.ffn + " heads=" + cfg.heads + " kv=" + cfg.kvHeads)
     var t0 = now()
-    var v = kofLmTokLoadVocab(path, m)
-    dbg("T vocab " + (now() - t0))
-    var t1a = now()
-    var ids = kofLmTokEncode(v.tokens, v.scores, "ola tudo bem", 1)
-    dbg("T encode " + (now() - t1a))
-    dbg("T" + (now() - t0) + " ids n=" + ids.length + " first=" + ids[0])
     dbg("pre-load")
     var W = kofLmWeightsLoad(path, m, cfg)
     dbg("load ms=" + (now() - t0))
+    var v = kofLmTokLoadVocab(path, m)
+    var t1a = now()
+    var ids = kofLmTokEncode(v.tokens, v.scores, "ola tudo bem", 1)
+    dbg("T encode " + (now() - t1a) + " ids n=" + ids.length + " first=" + ids[0])
     var cache = listOf<List<KofLmKv>>()
     var t1 = now()
     var lg = kofLmForwardW(W, cfg, ids[0], 0, cache)
@@ -31,5 +29,27 @@ main() {
     var t2 = now()
     var lg2 = kofLmForwardW(W, cfg, ids[1], 1, cache)
     dbg("fwd2 ms=" + (now() - t2) + " argmax=" + kofLmArgmax(lg2, cfg.vocab))
-    dbg("tok=" + v.tokens[kofLmArgmax(lg, cfg.vocab)])
+    var mx = 0
+    var mi = 0
+    var li = 0
+    while (li < cfg.vocab) {
+        if (lg[li] > mx) { mx = lg[li]; mi = li }
+        li = li + 1
+    }
+    dbg("top1=" + mi + " " + v.tokens[mi] + " v=" + mx + " zero_cnt")
+    var zc = 0
+    li = 0
+    while (li < cfg.vocab) {
+        if (lg[li] == 0) { zc = zc + 1 }
+        if (lg[li] < 0 - 1000000) { zc = zc + 1 }
+        li = li + 1
+    }
+    dbg("zero/neg-mio=" + zc + " lg0=" + lg[0] + " lg1=" + lg[1] + " lg48=" + lg[48])
+    var neg = 0
+    li = 0
+    while (li < cfg.vocab) {
+        if (lg[li] < 0) { neg = neg + 1 }
+        li = li + 1
+    }
+    dbg("neg=" + neg)
 }

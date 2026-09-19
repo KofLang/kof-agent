@@ -1,0 +1,34 @@
+dbg(String s) {
+    var f = File("/tmp/opencode/r4dbg.log")
+    if (f.exists()) { f.appendText(s + "\n") } else { f.writeText(s + "\n") }
+}
+
+main() {
+    var path = "/home/mel/Downloads/kof-data/models/TinyLlama-Q4_K_M.gguf"
+    var m = kofGgufBinOpen(path)
+    var cfg = kofLmCfgFromKv(m)
+    var mode = 0
+    if (File("/tmp/opencode/mode1.flag").exists()) { mode = 1 }
+    if (File("/tmp/opencode/mode2.flag").exists()) { mode = 2 }
+    if (File("/tmp/opencode/mode3.flag").exists()) { mode = 3 }
+    var keep = 0
+    if (mode == 1) {
+        var tk = new String[32000]
+        var i = 0
+        while (i < 32000) { tk[i] = "tok" + i; i = i + 1 }
+        keep = tk.length
+    }
+    if (mode == 2) {
+        var sc = new Long[32000]
+        var j = 0
+        while (j < 32000) { sc[j] = j; j = j + 1 }
+        keep = sc.length
+    }
+    if (mode == 3) {
+        var vs = kofLmTokLoadVocab(path, m)
+        keep = vs.scores.length
+    }
+    dbg("keep " + keep + " mode " + mode)
+    var W = kofLmWeightsLoad(path, m, cfg)
+    dbg("load ok keep=" + keep)
+}
