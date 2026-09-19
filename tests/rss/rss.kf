@@ -1,0 +1,11 @@
+main() {
+    var i = 0
+    if (File("/tmp/opencode/mode2.flag").exists()) {
+        var c = new Long[100000000]
+        i = 0
+        while (i < 100000000) { c[i] = i; i = i + 512 }
+    }
+    var a = new Int[100000000]
+    i = 0
+    while (i < 100000000) { a[i] = i; i = i + 512 }
+}

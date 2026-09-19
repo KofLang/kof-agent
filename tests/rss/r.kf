@@ -1,32 +1,31 @@
-rssGb(): Int { return 0 }
-
-stage(String label) {
-    println("T+" + (now() / 1000) + "s " + label)
+dbg(String s) {
+    var f = File("/tmp/opencode/rdbg.log")
+    if (f.exists()) {
+        f.appendText(s + "\n")
+    } else {
+        f.writeText(s + "\n")
+    }
 }
 
 main() {
-    println("start rss=" + rssGb())
     var path = "/home/mel/Downloads/kof-data/models/TinyLlama-Q4_K_M.gguf"
+    dbg("start")
     var m = kofGgufBinOpen(path)
-    println("open err=" + m.errorCount + " rss=" + rssGb())
+    dbg("open err=" + m.errorCount)
     var cfg = kofLmCfgFromKv(m)
-    println("cfg embd=" + cfg.embd + " layers=" + cfg.layers + " ffn=" + cfg.ffn + " vocab=" + cfg.vocab + " rss=" + rssGb())
+    dbg("cfg embd=" + cfg.embd + " layers=" + cfg.layers + " ffn=" + cfg.ffn + " heads=" + cfg.heads + " kv=" + cfg.kvHeads)
     var v = kofLmTokLoadVocab(path, m)
-    println("vocab n=" + v.tokens.length + " rss=" + rssGb())
-    var ids = kofLmTokEncode(v.tokens, v.scores, "ola", 1)
-    println("ids n=" + ids.length + " first=" + ids[0] + " rss=" + rssGb())
-    stage("pos-encode")
-    var sc = kofLmScratchNew(cfg)
-    stage("pos-scratch")
+    var ids = kofLmTokEncode(v.tokens, v.scores, "ola tudo bem", 1)
+    dbg("ids n=" + ids.length + " first=" + ids[0])
+    var t0 = now()
+    var W = kofLmWeightsLoad(path, m, cfg)
+    dbg("load ms=" + (now() - t0))
     var cache = listOf<List<KofLmKv>>()
-    if (ids.length == 0) {
-        println("ENCODE VAZIO — aborta")
-        return
-    }
-    var logits = kofLmForwardInt(path, m, cfg, ids[0], 0, cache, sc)
-    var a = kofLmArgmax(logits, logits.length)
-    println("fwd1 argmax=" + a + " n=" + logits.length + " rss=" + rssGb())
-    stage("pos-fwd1")
-    var logits2 = kofLmForwardInt(path, m, cfg, ids[0], 1, cache, sc)
-    println("fwd2 argmax=" + kofLmArgmax(logits2, logits2.length) + " rss=" + rssGb())
+    var t1 = now()
+    var lg = kofLmForwardW(W, cfg, ids[0], 0, cache)
+    dbg("fwd1 ms=" + (now() - t1) + " argmax=" + kofLmArgmax(lg, cfg.vocab))
+    var t2 = now()
+    var lg2 = kofLmForwardW(W, cfg, ids[1], 1, cache)
+    dbg("fwd2 ms=" + (now() - t2) + " argmax=" + kofLmArgmax(lg2, cfg.vocab))
+    dbg("tok=" + v.tokens[kofLmArgmax(lg, cfg.vocab)])
 }

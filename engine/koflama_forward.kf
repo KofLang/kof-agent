@@ -127,9 +127,53 @@ kofLmMatvecId(Int wId, String path, KofGgufBinModel gg, String tensor,
     return kofLmMatvec(W2, x, nRows, kdim, div)
 }
 
+// W em Int32 nano (residente — 4B/elemento). Mesma aritmetica do Cpu Long.
+kofLmMatvecCpuI(Int[] W, Long[] x, Int nRows, Int kdim, Long div): Long[] {
+    var y = new Long[nRows]
+    var xh = new Long[kdim]
+    var xl = new Long[kdim]
+    var hc = 0
+    while (hc < kdim) {
+        xh[hc] = x[hc] / 1000000
+        xl[hc] = x[hc] % 1000000
+        hc = hc + 1
+    }
+    var r = 0
+    while (r < nRows) {
+        var off = r * kdim
+        var accA: Long = 0
+        var accB: Long = 0
+        var accC: Long = 0
+        var accD: Long = 0
+        var c = 0
+        while (c < kdim) {
+            var wv: Long = W[off + c]
+            var wh = wv / 1000
+            var wl = wv - wh * 1000
+            accA = accA + wh * xh[c]
+            accB = accB + wh * xl[c]
+            accC = accC + wl * xh[c]
+            accD = accD + wl * xl[c]
+            c = c + 1
+        }
+        var full = accA * 1000000000000 + accB * 1000000000 + accC * 1000000000 + accD
+        y[r] = full / div
+        r = r + 1
+    }
+    return y
+}
+
 // CPU split PURO (sem qualquer dispatch gpu.*) — usado pelo caminho scratch
 kofLmMatvecCpu(Long[] W, Long[] x, Int nRows, Int kdim, Long div): Long[] {
     var y = new Long[nRows]
+    var xh = new Long[kdim]
+    var xl = new Long[kdim]
+    var hc = 0
+    while (hc < kdim) {
+        xh[hc] = x[hc] / 1000000
+        xl[hc] = x[hc] % 1000000
+        hc = hc + 1
+    }
     var r = 0
     while (r < nRows) {
         var off = r * kdim
@@ -140,15 +184,12 @@ kofLmMatvecCpu(Long[] W, Long[] x, Int nRows, Int kdim, Long div): Long[] {
         var c = 0
         while (c < kdim) {
             var wv = W[off + c]
-            var xv = x[c]
             var wh = wv / 1000
-            var wl = wv % 1000
-            var xh = xv / 1000000
-            var xl = xv % 1000000
-            accA = accA + wh * xh
-            accB = accB + wh * xl
-            accC = accC + wl * xh
-            accD = accD + wl * xl
+            var wl = wv - wh * 1000
+            accA = accA + wh * xh[c]
+            accB = accB + wh * xl[c]
+            accC = accC + wl * xh[c]
+            accD = accD + wl * xl[c]
             c = c + 1
         }
         if (div == 1000000000) {
@@ -619,17 +660,219 @@ kofLmWarmWeights(String path, KofGgufBinModel m, KofLmCfg cfg): Int {
     return 0
 }
 
-// ── forward completo de 1 token (com cache) ─────────────────────────────
-// Retorna logits[vocab] micro.
+// ── RESIDENTE: pesos dequantizados uma vez em Long[] (engine native sem GC
+// nao pode reler o arquivo por token: readRange alocaria 5.3GB de lixo/token).
+// Forward entao faz so aritmetica — zero leitura de arquivo, ~4MB/token de
+// arrays pequenos (y por matvec, attention) que nem chegam a incomodar. ──
+
+class KofLmLayer {
+    Int[] q = new Int[0]
+    Int[] k = new Int[0]
+    Int[] v = new Int[0]
+    Int[] o = new Int[0]
+    Int[] gate = new Int[0]
+    Int[] up = new Int[0]
+    Int[] down = new Int[0]
+    Int[] n1 = new Int[0]
+    Int[] n2 = new Int[0]
+}
+
+class KofLmWeights {
+    Int[] embd = new Int[0]
+    Int[] lm = new Int[0]
+    Int[] fin = new Int[0]
+    KofLmLayer[] layers = new KofLmLayer[0]
+}
+
+// tensor inteiro (ou em fatias de maxRows) -> Long[] nano residente
+void kofLmLoadInto(String path, KofGgufBinModel m, String tensor, Int rows, Int kdim,
+                   Int maxRows, Int[] out, Int[] win) {
+    var ltmp = new Long[256]
+    var r0 = 0
+    while (r0 < rows) {
+        var n = maxRows
+        if (r0 + n > rows) { n = rows - r0 }
+        kofGgufDecodeRowsNTo(path, m, tensor, r0, n, kdim, out, win, ltmp)
+        r0 = r0 + n
+    }
+}
+
+KofLmWeights kofLmWeightsLoad(String path, KofGgufBinModel m, KofLmCfg cfg) {
+    var W = KofLmWeights()
+    var win = new Int[11000000]
+    var kv = cfg.kvHeads * cfg.headDim
+    W.embd = new Int[cfg.vocab * cfg.embd]
+    kofLmLoadInto(path, m, "token_embd.weight", cfg.vocab, cfg.embd, 4096, W.embd, win)
+    W.lm = new Int[cfg.vocab * cfg.embd]
+    kofLmLoadInto(path, m, "output.weight", cfg.vocab, cfg.embd, 4096, W.lm, win)
+    var fnd = kofGgufF32DecodeRows(path, m, "output_norm.weight", 0, 1, cfg.embd)
+    W.fin = new Int[cfg.embd]
+    var fi = 0
+    while (fi < cfg.embd) {
+        W.fin[fi] = (fnd[fi] * 1000)
+        fi = fi + 1
+    }
+    W.layers = new KofLmLayer[cfg.layers]
+    var l = 0
+    while (l < cfg.layers) {
+        var P = "blk." + l + "."
+        var Ly = KofLmLayer()
+        Ly.q = new Int[cfg.embd * cfg.embd]
+        kofLmLoadInto(path, m, P + "attn_q.weight", cfg.embd, cfg.embd, 4096, Ly.q, win)
+        Ly.k = new Int[kv * cfg.embd]
+        kofLmLoadInto(path, m, P + "attn_k.weight", kv, cfg.embd, 4096, Ly.k, win)
+        Ly.v = new Int[kv * cfg.embd]
+        kofLmLoadInto(path, m, P + "attn_v.weight", kv, cfg.embd, 4096, Ly.v, win)
+        Ly.o = new Int[cfg.embd * cfg.embd]
+        kofLmLoadInto(path, m, P + "attn_output.weight", cfg.embd, cfg.embd, 4096, Ly.o, win)
+        Ly.gate = new Int[cfg.ffn * cfg.embd]
+        kofLmLoadInto(path, m, P + "ffn_gate.weight", cfg.ffn, cfg.embd, 4096, Ly.gate, win)
+        Ly.up = new Int[cfg.ffn * cfg.embd]
+        kofLmLoadInto(path, m, P + "ffn_up.weight", cfg.ffn, cfg.embd, 4096, Ly.up, win)
+        Ly.down = new Int[cfg.embd * cfg.ffn]
+        kofLmLoadInto(path, m, P + "ffn_down.weight", cfg.embd, cfg.ffn, 4096, Ly.down, win)
+        var di = 0
+        while (di < cfg.embd * cfg.ffn) {
+            Ly.down[di] = Ly.down[di] / 1000
+            di = di + 1
+        }
+        var an = kofGgufF32DecodeRows(path, m, P + "attn_norm.weight", 0, 1, cfg.embd)
+        Ly.n1 = new Int[cfg.embd]
+        var ni = 0
+        while (ni < cfg.embd) {
+            Ly.n1[ni] = (an[ni] * 1000)
+            ni = ni + 1
+        }
+        var f2 = kofGgufF32DecodeRows(path, m, P + "ffn_norm.weight", 0, 1, cfg.embd)
+        Ly.n2 = new Int[cfg.embd]
+        ni = 0
+        while (ni < cfg.embd) {
+            Ly.n2[ni] = (f2[ni] * 1000)
+            ni = ni + 1
+        }
+        W.layers[l] = Ly
+        l = l + 1
+    }
+    return W
+}
+
+// forward 1 token sobre pesos residentes — mesma matematica do ForwardInt
+kofLmForwardW(KofLmWeights W, KofLmCfg cfg, Int token, Int pos,
+              List<List<KofLmKv>> kvCache): Long[] {
+    var xs = new Long[cfg.embd]
+    var ei = 0
+    var ebase = token * cfg.embd
+    while (ei < cfg.embd) {
+        xs[ei] = W.embd[ebase + ei]
+        ei = ei + 1
+    }
+    var l = 0
+    while (l < cfg.layers) {
+        var Ly = W.layers[l]
+        var h = kofLmRmsNormI(xs, Ly.n1, cfg.embd, cfg.eps)
+        var q = kofLmMatvecCpuI(Ly.q, h, cfg.embd, cfg.embd, 1000000000)
+        var kv = cfg.kvHeads * cfg.headDim
+        var k = kofLmMatvecCpuI(Ly.k, h, kv, cfg.embd, 1000000000)
+        var v = kofLmMatvecCpuI(Ly.v, h, kv, cfg.embd, 1000000000)
+        var hd = 0
+        while (hd < cfg.heads) {
+            kofLmApplyRope(q, hd * cfg.headDim, cfg.headDim, pos, cfg.ropeDims)
+            hd = hd + 1
+        }
+        hd = 0
+        while (hd < cfg.kvHeads) {
+            kofLmApplyRope(k, hd * cfg.headDim, cfg.headDim, pos, cfg.ropeDims)
+            hd = hd + 1
+        }
+        if (kvCache.size() <= l) {
+            kvCache.add(listOf<KofLmKv>())
+        }
+        kvCache.get(l).add(KofLmKv(k, v))
+        var nPos = pos + 1
+        var kcache = new Long[nPos * kv]
+        var vcache = new Long[nPos * kv]
+        var layerCache = kvCache.get(l)
+        var pi = 0
+        while (pi < nPos) {
+            var kvEnt = layerCache.get(pi)
+            var ci = 0
+            while (ci < kv) {
+                kcache[pi * kv + ci] = kvEnt.k[ci]
+                vcache[pi * kv + ci] = kvEnt.v[ci]
+                ci = ci + 1
+            }
+            pi = pi + 1
+        }
+        var attn = kofLmAttention(q, kcache, vcache, nPos, cfg.heads,
+                                  cfg.kvHeads, cfg.headDim)
+        var attno = kofLmMatvecCpuI(Ly.o, attn, cfg.embd, cfg.embd, 1000000000)
+        var i2 = 0
+        while (i2 < cfg.embd) {
+            xs[i2] = xs[i2] + attno[i2]
+            i2 = i2 + 1
+        }
+        var h2 = kofLmRmsNormI(xs, Ly.n2, cfg.embd, cfg.eps)
+        var g = kofLmMatvecCpuI(Ly.gate, h2, cfg.ffn, cfg.embd, 1000000000)
+        var u = kofLmMatvecCpuI(Ly.up, h2, cfg.ffn, cfg.embd, 1000000000)
+        var act = kofLmSwiglu(g, u, cfg.ffn)
+        var d = kofLmMatvecCpuI(Ly.down, act, cfg.embd, cfg.ffn, 1000000)
+        i2 = 0
+        while (i2 < cfg.embd) {
+            xs[i2] = xs[i2] + d[i2]
+            i2 = i2 + 1
+        }
+        l = l + 1
+    }
+    var hf = kofLmRmsNormI(xs, W.fin, cfg.embd, cfg.eps)
+    return kofLmMatvecCpuI(W.lm, hf, cfg.vocab, cfg.embd, 1000000000000)
+}
+
+// ── forward completo de 1 token (com cache) ─────────────────────────────// Retorna logits[vocab] micro.
 class KofLmScratch {
-    Long[] w = new Long[0]
+    Int[] win = new Int[0]
+    Int[] w = new Int[0]
+    Long[] tmp = new Long[256]
 }
 
 // maior matriz do modelo = ffn x embd (gate/up/down); lm-head entra em chunks
 kofLmScratchNew(KofLmCfg cfg): KofLmScratch {
     var sc = KofLmScratch()
-    sc.w = new Long[cfg.ffn * cfg.embd]
+    sc.win = new Int[8500000]
+    sc.w = new Int[cfg.ffn * cfg.embd]
     return sc
+}
+
+// RMSNorm com pesos residentes Int32 nano — mesma formula do RmsNorm Long
+kofLmRmsNormI(Long[] x, Int[] w, Int n, Long eps): Long[] {
+    var sq: Long = 0
+    var i = 0
+    while (i < n) {
+        var acc: Long = 0
+        var ce = 0
+        while (ce < 8 && i < n) {
+            var m = (x[i] + 500) / 1000
+            if (x[i] < 0) { m = (x[i] - 500) / 1000 }
+            acc = acc + m * m
+            i = i + 1
+            ce = ce + 1
+        }
+        sq = sq + acc
+    }
+    var mean = sq / n + eps
+    var rmsMicro = kofLmIsqrt(mean)
+    if (rmsMicro <= 0) { rmsMicro = 1 }
+    var rmsN: Long = rmsMicro * 1000
+    var y = new Long[n]
+    i = 0
+    while (i < n) {
+        var xv = x[i]
+        var wv: Long = w[i]
+        var q = xv / rmsN
+        var r = xv % rmsN
+        y[i] = q * wv + (r * wv) / rmsN
+        i = i + 1
+    }
+    return y
 }
 
 // matvec CPU sem alocar W: decodifica em chunks DE DENTRO DO SCRATCH e acumula
@@ -644,7 +887,7 @@ kofLmMatvecSc(KofLmScratch sc, String path, KofGgufBinModel gg, String tensor,
         if (off + n > nRows) {
             n = nRows - off
         }
-        kofGgufDecodeRowsNTo(path, gg, tensor, off, n, kdim, sc.w)
+        kofGgufDecodeRowsNTo(path, gg, tensor, off, n, kdim, sc.w, sc.win, sc.tmp)
         if (microDiv) {
             var iz = 0
             while (iz < n * kdim) {
@@ -652,7 +895,7 @@ kofLmMatvecSc(KofLmScratch sc, String path, KofGgufBinModel gg, String tensor,
                 iz = iz + 1
             }
         }
-        var part = kofLmMatvecCpu(sc.w, x, n, kdim, div)
+        var part = kofLmMatvecCpuI(sc.w, x, n, kdim, div)
         var j = 0
         while (j < n) {
             y[off + j] = part[j]

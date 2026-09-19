@@ -1,27 +1,27 @@
-step(String label) { println("== " + label) }
+dbg(String s) {
+    var f = File("/tmp/opencode/mdbg.log")
+    if (f.exists()) {
+        f.appendText(s + "\n")
+    } else {
+        f.writeText(s + "\n")
+    }
+}
 
 main() {
     var path = "/home/mel/Downloads/kof-data/models/TinyLlama-Q4_K_M.gguf"
     var m = kofGgufBinOpen(path)
-    step("open " + m.errorCount)
-    var v = kofLmTokLoadVocab(path, m)
-    step("vocab " + v.tokens.length)
-    var acc = 0
+    var n = m.tensors.size()
+    dbg("open err=" + m.errorCount + " tensors=" + n)
     var i = 0
-    while (i < v.tokens.length) {
-        acc = acc + v.tokens[i].length()
+    while (i < 45) {
+        var t = m.tensors.get(i)
+        dbg("t" + i + " " + t.name + " q=" + t.quant + " " + t.d0 + "x" + t.d1)
         i = i + 1
     }
-    step("strings ok acc=" + acc)
-    var idx = mapOf<String, Int>()
-    i = 0
-    while (i < 32000) {
-        idx.put(v.tokens[i], i)
+    i = n - 10
+    while (i < n) {
+        var t2 = m.tensors.get(i)
+        dbg("t" + i + " " + t2.name + " q=" + t2.quant + " " + t2.d0 + "x" + t2.d1)
         i = i + 1
     }
-    step("map put 32k ok")
-    var g = idx.getOrDefault("the", 0 - 1)
-    step("map get ok g=" + g)
-    var ids = kofLmTokEncode(v.tokens, v.scores, "ola mundo", 1)
-    step("encode n=" + ids.length + " id0=" + ids[0])
 }

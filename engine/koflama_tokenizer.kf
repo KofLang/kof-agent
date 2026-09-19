@@ -92,11 +92,78 @@ kofLmTokLoadVocab(String path, KofGgufBinModel m): KofLmTokVocab {
 }
 
 // encode: greedy longest match (llama.cpp SPM). Retorna ids (com BOS).
+// ── tabela de strings própria (Map<String,*> do native quebra no resize >512:
+// regressao N30; keys Int duplicam — N31). Open addressing linear, cap 1<<17. ──
+KFT_MASK(): Int { return 131071 }
+
+class KofLmTokIndex {
+    String[] keys = new String[0]
+    Int[] vals = new Int[0]
+    Int[] used = new Int[0]
+}
+
+Int kofLmStrHash(String s): Int {
+    var h = 5381
+    var i = 0
+    var n = s.length()
+    while (i < n) {
+        h = h * 33 + s.charAt(i)
+        i = i + 1
+    }
+    if (h < 0) {
+        h = 0 - h
+    }
+    return h % (KFT_MASK() + 1)
+}
+
+kofLmTokIndexNew(): KofLmTokIndex {
+    var t = KofLmTokIndex()
+    t.keys = new String[KFT_MASK() + 1]
+    t.vals = new Int[KFT_MASK() + 1]
+    t.used = new Int[KFT_MASK() + 1]
+    return t
+}
+
+void kofLmTokIndexPut(KofLmTokIndex t, String k, Int v) {
+    var pos = kofLmStrHash(k)
+    var guard = 0
+    while (guard <= KFT_MASK()) {
+        if (t.used[pos] == 0) {
+            t.keys[pos] = k
+            t.vals[pos] = v
+            t.used[pos] = 1
+            return
+        }
+        if (t.keys[pos] == k) {
+            t.vals[pos] = v
+            return
+        }
+        pos = (pos + 1) % (KFT_MASK() + 1)
+        guard = guard + 1
+    }
+}
+
+Int kofLmTokIndexGet(KofLmTokIndex t, String k): Int {
+    var pos = kofLmStrHash(k)
+    var guard = 0
+    while (guard <= KFT_MASK()) {
+        if (t.used[pos] == 0) {
+            return 0 - 1
+        }
+        if (t.keys[pos] == k) {
+            return t.vals[pos]
+        }
+        pos = (pos + 1) % (KFT_MASK() + 1)
+        guard = guard + 1
+    }
+    return 0 - 1
+}
+
 kofLmTokEncode(String[] vocab, Long[] scores, String text, Int bosId): Int[] {
-    var idx = mapOf<String, Int>()
+    var idx = kofLmTokIndexNew()
     var vi0 = 0
     while (vi0 < vocab.length) {
-        if (vocab[vi0] != null) { idx.put(vocab[vi0], vi0) }
+        if (vocab[vi0] != null) { kofLmTokIndexPut(idx, vocab[vi0], vi0) }
         vi0 = vi0 + 1
     }
     var t = text
@@ -123,7 +190,7 @@ kofLmTokEncode(String[] vocab, Long[] scores, String text, Int bosId): Int[] {
         while (len >= 1) {
             if (pos + len <= n) {
                 var sub = sb.substring(pos, pos + len)
-                var r = idx.getOrDefault(sub, 0 - 1)
+                var r = kofLmTokIndexGet(idx, sub)
                 if (r >= 0) {
                     bestLen = len
                     bestId = r

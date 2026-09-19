@@ -1,0 +1,22 @@
+main() {
+    var idx = mapOf<Int, Int>()
+    var i = 0
+    while (i < 1500) {
+        idx.put(i, i * 2)
+        i = i + 1
+    }
+    println("int-keys 1500 size=" + idx.size() + " probe=" + idx.getOrDefault(1499, 0))
+    var s = mapOf<String, Int>()
+    i = 0
+    while (i < 600) {
+        s.put("k" + i, i)
+        i = i + 1
+    }
+    println("str 600 size=" + s.size())
+    i = 600
+    while (i < 1500) {
+        s.put("k" + i, i)
+        i = i + 1
+    }
+    println("str 1500 size=" + s.size())
+}

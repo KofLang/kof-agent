@@ -708,21 +708,25 @@ void kofGgufQ6KDecodeBlockN(Int[] b, Int off, Long[] out) {
 
 // mesma gramatica de RowsN, mas ESCREVE num out[] existente (scratch reusado)
 void kofGgufDecodeRowsNTo(String path, KofGgufBinModel m, String name, Int rowStart,
-                          Int nRows, Int kdim, Long[] out) {
+                          Int nRows, Int kdim, Int[] out, Int[] win, Long[] tmp) {
     var t = kofGgufFindTensor(m, name)
     if (t == null) { return }
     var f = File(path)
-    var tmp = new Long[256]
     if (t.quant == 12) {
         var blocksPerRow = kdim / 256
+        var bytes = f.readRange(kofGgufTensorAbsOff(m, t) + rowStart * blocksPerRow * 144, nRows * blocksPerRow * 144)
+        if (bytes == null) { return }
+        var need = nRows * blocksPerRow * 144
+        var cp = 0
+        while (cp < need) {
+            win[cp] = bytes[cp]
+            cp = cp + 1
+        }
         var r = 0
         while (r < nRows) {
-            var block0 = (rowStart + r) * blocksPerRow
-            var bytes = f.readRange(kofGgufTensorAbsOff(m, t) + block0 * 144, blocksPerRow * 144)
-            if (bytes == null) { return }
             var k = 0
             while (k < blocksPerRow) {
-                kofGgufQ4KDecodeBlockN(bytes, k * 144, tmp)
+                kofGgufQ4KDecodeBlockN(win, (r * blocksPerRow + k) * 144, tmp)
                 var e = 0
                 while (e < 256) {
                     out[r * kdim + k * 256 + e] = tmp[e]
@@ -732,18 +736,24 @@ void kofGgufDecodeRowsNTo(String path, KofGgufBinModel m, String name, Int rowSt
             }
             r = r + 1
         }
+        time.collect()
         return
     }
     if (t.quant == 14) {
         var blocksPerRow2 = kdim / 256
+        var bytes2 = f.readRange(kofGgufTensorAbsOff(m, t) + rowStart * blocksPerRow2 * 210, nRows * blocksPerRow2 * 210)
+        if (bytes2 == null) { return }
+        var need2 = nRows * blocksPerRow2 * 210
+        var cp2 = 0
+        while (cp2 < need2) {
+            win[cp2] = bytes2[cp2]
+            cp2 = cp2 + 1
+        }
         var r2 = 0
         while (r2 < nRows) {
-            var block02 = (rowStart + r2) * blocksPerRow2
-            var bytes2 = f.readRange(kofGgufTensorAbsOff(m, t) + block02 * 210, blocksPerRow2 * 210)
-            if (bytes2 == null) { return }
             var k2 = 0
             while (k2 < blocksPerRow2) {
-                kofGgufQ6KDecodeBlockN(bytes2, k2 * 210, tmp)
+                kofGgufQ6KDecodeBlockN(win, (r2 * blocksPerRow2 + k2) * 210, tmp)
                 var e2 = 0
                 while (e2 < 256) {
                     out[r2 * kdim + k2 * 256 + e2] = tmp[e2]
@@ -753,20 +763,23 @@ void kofGgufDecodeRowsNTo(String path, KofGgufBinModel m, String name, Int rowSt
             }
             r2 = r2 + 1
         }
+        time.collect()
         return
     }
     if (t.quant == 1) {
+        var bytes3 = f.readRange(kofGgufTensorAbsOff(m, t) + rowStart * kdim * 2, nRows * kdim * 2)
+        if (bytes3 == null) { return }
         var r3 = 0
         while (r3 < nRows) {
-            var bytes3 = f.readRange(kofGgufTensorAbsOff(m, t) + (rowStart + r3) * kdim * 2, kdim * 2)
-            if (bytes3 == null) { return }
             var e3 = 0
             while (e3 < kdim) {
-                out[r3 * kdim + e3] = f16ToNano(bytes3[e3 * 2] + bytes3[e3 * 2 + 1] * 256)
+                var bo = (r3 * kdim + e3) * 2
+                out[r3 * kdim + e3] = f16ToNano(bytes3[bo] + bytes3[bo + 1] * 256)
                 e3 = e3 + 1
             }
             r3 = r3 + 1
         }
+        time.collect()
     }
 }
 
@@ -832,6 +845,7 @@ kofGgufDecodeRowsN(String path, KofGgufBinModel m, String name, Int rowStart,
             }
             r3 = r3 + 1
         }
+        time.collect()
     }
     return out
 }
