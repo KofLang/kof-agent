@@ -1,0 +1,40 @@
+dbg(String s) {
+    var f = File("/tmp/opencode/q1dbg.log")
+    if (f.exists()) { f.appendText(s + "\n") } else { f.writeText(s + "\n") }
+}
+main() {
+    var m = KflModel()
+    m.init(8192)
+    var e = 0
+    while (e < 250) {
+        kflTrainStep(m, "crie um site agora", KFL_EXEC())
+        kflTrainStep(m, "o que voce quer dizer exatamente", KFL_ASK())
+        e = e + 1
+    }
+    var p = "/tmp/opencode/mini5.kflq"
+    var ok = kflQuantSaveDbg(p, m)
+    dbg("savedbg=" + ok)
+    var q = kflQuantLoad(p)
+    dbg("ready=" + q.ready() + " nfeat=" + q.nfeat)
+    if (q.ready()) {
+        dbg("p1 " + kflPredict(m, "crie um site agora") + "/" + kflPredict(q, "crie um site agora"))
+        var idxp = listOf<Int>()
+        kflFeatures("crie um site agora", idxp)
+        var cc = 0
+        var line = ""
+        while (cc < 3) {
+            line = line + kflScore(m, idxp, cc) + "|" + kflScore(q, idxp, cc) + "  "
+            cc = cc + 1
+        }
+        dbg("scores m|q: " + line)
+        dbg("bias " + m.bias[0] + "," + m.bias[1] + "," + m.bias[2] + " q " + q.bias[0] + "," + q.bias[1] + "," + q.bias[2])
+        dbg("p2 " + kflPredict(m, "o que voce quer dizer exatamente") + "/" + kflPredict(q, "o que voce quer dizer exatamente"))
+        var i = 0
+        var diff = 0
+        while (i < 24576) {
+            if (m.w[i] != q.w[i]) { diff = diff + 1 }
+            i = i + 1
+        }
+        dbg("diff-weights=" + diff + " m.w0=" + m.w[0] + " q.w0=" + q.w[0])
+    }
+}

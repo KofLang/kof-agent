@@ -1,0 +1,31 @@
+dbg(String s) {
+    var f = File("/tmp/opencode/q2dbg.log")
+    if (f.exists()) { f.appendText(s + "\n") } else { f.writeText(s + "\n") }
+}
+main() {
+    var a = new Int[4]
+    a[0] = 75
+    a[1] = 70
+    a[2] = 76
+    a[3] = 81
+    var f1 = File("/tmp/opencode/t4.bin")
+    if (f1.exists()) { f1.delete() }
+    dbg("tiny4=" + f1.writeBytes(a))
+    var b = new Int[24633]
+    var i = 0
+    while (i < 24633) {
+        b[i] = i & 255
+        i = i + 1
+    }
+    var f2 = File("/tmp/opencode/t24.bin")
+    if (f2.exists()) { f2.delete() }
+    dbg("b24k=" + f2.writeBytes(b))
+    var m = KflModel()
+    m.init(16)
+    var p = "/tmp/opencode/mini.kflq"
+    var f3 = File(p)
+    if (f3.exists()) { f3.delete() }
+    dbg("save16=" + kflQuantSave(p, m))
+    var f4 = File(p)
+    dbg("len=" + f4.readRange(0, 60).length)
+}

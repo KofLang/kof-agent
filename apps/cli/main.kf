@@ -331,6 +331,27 @@ cmdQuant(CliOpts o): Int {
         println("quant: use --out <in.gguf>")
         return 1
     }
+    if (src.endsWith(".w") || dst.endsWith(".kflq")) {
+        println("quantizando classificador " + src + " -> " + dst + " (KFLQ int8)...")
+        var mk = kflLoadModel(src)
+        if (!mk.ready()) {
+            println("kflq: sem pesos em " + src + " — rode train antes")
+            return 2
+        }
+        if (!kflQuantSave(dst, mk)) {
+            println("kflq: falha ao gravar " + dst)
+            return 2
+        }
+        var mq = kflQuantLoad(dst)
+        if (!mq.ready()) {
+            println("kflq: roundtrip falhou (CRC/corrompido)")
+            return 2
+        }
+        var suite = joinPath(o.root, "eval/ptbr-suite-v4.jsonl")
+        var agree = kflqAgreement(mk, mq, suite)
+        println("kflq: ok — concordancia de previsao na suite = " + agree + "/1000")
+        return 0
+    }
     println("quantizando " + src + " -> " + dst + " (Q4_K em Kof)...")
     println(kofqGguf(src, dst))
     return 0

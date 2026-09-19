@@ -1,0 +1,99 @@
+dbg(String s) {
+    var f = File("/tmp/opencode/q3dbg.log")
+    if (f.exists()) { f.appendText(s + "\n") } else { f.writeText(s + "\n") }
+}
+main() {
+    var m = KflModel()
+    m.init(8192)
+    var e = 0
+    while (e < 250) {
+        kflTrainStep(m, "crie um site agora", KFL_EXEC())
+        kflTrainStep(m, "o que voce quer dizer exatamente", KFL_ASK())
+        e = e + 1
+    }
+    var n = m.w.length
+    var amax0: Long = 0
+    var i = 0
+    while (i < n) {
+        var a = m.w[i]
+        if (a < 0) { a = 0 - a }
+        var cls = i - (i / 3) * 3
+        if (cls == 0) { if (a > amax0) { amax0 = a } }
+        i = i + 1
+    }
+    dbg("amax0=" + amax0)
+    var s0 = (amax0 + 126) / 127
+    dbg("s0=" + s0)
+    var w0 = m.w[0]
+    var q0 = (2 * w0 + s0) / (2 * s0)
+    dbg("w0=" + w0 + " q0=" + q0)
+    var s1 = s0
+    var s2 = s0
+    var minv: Long = 999999
+    var maxv: Long = 0 - 999999
+    i = 0
+    while (i < n) {
+        var cls2 = i - (i / 3) * 3
+        var sc = s0
+        if (cls2 == 1) { sc = s1 }
+        if (cls2 == 2) { sc = s2 }
+        var wv = m.w[i]
+        var qq = kflqQuantizeLong(wv, sc)
+        if (qq < 0) { qq = qq + 256 }
+        if (qq < minv) { minv = qq }
+        if (qq > maxv) { maxv = qq }
+        if (qq < 0 || qq > 255) {
+            dbg("OUT i=" + i + " w=" + wv + " q=" + qq)
+        }
+        i = i + 1
+    }
+    dbg("min=" + minv + " max=" + maxv)
+    var b = new Int[57 + n]
+    var k = 0
+    while (k < 57 + n) {
+        b[k] = 0
+        k = k + 1
+    }
+    b[0] = 75
+    b[1] = 70
+    b[2] = 76
+    b[3] = 81
+    b[4] = 1
+    kflqPutI32(b, 5, m.nfeat)
+    kflqPutI64(b, 9, s0)
+    kflqPutI64(b, 17, s1)
+    kflqPutI64(b, 25, s2)
+    kflqPutI64(b, 33, m.bias[0])
+    kflqPutI64(b, 41, m.bias[1])
+    kflqPutI64(b, 49, m.bias[2])
+    var hmin: Long = 999999
+    var hmax: Long = 0 - 999999
+    k = 0
+    while (k < 57) {
+        if (b[k] < hmin) { hmin = b[k] }
+        if (b[k] > hmax) { hmax = b[k] }
+        if (b[k] < 0 || b[k] > 255) { dbg("HDR-OUT k=" + k + " v=" + b[k]) }
+        k = k + 1
+    }
+    dbg("hdr min=" + hmin + " max=" + hmax)
+    var ff = File("/tmp/opencode/tq3.bin")
+    if (ff.exists()) { ff.delete() }
+    dbg("writeBytes2=" + ff.writeBytes(b))
+    var g1 = File("/tmp/opencode/tq3.kflq")
+    if (g1.exists()) { g1.delete() }
+    dbg("kflq=" + g1.writeBytes(b))
+    var g2 = File("/tmp/opencode/mini.kflq")
+    if (g2.exists()) { g2.delete() }
+    dbg("mini.kflq=" + g2.writeBytes(b))
+    var g3 = File("/tmp/opencode/mini2.kflq")
+    if (g3.exists()) { g3.delete() }
+    dbg("mini2.kflq=" + g3.writeBytes(b))
+    var crc = kflqCrc(b, 57, n)
+    dbg("crc=" + crc)
+    kflqPutI32(b, 53, crc)
+    for (var zz = 0; zz < 1; zz = zz + 1) {
+    }
+    var g4 = File("mini.kflq")
+    if (g4.exists()) { g4.delete() }
+    dbg("cwd-mini.kflq=" + g4.writeBytes(b))
+}

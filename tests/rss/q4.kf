@@ -1,0 +1,27 @@
+dbg(String s) {
+    var f = File("/tmp/opencode/q4dbg.log")
+    if (f.exists()) { f.appendText(s + "\n") } else { f.writeText(s + "\n") }
+}
+main() {
+    var w: Long = 251168
+    var sc: Long = 1978
+    var q = (2 * w + sc) / (2 * sc)
+    dbg("q=" + q)
+    var arr = new Int[8]
+    var i = 0
+    while (i < 8) { arr[i] = 0; i = i + 1 }
+    arr[3] = q
+    dbg("store-long=" + arr[3])
+    var arr2 = new Int[8]
+    i = 0
+    while (i < 8) { arr2[i] = 0; i = i + 1 }
+    var qq: Int = 0 - 0
+    qq = qq + 1
+    arr2[3] = qq + 255
+    dbg("arr2=" + arr2[3])
+    var f = File("/tmp/opencode/tq4.bin")
+    if (f.exists()) { f.delete() }
+    dbg("wb=" + f.writeBytes(arr))
+    var back = f.readRange(0, 8)
+    dbg("back3=" + back[3])
+}

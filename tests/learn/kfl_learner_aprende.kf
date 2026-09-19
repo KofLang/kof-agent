@@ -96,3 +96,42 @@ kflLoaded(): KflModel {
 
 main() {
 }
+
+test "KFLQ roundtrip int8 preserva previsoes" {
+    var m = KflModel()
+    m.init(KFL_NFEAT())
+    kflMini(m)
+    var p = joinPath(kflTmp(), "mini.kflq")
+    assert(kflQuantSave(p, m))
+    var q = kflQuantLoad(p)
+    assert(q.ready())
+    assert(q.nfeat == m.nfeat)
+    var probes = listOf<String>()
+    probes.add("crie um site agora")
+    probes.add("gere uma pagina nova")
+    probes.add("o que voce quer dizer exatamente")
+    probes.add("poderia esclarecer o pedido")
+    probes.add("rode os testes do projeto")
+    probes.add("explique o diagnostico")
+    var i = 0
+    while (i < probes.size()) {
+        assert(kflPredict(m, probes.get(i)) == kflPredict(q, probes.get(i)))
+        i = i + 1
+    }
+    var raw = File(p).readRange(0, 61)
+    assert(raw[0] == 75 && raw[1] == 70 && raw[2] == 76 && raw[3] == 81)
+}
+
+test "KFLQ rejeita arquivo corrompido" {
+    var m = KflModel()
+    m.init(KFL_NFEAT())
+    kflMini(m)
+    var p = joinPath(kflTmp(), "corrupt.kflq")
+    assert(kflQuantSave(p, m))
+    var bytes = File(p).readRange(0, 61 + KFL_NFEAT() * 3)
+    bytes[60] = (bytes[60] + 7) - ((bytes[60] + 7) / 256) * 256
+    var f = File(p)
+    assert(f.writeBytes(bytes))
+    var bad = kflQuantLoad(p)
+    assert(!bad.ready())
+}

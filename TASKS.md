@@ -49,4 +49,5 @@
 - [ ] quantizar TinyLlama-F16.gguf (2.2GB) → koflm-q4.gguf com o quantizador Kof e validar no forward (após probe verde)
 - [ ] nºs finais de acc/chute/ask no suite 620 (treino n-gram 12 epochs em andamento; meta §5.2: acc≥95% chute≤5%; reportar o que vier, sem maquiar)
 - [x] E8a: forward REAL do TinyLlama-1.1B-Q4_K_M em Kof nativo puro (pesos residentes Int32, 100s/token CPU, tokens 233/262 deterministicos byte-a-byte entre jars 0.4.0/0.4.6; sem GPU, sem C, sem Python)
+- [x] E8a2: retreino do classificador (15 epochs/7665 passos) + quantizacao KFLQ int8 (24.6KB, concordancia 1000/1000 suite 620) — modelos em models/koflm/, CLI `kof-agent quant`
 - [ ] E8b: backward/LoRA do TinyLlama em Kof para o executador gerar código de verdade (GGUFs em ~/Downloads/kof-data/models; sha256 divergente do registrado — verificar no load)

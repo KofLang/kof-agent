@@ -340,3 +340,301 @@ kflHarvest(String root, String text, Int pred, Long confMilli) {
     }
     f.appendText(line + "\n")
 }
+
+// ---- KFLQ v1: pesos int8 por classe (quantizacao simetrica por amax de classe).
+// Layout: 'KFLQ'(4) ver(1) nfeat i32(4) scales 3xi64(24) bias 3xi64(24) crc i32(4)
+//         pesos (nfeat*3) int8 LE-ish. ~24.6KB p/ 8192 features.
+
+kflqPutI32(Int[] b, Int at, Int v) {
+    b[at] = v & 255
+    b[at + 1] = (v / 256) & 255
+    b[at + 2] = (v / 65536) & 255
+    b[at + 3] = (v / 16777216) & 255
+}
+
+kflqGetI32(Int[] b, Int at): Int {
+    return b[at] + b[at + 1] * 256 + b[at + 2] * 65536 + b[at + 3] * 16777216
+}
+
+kflqPutI64(Int[] b, Int at, Long v) {
+    var x = v
+    var i = 0
+    while (i < 8) {
+        var by = x - (x / 256) * 256
+        if (by < 0) {
+            by = by + 256
+        }
+        b[at + i] = by
+        x = (x - by) / 256
+        i = i + 1
+    }
+}
+
+kflqGetI64(Int[] b, Int at): Long {
+    var acc: Long = b[at + 7]
+    if (acc > 127) {
+        acc = acc - 256
+    }
+    var i = 6
+    while (i >= 0) {
+        acc = acc * 256 + b[at + i]
+        i = i - 1
+    }
+    return acc
+}
+
+kflqCrc(Int[] b, Int from, Int n): Int {
+    var h = 0 - 2128831035
+    var i = 0
+    while (i < n) {
+        h = (h * 31 + b[from + i]) & 2147483647
+        i = i + 1
+    }
+    return h
+}
+
+kflqQuantizeLong(Long w, Long scale): Long {
+    var s = scale
+    if (s <= 0) {
+        return 0
+    }
+    if (w >= 0) {
+        var q = (2 * w + s) / (2 * s)
+        if (q > 127) {
+            q = 127
+        }
+        return q
+    }
+    var nq = (0 - (2 * (0 - w) + s)) / (2 * s)
+    if (nq < 0 - 128) {
+        nq = 0 - 128
+    }
+    return nq
+}
+
+kflQuantSaveDbg(String path, KflModel m): Int {
+    var n = m.w.length
+    var amax0: Long = 0
+    var amax1: Long = 0
+    var amax2: Long = 0
+    var i = 0
+    while (i < n) {
+        var a = m.w[i]
+        if (a < 0) {
+            a = 0 - a
+        }
+        var cls = i - (i / 3) * 3
+        if (cls == 0) {
+            if (a > amax0) { amax0 = a }
+        } else if (cls == 1) {
+            if (a > amax1) { amax1 = a }
+        } else {
+            if (a > amax2) { amax2 = a }
+        }
+        i = i + 1
+    }
+    var s0 = (amax0 + 126) / 127
+    var s1 = (amax1 + 126) / 127
+    var s2 = (amax2 + 126) / 127
+    if (s0 <= 0) { s0 = 1 }
+    if (s1 <= 0) { s1 = 1 }
+    if (s2 <= 0) { s2 = 1 }
+    var hdr = 61
+    var b = new Int[hdr + n]
+    b[0] = 75
+    b[1] = 70
+    b[2] = 76
+    b[3] = 81
+    b[4] = 1
+    kflqPutI32(b, 5, m.nfeat)
+    kflqPutI64(b, 9, s0)
+    kflqPutI64(b, 17, s1)
+    kflqPutI64(b, 25, s2)
+    kflqPutI64(b, 33, m.bias[0])
+    kflqPutI64(b, 41, m.bias[1])
+    kflqPutI64(b, 49, m.bias[2])
+    var bad = 0
+    i = 0
+    while (i < 61) {
+        if (b[i] < 0 || b[i] > 255) { bad = i + 1000 }
+        i = i + 1
+    }
+    if (bad != 0) { return bad }
+    i = 0
+    while (i < n) {
+        var cls2 = i - (i / 3) * 3
+        var sc = s0
+        if (cls2 == 1) {
+            sc = s1
+        } else if (cls2 == 2) {
+            sc = s2
+        }
+        var q = kflqQuantizeLong(m.w[i], sc)
+        if (q < 0) {
+            q = q + 256
+        }
+        if (q < 0 || q > 255) {
+            return 2000 + (i - (i / 1000) * 1000)
+        }
+        b[hdr + i] = q
+        i = i + 1
+    }
+    var crc = kflqCrc(b, hdr, n)
+    kflqPutI32(b, 57, crc)
+    var f = File(path)
+    if (!f.writeBytes(b)) {
+        return 9
+    }
+    return 0
+}
+
+kflQuantSave(String path, KflModel m): Bool {
+    var n = m.w.length
+    var amax0: Long = 0
+    var amax1: Long = 0
+    var amax2: Long = 0
+    var i = 0
+    while (i < n) {
+        var a = m.w[i]
+        if (a < 0) {
+            a = 0 - a
+        }
+        var cls = i - (i / 3) * 3
+        if (cls == 0) {
+            if (a > amax0) { amax0 = a }
+        } else if (cls == 1) {
+            if (a > amax1) { amax1 = a }
+        } else {
+            if (a > amax2) { amax2 = a }
+        }
+        i = i + 1
+    }
+    var s0 = (amax0 + 126) / 127
+    var s1 = (amax1 + 126) / 127
+    var s2 = (amax2 + 126) / 127
+    if (s0 <= 0) { s0 = 1 }
+    if (s1 <= 0) { s1 = 1 }
+    if (s2 <= 0) { s2 = 1 }
+    var hdr = 61
+    var b = new Int[hdr + n]
+    b[0] = 75
+    b[1] = 70
+    b[2] = 76
+    b[3] = 81
+    b[4] = 1
+    kflqPutI32(b, 5, m.nfeat)
+    kflqPutI64(b, 9, s0)
+    kflqPutI64(b, 17, s1)
+    kflqPutI64(b, 25, s2)
+    kflqPutI64(b, 33, m.bias[0])
+    kflqPutI64(b, 41, m.bias[1])
+    kflqPutI64(b, 49, m.bias[2])
+    i = 0
+    while (i < n) {
+        var cls2 = i - (i / 3) * 3
+        var sc = s0
+        if (cls2 == 1) {
+            sc = s1
+        } else if (cls2 == 2) {
+            sc = s2
+        }
+        var q = kflqQuantizeLong(m.w[i], sc)
+        if (q < 0) {
+            q = q + 256
+        }
+        b[hdr + i] = q
+        i = i + 1
+    }
+    var crc = kflqCrc(b, hdr, n)
+    kflqPutI32(b, 57, crc)
+    var f = File(path)
+    return f.writeBytes(b)
+}
+
+kflQuantLoad(String path): KflModel {
+    var m = KflModel()
+    var f = File(path)
+    if (!f.exists() || !f.isFile()) {
+        return m
+    }
+    var hb = f.readRange(0, 61)
+    if (hb.length < 61 || hb[0] != 75 || hb[1] != 70 || hb[2] != 76 || hb[3] != 81) {
+        return m
+    }
+    var nfeat = kflqGetI32(hb, 5)
+    if (nfeat <= 0 || nfeat > 16777216) {
+        return m
+    }
+    m.init(nfeat)
+    var s0 = kflqGetI64(hb, 9)
+    var s1 = kflqGetI64(hb, 17)
+    var s2 = kflqGetI64(hb, 25)
+    m.bias[0] = kflqGetI64(hb, 33)
+    m.bias[1] = kflqGetI64(hb, 41)
+    m.bias[2] = kflqGetI64(hb, 49)
+    var n = nfeat * 3
+    var wb = f.readRange(61, n)
+    if (wb.length < n) {
+        return KofLmEmptyKfl()
+    }
+    if (kflqCrc(wb, 0, n) != kflqGetI32(hb, 57)) {
+        return KofLmEmptyKfl()
+    }
+    var i = 0
+    while (i < n) {
+        var q = wb[i]
+        if (q > 127) {
+            q = q - 256
+        }
+        var cls = i - (i / 3) * 3
+        var sc = s0
+        if (cls == 1) {
+            sc = s1
+        } else if (cls == 2) {
+            sc = s2
+        }
+        m.w[i] = q * sc
+        i = i + 1
+    }
+    return m
+}
+
+KofLmEmptyKfl(): KflModel {
+    return KflModel()
+}
+
+// concordancia de previsao (por mil) entre dois pesos sobre o mesmo corpus
+kflqAgreement(KflModel a, KflModel b, String path): Long {
+    var f = File(path)
+    if (!f.exists()) {
+        return 0
+    }
+    var txt = f.readText()
+    var pos = 0
+    var n = 0
+    var same = 0
+    while (pos < txt.length) {
+        var ln = ""
+        var nl = txt.indexOf("\n", pos)
+        if (nl < 0) {
+            ln = txt.substring(pos, txt.length)
+            pos = txt.length
+        } else {
+            ln = txt.substring(pos, nl)
+            pos = nl + 1
+        }
+        if (ln.length > 12) {
+            var ins = kflJsonField(ln, "instruction")
+            if (ins.length > 0) {
+                n = n + 1
+                if (kflPredict(a, ins) == kflPredict(b, ins)) {
+                    same = same + 1
+                }
+            }
+        }
+    }
+    if (n == 0) {
+        return 0
+    }
+    return same * 1000 / n
+}
