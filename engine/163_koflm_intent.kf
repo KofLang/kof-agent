@@ -55,10 +55,11 @@ koflmIntent(String modelPath, String prompt): String {
         n = 256
     }
     var cache = listOf<List<KofLmKv>>()
+    var sc = kofLmScratchNew(cfg)
     var logits = new Long[cfg.vocab]
     var i = 0
     while (i < n) {
-        logits = kofLmForward(modelPath, m, cfg, ids[i], i, cache)
+        logits = kofLmForwardInt(modelPath, m, cfg, ids[i], i, cache, sc)
         i = i + 1
     }
     return koflmPickLabel(logits, koflmLabelId(tv.tokens, tv.scores, "EXECUTE"), koflmLabelId(tv.tokens, tv.scores, "ASK"), koflmLabelId(tv.tokens, tv.scores, "REFUSE"))

@@ -706,6 +706,70 @@ void kofGgufQ6KDecodeBlockN(Int[] b, Int off, Long[] out) {
     }
 }
 
+// mesma gramatica de RowsN, mas ESCREVE num out[] existente (scratch reusado)
+void kofGgufDecodeRowsNTo(String path, KofGgufBinModel m, String name, Int rowStart,
+                          Int nRows, Int kdim, Long[] out) {
+    var t = kofGgufFindTensor(m, name)
+    if (t == null) { return }
+    var f = File(path)
+    var tmp = new Long[256]
+    if (t.quant == 12) {
+        var blocksPerRow = kdim / 256
+        var r = 0
+        while (r < nRows) {
+            var block0 = (rowStart + r) * blocksPerRow
+            var bytes = f.readRange(kofGgufTensorAbsOff(m, t) + block0 * 144, blocksPerRow * 144)
+            if (bytes == null) { return }
+            var k = 0
+            while (k < blocksPerRow) {
+                kofGgufQ4KDecodeBlockN(bytes, k * 144, tmp)
+                var e = 0
+                while (e < 256) {
+                    out[r * kdim + k * 256 + e] = tmp[e]
+                    e = e + 1
+                }
+                k = k + 1
+            }
+            r = r + 1
+        }
+        return
+    }
+    if (t.quant == 14) {
+        var blocksPerRow2 = kdim / 256
+        var r2 = 0
+        while (r2 < nRows) {
+            var block02 = (rowStart + r2) * blocksPerRow2
+            var bytes2 = f.readRange(kofGgufTensorAbsOff(m, t) + block02 * 210, blocksPerRow2 * 210)
+            if (bytes2 == null) { return }
+            var k2 = 0
+            while (k2 < blocksPerRow2) {
+                kofGgufQ6KDecodeBlockN(bytes2, k2 * 210, tmp)
+                var e2 = 0
+                while (e2 < 256) {
+                    out[r2 * kdim + k2 * 256 + e2] = tmp[e2]
+                    e2 = e2 + 1
+                }
+                k2 = k2 + 1
+            }
+            r2 = r2 + 1
+        }
+        return
+    }
+    if (t.quant == 1) {
+        var r3 = 0
+        while (r3 < nRows) {
+            var bytes3 = f.readRange(kofGgufTensorAbsOff(m, t) + (rowStart + r3) * kdim * 2, kdim * 2)
+            if (bytes3 == null) { return }
+            var e3 = 0
+            while (e3 < kdim) {
+                out[r3 * kdim + e3] = f16ToNano(bytes3[e3 * 2] + bytes3[e3 * 2 + 1] * 256)
+                e3 = e3 + 1
+            }
+            r3 = r3 + 1
+        }
+    }
+}
+
 // nRows linhas de um tensor quantizado → Long[] NANO (novo; p/ matvec)
 kofGgufDecodeRowsN(String path, KofGgufBinModel m, String name, Int rowStart,
               Int nRows, Int kdim): Long[] {
@@ -755,6 +819,19 @@ kofGgufDecodeRowsN(String path, KofGgufBinModel m, String name, Int rowStart,
             r = r + 1
         }
         return out
+    }
+    if (t.quant == 1) {
+        var r3 = 0
+        while (r3 < nRows) {
+            var bytes3 = f.readRange(kofGgufTensorAbsOff(m, t) + (rowStart + r3) * kdim * 2, kdim * 2)
+            if (bytes3 == null) { return out }
+            var e3 = 0
+            while (e3 < kdim) {
+                out[r3 * kdim + e3] = f16ToNano(bytes3[e3 * 2] + bytes3[e3 * 2 + 1] * 256)
+                e3 = e3 + 1
+            }
+            r3 = r3 + 1
+        }
     }
     return out
 }

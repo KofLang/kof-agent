@@ -127,6 +127,45 @@ kofLmMatvecId(Int wId, String path, KofGgufBinModel gg, String tensor,
     return kofLmMatvec(W2, x, nRows, kdim, div)
 }
 
+// CPU split PURO (sem qualquer dispatch gpu.*) — usado pelo caminho scratch
+kofLmMatvecCpu(Long[] W, Long[] x, Int nRows, Int kdim, Long div): Long[] {
+    var y = new Long[nRows]
+    var r = 0
+    while (r < nRows) {
+        var off = r * kdim
+        var accA: Long = 0
+        var accB: Long = 0
+        var accC: Long = 0
+        var accD: Long = 0
+        var c = 0
+        while (c < kdim) {
+            var wv = W[off + c]
+            var xv = x[c]
+            var wh = wv / 1000
+            var wl = wv % 1000
+            var xh = xv / 1000000
+            var xl = xv % 1000000
+            accA = accA + wh * xh
+            accB = accB + wh * xl
+            accC = accC + wl * xh
+            accD = accD + wl * xl
+            c = c + 1
+        }
+        if (div == 1000000000) {
+            var remT = (accB % 1000000) * 1000 + (accC % 1000) * 1000000 + accD
+            y[r] = accA + accB / 1000000 + accC / 1000 + remT / 1000000000
+        } else if (div == 1000000) {
+            var remT = (accB % 1000) * 1000000 + accD
+            y[r] = accA * 1000 + accB / 1000 + accC + remT / 1000000
+        } else {
+            var remT = (accA % 1000) * 1000000000 + (accB % 1000000000) * 1000 + (accC % 1000000) * 1000000 + accD
+            y[r] = accA / 1000 + accB / 1000000000 + accC / 1000000 + remT / 1000000000000
+        }
+        r = r + 1
+    }
+    return y
+}
+
 kofLmMatvecIdOld(Int wId, Long[] W, Long[] x, Int nRows, Int kdim, Long div): Long[] {
     var y = new Long[nRows]
     // 1) dispatch FASE B (gpu.available() da lib32 + set_shape/load_w)
@@ -582,8 +621,55 @@ kofLmWarmWeights(String path, KofGgufBinModel m, KofLmCfg cfg): Int {
 
 // ── forward completo de 1 token (com cache) ─────────────────────────────
 // Retorna logits[vocab] micro.
+class KofLmScratch {
+    Long[] w = new Long[0]
+}
+
+// maior matriz do modelo = ffn x embd (gate/up/down); lm-head entra em chunks
+kofLmScratchNew(KofLmCfg cfg): KofLmScratch {
+    var sc = KofLmScratch()
+    sc.w = new Long[cfg.ffn * cfg.embd]
+    return sc
+}
+
+// matvec CPU sem alocar W: decodifica em chunks DE DENTRO DO SCRATCH e acumula
+kofLmMatvecSc(KofLmScratch sc, String path, KofGgufBinModel gg, String tensor,
+              Long[] x, Int nRows, Int kdim, Long div, Bool microDiv): Long[] {
+    var y = new Long[nRows]
+    var cap = sc.w.length / kdim
+    if (cap < 1) { cap = 1 }
+    var off = 0
+    while (off < nRows) {
+        var n = cap
+        if (off + n > nRows) {
+            n = nRows - off
+        }
+        kofGgufDecodeRowsNTo(path, gg, tensor, off, n, kdim, sc.w)
+        if (microDiv) {
+            var iz = 0
+            while (iz < n * kdim) {
+                sc.w[iz] = sc.w[iz] / 1000
+                iz = iz + 1
+            }
+        }
+        var part = kofLmMatvecCpu(sc.w, x, n, kdim, div)
+        var j = 0
+        while (j < n) {
+            y[off + j] = part[j]
+            j = j + 1
+        }
+        off = off + n
+    }
+    return y
+}
+
 kofLmForward(String path, KofGgufBinModel m, KofLmCfg cfg, Int token, Int pos,
             List<List<KofLmKv>> kvCache): Long[] {
+    return kofLmForwardInt(path, m, cfg, token, pos, kvCache, kofLmScratchNew(cfg))
+}
+
+kofLmForwardInt(String path, KofGgufBinModel m, KofLmCfg cfg, Int token, Int pos,
+            List<List<KofLmKv>> kvCache, KofLmScratch sc): Long[] {
     // estados em NANO (Long): xs = dequant direto (já é nano)
     var xs = kofGgufDecodeRowsN(path, m, "token_embd.weight", token, 1, cfg.embd)
     var i = 0
@@ -599,9 +685,9 @@ kofLmForward(String path, KofGgufBinModel m, KofLmCfg cfg, Int token, Int pos,
         }
         var h = kofLmRmsNorm(xs, normW, cfg.embd, cfg.eps)
         // q/k/v
-        var q = kofLmMatvecId(7 * l, path, m, "blk." + l + ".attn_q.weight", h, cfg.embd, cfg.embd, 1000000000)
-        var k = kofLmMatvecId(7 * l + 1, path, m, "blk." + l + ".attn_k.weight", h, cfg.kvHeads * cfg.headDim, cfg.embd, 1000000000)
-        var v = kofLmMatvecId(7 * l + 2, path, m, "blk." + l + ".attn_v.weight", h, cfg.kvHeads * cfg.headDim, cfg.embd, 1000000000)
+        var q = kofLmMatvecSc(sc, path, m, "blk." + l + ".attn_q.weight", h, cfg.embd, cfg.embd, 1000000000, false)
+        var k = kofLmMatvecSc(sc, path, m, "blk." + l + ".attn_k.weight", h, cfg.kvHeads * cfg.headDim, cfg.embd, 1000000000, false)
+        var v = kofLmMatvecSc(sc, path, m, "blk." + l + ".attn_v.weight", h, cfg.kvHeads * cfg.headDim, cfg.embd, 1000000000, false)
         // RoPE em q e k (pos atual)
         var hd = 0
         while (hd < cfg.heads) {
@@ -638,7 +724,7 @@ kofLmForward(String path, KofGgufBinModel m, KofLmCfg cfg, Int token, Int pos,
         var attn = kofLmAttention(q, kcache, vcache, nPos, cfg.heads,
                                  cfg.kvHeads, cfg.headDim)
         // attn_output
-        var attno = kofLmMatvecId(7 * l + 3, path, m, "blk." + l + ".attn_output.weight", attn, cfg.embd, cfg.embd, 1000000000)
+        var attno = kofLmMatvecSc(sc, path, m, "blk." + l + ".attn_output.weight", attn, cfg.embd, cfg.embd, 1000000000, false)
         i = 0
         while (i < cfg.embd) {
             xs[i] = xs[i] + attno[i]
@@ -652,14 +738,14 @@ kofLmForward(String path, KofGgufBinModel m, KofLmCfg cfg, Int token, Int pos,
             i = i + 1
         }
         var h2 = kofLmRmsNorm(xs, normW, cfg.embd, cfg.eps)
-        var g = kofLmMatvecId(7 * l + 4, path, m, "blk." + l + ".ffn_gate.weight", h2, cfg.ffn, cfg.embd, 1000000000)
-        var u = kofLmMatvecId(7 * l + 5, path, m, "blk." + l + ".ffn_up.weight", h2, cfg.ffn, cfg.embd, 1000000000)
+        var g = kofLmMatvecSc(sc, path, m, "blk." + l + ".ffn_gate.weight", h2, cfg.ffn, cfg.embd, 1000000000, false)
+        var u = kofLmMatvecSc(sc, path, m, "blk." + l + ".ffn_up.weight", h2, cfg.ffn, cfg.embd, 1000000000, false)
         var act = kofLmSwiglu(g, u, cfg.ffn)
         // W em MICRO (w_n/1000) × act NANO: acc = w×act real ×1e15;
         // d NANO = acc/1e6 (exato p/ o cancelamento do outlier).
         // Residente: o warm já subiu o dW DIVIDIDO (mvRun ignora o local).
         // O /1000 local abaixo serve so p/ o fallback CPU (split assume micro).
-        var d = kofLmMatvecId(7 * l + 6, path, m, "blk." + l + ".ffn_down.weight", act, cfg.embd, cfg.ffn, 1000000)
+        var d = kofLmMatvecSc(sc, path, m, "blk." + l + ".ffn_down.weight", act, cfg.embd, cfg.ffn, 1000000, true)
         var i2 = 0
         while (i2 < cfg.embd) {
             xs[i2] = xs[i2] + d[i2]
@@ -675,7 +761,7 @@ kofLmForward(String path, KofGgufBinModel m, KofLmCfg cfg, Int token, Int pos,
     }
     var hf = kofLmRmsNorm(xs, normW, cfg.embd, cfg.eps)
     // lm_head: output.weight Q6_K (2048, 32000) — 32000 linhas de 2048
-    var logits = kofLmMatvecId(190, path, m, "output.weight", hf, cfg.vocab, cfg.embd, 1000000000000)
+    var logits = kofLmMatvecSc(sc, path, m, "output.weight", hf, cfg.vocab, cfg.embd, 1000000000000, false)
     return logits
 }
 

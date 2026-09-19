@@ -1,0 +1,27 @@
+step(String label) { println("== " + label) }
+
+main() {
+    var path = "/home/mel/Downloads/kof-data/models/TinyLlama-Q4_K_M.gguf"
+    var m = kofGgufBinOpen(path)
+    step("open " + m.errorCount)
+    var v = kofLmTokLoadVocab(path, m)
+    step("vocab " + v.tokens.length)
+    var acc = 0
+    var i = 0
+    while (i < v.tokens.length) {
+        acc = acc + v.tokens[i].length()
+        i = i + 1
+    }
+    step("strings ok acc=" + acc)
+    var idx = mapOf<String, Int>()
+    i = 0
+    while (i < 32000) {
+        idx.put(v.tokens[i], i)
+        i = i + 1
+    }
+    step("map put 32k ok")
+    var g = idx.getOrDefault("the", 0 - 1)
+    step("map get ok g=" + g)
+    var ids = kofLmTokEncode(v.tokens, v.scores, "ola mundo", 1)
+    step("encode n=" + ids.length + " id0=" + ids[0])
+}

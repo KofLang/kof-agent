@@ -1,0 +1,32 @@
+rssGb(): Int { return 0 }
+
+stage(String label) {
+    println("T+" + (now() / 1000) + "s " + label)
+}
+
+main() {
+    println("start rss=" + rssGb())
+    var path = "/home/mel/Downloads/kof-data/models/TinyLlama-Q4_K_M.gguf"
+    var m = kofGgufBinOpen(path)
+    println("open err=" + m.errorCount + " rss=" + rssGb())
+    var cfg = kofLmCfgFromKv(m)
+    println("cfg embd=" + cfg.embd + " layers=" + cfg.layers + " ffn=" + cfg.ffn + " vocab=" + cfg.vocab + " rss=" + rssGb())
+    var v = kofLmTokLoadVocab(path, m)
+    println("vocab n=" + v.tokens.length + " rss=" + rssGb())
+    var ids = kofLmTokEncode(v.tokens, v.scores, "ola", 1)
+    println("ids n=" + ids.length + " first=" + ids[0] + " rss=" + rssGb())
+    stage("pos-encode")
+    var sc = kofLmScratchNew(cfg)
+    stage("pos-scratch")
+    var cache = listOf<List<KofLmKv>>()
+    if (ids.length == 0) {
+        println("ENCODE VAZIO — aborta")
+        return
+    }
+    var logits = kofLmForwardInt(path, m, cfg, ids[0], 0, cache, sc)
+    var a = kofLmArgmax(logits, logits.length)
+    println("fwd1 argmax=" + a + " n=" + logits.length + " rss=" + rssGb())
+    stage("pos-fwd1")
+    var logits2 = kofLmForwardInt(path, m, cfg, ids[0], 1, cache, sc)
+    println("fwd2 argmax=" + kofLmArgmax(logits2, logits2.length) + " rss=" + rssGb())
+}
