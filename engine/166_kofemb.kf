@@ -244,14 +244,39 @@ kflLabelLn(String ln): Int {
 //
 // O idx cacheado importa: sem ele, kofLmTokEncode re-construa a tabela de
 // 32k por linha = 12GB de garbage num epoch (OOM medido 15.4GB anon).
-record KofEmbCtx(KofLmTokIndex idx, List<String> lines)
+record KofEmbCtx(KofLmTokIndex idx, List<String> lines, List<Int[]> tokenIds)
 
 kofEmbCtxNew(String[] tokens): KofEmbCtx {
-    return KofEmbCtx(kofLmTokIndexBuild(tokens), listOf<String>())
+    return KofEmbCtx(kofLmTokIndexBuild(tokens), listOf<String>(), listOf<Int[]>())
 }
 
 kofEmbCtxFile(String[] tokens, String path): KofEmbCtx {
-    return KofEmbCtx(kofLmTokIndexBuild(tokens), kofEmbLines(path))
+    var idx = kofLmTokIndexBuild(tokens)
+    var lines = kofEmbLines(path)
+    var tokenIds = listOf<Int[]>()
+    var n = lines.size()
+    var li = 0
+    while (li < n) {
+        var ln = lines.get(li)
+        li = li + 1
+        if (ln.length < 13) {
+            tokenIds.add(new Int[0])
+            continue
+        }
+        var gold = kflLabelLn(ln)
+        if (gold < 0) {
+            tokenIds.add(new Int[0])
+            continue
+        }
+        var ins = kflJsonFieldLn(ln, "instruction")
+        if (ins.length == 0) {
+            tokenIds.add(new Int[0])
+            continue
+        }
+        var ids = kofLmTokEncodeIdx(idx, ins, 1)
+        tokenIds.add(ids)
+    }
+    return KofEmbCtx(idx, lines, tokenIds)
 }
 
 // treina epochs sobre ctx.lines (v4: instruction+action). retorna vistos.
