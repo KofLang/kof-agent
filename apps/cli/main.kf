@@ -370,7 +370,7 @@ cmdEmbTrain(CliOpts o): Int {
         return 1
     }
     var cfg = kofLmCfgFromKv(m)
-    var W = kofLmWeightsLoad(base, m, cfg)
+    var W = kofLmWeightsLoadEmb(base, m, cfg)
     var v = kofLmTokLoadVocab(base, m)
     if (v.tokens.length == 0) {
         println("emb-train: NO-VOCAB")
@@ -383,14 +383,21 @@ cmdEmbTrain(CliOpts o): Int {
         ds = joinPath(o.root, "datasets/jsonl/koflm-v4.jsonl")
     }
     var t1 = now()
-    var seen = kofEmbTrainFile(em, W, cfg, v.tokens, v.scores, ds, o.epochs, 200)
-    seen = seen + kofEmbTrainFile(em, W, cfg, v.tokens, v.scores, joinPath(o.root, "datasets/jsonl/koflm-errors.jsonl"), o.epochs, 200)
+    println("emb-train: fase=ctxFile t=" + (now()/1000))
+    var ctx = kofEmbCtxFile(v.tokens, ds)
+    println("emb-train: fase=linhas t=" + (now()/1000))
+    var seen = kofEmbTrainFileC(em, W, cfg, ctx, ds, o.epochs, 200)
+    println("emb-train: fase=train1 t=" + (now()/1000))
+    var ctxE = kofEmbCtxFile(v.tokens, joinPath(o.root, "datasets/jsonl/koflm-errors.jsonl"))
+    seen = seen + kofEmbTrainFileC(em, W, cfg, ctxE, joinPath(o.root, "datasets/jsonl/koflm-errors.jsonl"), o.epochs, 200)
+    println("emb-train: fase=train2 t=" + (now()/1000))
     println("emb-train: exemplos=" + seen + " epochs=" + o.epochs + " ms=" + (now() - t1))
     if (!kofEmbSave(dst, em)) {
         println("emb-train: falha ao salvar " + dst)
         return 2
     }
-    println("emb-eval: " + kofEmbEvalFile(em, W, cfg, v.tokens, v.scores, joinPath(o.root, "eval/ptbr-suite-v4.jsonl"), cmdConfMilli(o)))
+    var ctx2 = kofEmbCtxFile(v.tokens, joinPath(o.root, "eval/ptbr-suite-v4.jsonl"))
+    println("emb-eval: " + kofEmbEvalFileC(em, W, cfg, ctx2, joinPath(o.root, "eval/ptbr-suite-v4.jsonl"), cmdConfMilli(o)))
     return 0
 }
 
@@ -408,13 +415,14 @@ cmdEmbEval(CliOpts o): Int {
         return 1
     }
     var cfg = kofLmCfgFromKv(m)
-    var W = kofLmWeightsLoad(base, m, cfg)
+    var W = kofLmWeightsLoadEmb(base, m, cfg)
     var v = kofLmTokLoadVocab(base, m)
     var file = o.file
     if (file == "") {
         file = joinPath(o.root, "eval/ptbr-suite-v4.jsonl")
     }
-    println("emb-eval: " + kofEmbEvalFile(em, W, cfg, v.tokens, v.scores, file, cmdConfMilli(o)))
+    var ctx3 = kofEmbCtxFile(v.tokens, file)
+    println("emb-eval: " + kofEmbEvalFileC(em, W, cfg, ctx3, file, cmdConfMilli(o)))
     return 0
 }
 
@@ -497,3 +505,4 @@ main() {
     }
     process.exit(code)
 }
+

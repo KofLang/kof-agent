@@ -375,6 +375,23 @@ void kofLmLoadInto(String path, KofGgufBinModel m, String tensor, Int rows, Int 
     }
 }
 
+// variante SO-COM-BASE p/ transfer learning do head (166). Nao carrega as
+// 22 camadas (i32 residente = 6.5GB de nada p/ o head, que so usa token_embd).
+KofLmWeights kofLmWeightsLoadEmb(String path, KofGgufBinModel m, KofLmCfg cfg) {
+    var W = KofLmWeights()
+    var win = new Int[11000000]
+    W.embd = new Int[cfg.vocab * cfg.embd]
+    kofLmLoadInto(path, m, "token_embd.weight", cfg.vocab, cfg.embd, 4096, W.embd, win)
+    var fnd = kofGgufF32DecodeRows(path, m, "output_norm.weight", 0, 1, cfg.embd)
+    W.fin = new Int[cfg.embd]
+    var fi = 0
+    while (fi < cfg.embd) {
+        W.fin[fi] = (fnd[fi] * 1000)
+        fi = fi + 1
+    }
+    return W
+}
+
 KofLmWeights kofLmWeightsLoad(String path, KofGgufBinModel m, KofLmCfg cfg) {
     var W = KofLmWeights()
         var win = new Int[11000000]
