@@ -1,0 +1,338 @@
+// E8b-incremento: head treinavel (logistico, softmax-CE, SGD int64-micro) SOBRE os
+// embeddings CONGELADOS do TinyLlama (transfer learning real em Kof puro).
+// feature h = media dos rows token_embd dos ids do prompt (nano, dim=cfg.embd).
+// score_c = dot(h, w_c)/1e9 + bias_c — 3 classes (EXECUTE/ASK/REFUSE).
+// custo por exemplo = milissegundos (vs ~100s do forward do transformer).
+// Layout KFEH v1: 'KFEH'(4) ver(1) e i32(4) crc i32(4) | pesos 3*e i64 | bias 3 i64.
+
+record KofEmbModel(Int e, Long[] w, Long[] bias)
+
+KOFEMB_MICRO(): Long { return 1000000 }
+
+kofEmbInit(Int e): KofEmbModel {
+    var w = new Long[e * 3]
+    var i = 0
+    while (i < e * 3) {
+        w[i] = 0
+        i = i + 1
+    }
+    return KofEmbModel(e, w, new Long[3])
+}
+
+kofEmbReady(KofEmbModel m): Bool { return m.e > 0 && m.w.length == m.e * 3 }
+
+// ids -> feature NA BASE CONGELADA, normalizada p/ esfera unitaria (micro).
+// sem normalizar, tokens raros (norm enorme) dominam o mean-pool e destroem
+// a separacao entre classes (medido: conf=1000 na classe errada).
+kofEmbFeature(KofLmWeights W, KofLmCfg cfg, Int[] ids, Long[] h) {
+    var e = cfg.embd
+    var i = 0
+    while (i < e) {
+        h[i] = 0
+        i = i + 1
+    }
+    if (ids.length == 0) {
+        return
+    }
+    var t = 0
+    while (t < ids.length) {
+        var tok = ids[t]
+        if (tok < 0) {
+            tok = 0
+        }
+        if (tok >= cfg.vocab) {
+            tok = cfg.vocab - 1
+        }
+        var base = tok * e
+        i = 0
+        while (i < e) {
+            h[i] = h[i] + W.embd[base + i]
+            i = i + 1
+        }
+        t = t + 1
+    }
+    i = 0
+    while (i < e) {
+        h[i] = h[i] / ids.length
+        i = i + 1
+    }
+    // micro p/ caber no isqrt: hm = h/1000
+    var sq: Long = 0
+    i = 0
+    while (i < e) {
+        var hm = h[i] / 1000
+        sq = sq + hm * hm / 1000000
+        i = i + 1
+    }
+    var norm = kofLmIsqrt(sq)
+    if (norm < 1) {
+        norm = 1
+    }
+    i = 0
+    while (i < e) {
+        h[i] = (h[i] / 1000) * 1000000 / norm
+        i = i + 1
+    }
+}
+
+// scores micro (3) — h nano, w micro => dot/1e9 = micro
+kofEmbScores(KofEmbModel m, Long[] h): Long[] {
+    var out = new Long[3]
+    var c = 0
+    while (c < 3) {
+        var acc: Long = 0
+        var off = c * m.e
+        var i = 0
+        while (i < m.e) {
+            acc = acc + h[i] * m.w[off + i] / 1000000
+            i = i + 1
+        }
+        out[c] = acc + m.bias[c]
+        c = c + 1
+    }
+    return out
+}
+
+kofEmbSoftmaxMicro(Long[] sc, Long[] p) {
+    var mx = sc[0]
+    if (sc[1] > mx) {
+        mx = sc[1]
+    }
+    if (sc[2] > mx) {
+        mx = sc[2]
+    }
+    var sum: Long = 0
+    var c = 0
+    while (c < 3) {
+        p[c] = kofLmExpMicro(sc[c] - mx)
+        sum = sum + p[c]
+        c = c + 1
+    }
+    c = 0
+    while (c < 3) {
+        p[c] = p[c] * 1000000 / sum
+        c = c + 1
+    }
+}
+
+// um passo SGD — g = (y - p) micro; w += g * h / 1e6 * lr / 1e6 (micro)
+kofEmbTrainStep(KofEmbModel m, Long[] h, Int gold, Long lrMicro) {
+    var sc = kofEmbScores(m, h)
+    var p = new Long[3]
+    kofEmbSoftmaxMicro(sc, p)
+    var c = 0
+    while (c < 3) {
+        var y: Long = 0
+        if (c == gold) {
+            y = 1000000
+        }
+        var g = y - p[c]
+        var off = c * m.e
+        var i = 0
+        while (i < m.e) {
+            m.w[off + i] = m.w[off + i] + (g * h[i] / 1000000) * lrMicro / 1000000
+            i = i + 1
+        }
+        m.bias[c] = m.bias[c] + g * lrMicro / 1000000
+        c = c + 1
+    }
+}
+
+kofEmbPredict(KofEmbModel m, Long[] h): Int {
+    var sc = kofEmbScores(m, h)
+    var best = 0
+    if (sc[1] > sc[best]) {
+        best = 1
+    }
+    if (sc[2] > sc[best]) {
+        best = 2
+    }
+    return best
+}
+
+// confianca da classe vencedora em micro
+kofEmbConf(KofEmbModel m, Long[] h): Long {
+    var sc = kofEmbScores(m, h)
+    var p = new Long[3]
+    kofEmbSoftmaxMicro(sc, p)
+    return p[kofEmbPredict(m, h)]
+}
+
+// treina em arquivo jsonl (v4: instruction + action; eval: expected_action)
+// retorna exemplos vistos. tokens/scores = vocab do proprio modelo.
+kofEmbTrainFile(KofEmbModel m, KofLmWeights W, KofLmCfg cfg, String[] tokens, Long[] scores, String path, Int epochs, Long lrMicro): Int {
+    var f = File(path)
+    if (!f.exists()) {
+        return 0
+    }
+    var txt = f.readText()
+    var seen = 0
+    var e = 0
+    var h = new Long[cfg.embd]
+    while (e < epochs) {
+        var pos = 0
+        while (pos < txt.length) {
+            var nl = txt.indexOf("\n", pos)
+            var ln = ""
+            if (nl < 0) {
+                ln = txt.substring(pos, txt.length)
+                pos = txt.length
+            } else {
+                ln = txt.substring(pos, nl)
+                pos = nl + 1
+            }
+            if (ln.length > 12) {
+                var ins = kflJsonField(ln, "instruction")
+                var act = kflJsonField(ln, "action")
+                if (act.length == 0) {
+                    act = kflJsonField(ln, "expected_action")
+                }
+                var gold = kflLabelCode(act)
+                if (gold >= 0 && ins.length > 0) {
+                    var ids = kofLmTokEncode(tokens, scores, ins, 1)
+                    kofEmbFeature(W, cfg, ids, h)
+                    kofEmbTrainStep(m, h, gold, lrMicro)
+                    seen = seen + 1
+                }
+            }
+        }
+        e = e + 1
+    }
+    return seen
+}
+
+// eval honesto: acc do total + abstem por conf < limiar (milli 0..1000)
+kofEmbEvalFile(KofEmbModel m, KofLmWeights W, KofLmCfg cfg, String[] tokens, Long[] scores, String path, Long confMinMilli): String {
+    var f = File(path)
+    if (!f.exists()) {
+        return "total=0"
+    }
+    var txt = f.readText()
+    var pos = 0
+    var total = 0
+    var ok = 0
+    var perguntou = 0
+    var chute = 0
+    var h = new Long[cfg.embd]
+    while (pos < txt.length) {
+        var nl = txt.indexOf("\n", pos)
+        var ln = ""
+        if (nl < 0) {
+            ln = txt.substring(pos, txt.length)
+            pos = txt.length
+        } else {
+            ln = txt.substring(pos, nl)
+            pos = nl + 1
+        }
+        if (ln.length > 12) {
+            var ins = kflJsonField(ln, "instruction")
+            var act = kflJsonField(ln, "action")
+            if (act.length == 0) {
+                act = kflJsonField(ln, "expected_action")
+            }
+            var gold = kflLabelCode(act)
+            if (gold >= 0 && ins.length > 0) {
+                total = total + 1
+                var ids = kofLmTokEncode(tokens, scores, ins, 1)
+                kofEmbFeature(W, cfg, ids, h)
+                var confMilli = kofEmbConf(m, h) * 1000 / KOFEMB_MICRO()
+                if (confMilli < confMinMilli) {
+                    perguntou = perguntou + 1
+                    if (gold == KFL_ASK()) {
+                        ok = ok + 1
+                    }
+                } else {
+                    var pred = kofEmbPredict(m, h)
+                    if (pred == gold) {
+                        ok = ok + 1
+                    } else if (gold != KFL_ASK()) {
+                        chute = chute + 1
+                    }
+                }
+            }
+        }
+    }
+    if (total == 0) {
+        return "total=0"
+    }
+    return "total=" + total + " acc=" + ok * 100 / total + "% chute=" + chute * 100 / total + "% perguntou=" + perguntou
+}
+
+// ---- persistencia binaria (crc cobre payload)
+
+kofEmbSave(String path, KofEmbModel m): Bool {
+    var payload = m.e * 3 * 8 + 24
+    var b = new Int[13 + payload]
+    b[0] = 75
+    b[1] = 69
+    b[2] = 69
+    b[3] = 72
+    b[4] = 1
+    kflqPutI32(b, 5, m.e)
+    var k = 13
+    var c = 0
+    while (c < 3) {
+        var off = c * m.e
+        var i = 0
+        while (i < m.e) {
+            kflqPutI64(b, k, m.w[off + i])
+            k = k + 8
+            i = i + 1
+        }
+        c = c + 1
+    }
+    c = 0
+    while (c < 3) {
+        kflqPutI64(b, k, m.bias[c])
+        k = k + 8
+        c = c + 1
+    }
+    var crc = kflqCrc(b, 13, payload)
+    kflqPutI32(b, 9, crc)
+    var f = File(path)
+    return f.writeBytes(b)
+}
+
+kofEmbLoad(String path): KofEmbModel {
+    var empty = KofEmbModel(0, new Long[0], new Long[0])
+    var f = File(path)
+    if (!f.exists() || !f.isFile()) {
+        return empty
+    }
+    var hb = f.readRange(0, 13)
+    if (hb.length < 13 || hb[0] != 75 || hb[1] != 69 || hb[2] != 69 || hb[3] != 72) {
+        return empty
+    }
+    var e = kflqGetI32(hb, 5)
+    if (e <= 0 || e > 8388608) {
+        return empty
+    }
+    var payload = e * 24 + 24
+    var all = f.readRange(0, 13 + payload)
+    if (all.length < 13 + payload) {
+        return empty
+    }
+    if (kflqCrc(all, 13, payload) != kflqGetI32(all, 9)) {
+        return empty
+    }
+    var m = kofEmbInit(e)
+    var k = 13
+    var c = 0
+    while (c < 3) {
+        var off = c * e
+        var i = 0
+        while (i < e) {
+            m.w[off + i] = kflqGetI64(all, k)
+            k = k + 8
+            i = i + 1
+        }
+        c = c + 1
+    }
+    c = 0
+    while (c < 3) {
+        m.bias[c] = kflqGetI64(all, k)
+        k = k + 8
+        c = c + 1
+    }
+    return m
+}

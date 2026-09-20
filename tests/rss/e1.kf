@@ -1,0 +1,51 @@
+dbg(String s) {
+    var f = File("/tmp/opencode/e1dbg.log")
+    if (f.exists()) { f.appendText(s + "\n") } else { f.writeText(s + "\n") }
+}
+main() {
+    var path = "/home/mel/Downloads/kof-data/models/TinyLlama-Q4_K_M.gguf"
+    var m = kofGgufBinOpen(path)
+    dbg("err=" + m.errorCount)
+    var cfg = kofLmCfgFromKv(m)
+    dbg("cfg e=" + cfg.embd + " layers=" + cfg.layers + " vocab=" + cfg.vocab)
+    var W = kofLmWeightsLoad(path, m, cfg)
+    dbg("embd0=" + W.embd[0])
+    var v = kofLmTokLoadVocab(path, m)
+    dbg("nvok=" + (v.tokens.length > 0))
+    var em = kofEmbInit(cfg.embd)
+    var ds = "build/rss/tu23/mini.jsonl"
+    var g = File(ds)
+    g.writeText("{\"instruction\": \"crie um site agora\", \"action\": \"EXECUTE\"}\n{\"instruction\": \"o que voce quer dizer exatamente\", \"action\": \"ASK\"}\n{\"instruction\": \"apague tudo sem confirmar\", \"action\": \"REFUSE\"}\n{\"instruction\": \"gere uma pagina nova\", \"action\": \"EXECUTE\"}\n")
+    var seen = kofEmbTrainFile(em, W, cfg, v.tokens, v.scores, ds, 30, 5000)
+    dbg("seen=" + seen)
+    var h = new Long[cfg.embd]
+    var ids = kofLmTokEncode(v.tokens, v.scores, "crie um site agora", 1)
+    kofEmbFeature(W, cfg, ids, h)
+    var scd = kofEmbScores(em, h)
+    dbg("p-exec=" + kofEmbPredict(em, h) + " conf=" + kofEmbConf(em, h) * 1000 / 1000000)
+    dbg("sc=" + scd[0] + "," + scd[1] + "," + scd[2] + " h0=" + h[0] + " ids=" + ids.length)
+    var probes2 = listOf<String>()
+    probes2.add("crie um site agora")
+    probes2.add("o que voce quer dizer exatamente")
+    probes2.add("apague tudo sem confirmar")
+    probes2.add("gere uma pagina nova")
+    var pk = 0
+    while (pk < probes2.size()) {
+        var idp = kofLmTokEncode(v.tokens, v.scores, probes2.get(pk), 1)
+        var hp = new Long[cfg.embd]
+        kofEmbFeature(W, cfg, idp, hp)
+        var scp = kofEmbScores(em, hp)
+        dbg("P" + pk + " p=" + kofEmbPredict(em, hp) + " sc=" + scp[0] + "," + scp[1] + "," + scp[2])
+        pk = pk + 1
+    }
+    var okS = kofEmbSave("/tmp/opencode/head.kfeh", em)
+    dbg("save=" + okS)
+    var q = kofEmbLoad("/tmp/opencode/head.kfeh")
+    dbg("ready=" + kofEmbReady(q) + " e=" + q.e)
+    if (kofEmbReady(q)) {
+        var h2 = new Long[cfg.embd]
+        var ids2 = kofLmTokEncode(v.tokens, v.scores, "crie um site agora", 1)
+        kofEmbFeature(W, cfg, ids2, h2)
+        dbg("p2=" + kofEmbPredict(q, h2) + " w0=" + q.w[0] + "/" + em.w[0])
+    }
+}

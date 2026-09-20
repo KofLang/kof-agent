@@ -81,7 +81,7 @@ SELECTED=("${PARTS[@]}")
 for flag in "${@:3}"; do
   case "$flag" in
     --with-gateway) SELECTED+=("agent/runtime/95_gateway.kf") ;;
-    --with-lm) SELECTED+=("engine/koflama_gguf.kf" "engine/koflama_forward.kf" "engine/koflama_tokenizer.kf" "engine/163_koflm_intent.kf" "engine/164_koflearn.kf" "engine/165_kofquant.kf") ;;
+    --with-lm) SELECTED+=("engine/koflama_gguf.kf" "engine/koflama_forward.kf" "engine/koflama_tokenizer.kf" "engine/163_koflm_intent.kf" "engine/164_koflearn.kf" "engine/165_kofquant.kf" "engine/166_kofemb.kf") ;;
     --only=*) SELECTED=(); for f in $(echo "$flag" | cut -d= -f2 | tr ',' ' '); do SELECTED+=("$(resolve_part "$f")"); done ;;
     --native-clock) SELECTED+=("agent/runtime/98_native_clock.kf") ;;
     --no-native-clock) ;;

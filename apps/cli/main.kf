@@ -357,6 +357,67 @@ cmdQuant(CliOpts o): Int {
     return 0
 }
 
+kofEmbBase(): String { return "/home/mel/Downloads/kof-data/models/TinyLlama-Q4_K_M.gguf" }
+
+cmdEmbTrain(CliOpts o): Int {
+    var base = kofEmbBase()
+    var dst = joinPath(o.root, "build/kofemb.head")
+    println("emb-train: base=" + base + " head=" + dst)
+    var t0 = now()
+    var m = kofGgufBinOpen(base)
+    if (m.errorCount > 0) {
+        println("emb-train: ERR:" + m.errorCode)
+        return 1
+    }
+    var cfg = kofLmCfgFromKv(m)
+    var W = kofLmWeightsLoad(base, m, cfg)
+    var v = kofLmTokLoadVocab(base, m)
+    if (v.tokens.length == 0) {
+        println("emb-train: NO-VOCAB")
+        return 1
+    }
+    println("emb-train: load=" + (now() - t0) + "ms e=" + cfg.embd)
+    var em = kofEmbInit(cfg.embd)
+    var ds = o.file
+    if (ds == "") {
+        ds = joinPath(o.root, "datasets/jsonl/koflm-v4.jsonl")
+    }
+    var t1 = now()
+    var seen = kofEmbTrainFile(em, W, cfg, v.tokens, v.scores, ds, o.epochs, 200)
+    seen = seen + kofEmbTrainFile(em, W, cfg, v.tokens, v.scores, joinPath(o.root, "datasets/jsonl/koflm-errors.jsonl"), o.epochs, 200)
+    println("emb-train: exemplos=" + seen + " epochs=" + o.epochs + " ms=" + (now() - t1))
+    if (!kofEmbSave(dst, em)) {
+        println("emb-train: falha ao salvar " + dst)
+        return 2
+    }
+    println("emb-eval: " + kofEmbEvalFile(em, W, cfg, v.tokens, v.scores, joinPath(o.root, "eval/ptbr-suite-v4.jsonl"), cmdConfMilli(o)))
+    return 0
+}
+
+cmdEmbEval(CliOpts o): Int {
+    var base = kofEmbBase()
+    var hp = joinPath(o.root, "build/kofemb.head")
+    var em = kofEmbLoad(hp)
+    if (!kofEmbReady(em)) {
+        println("emb-eval: sem head — rode: kof-agent emb-train")
+        return 2
+    }
+    var m = kofGgufBinOpen(base)
+    if (m.errorCount > 0) {
+        println("emb-eval: ERR:" + m.errorCode)
+        return 1
+    }
+    var cfg = kofLmCfgFromKv(m)
+    var W = kofLmWeightsLoad(base, m, cfg)
+    var v = kofLmTokLoadVocab(base, m)
+    var file = o.file
+    if (file == "") {
+        file = joinPath(o.root, "eval/ptbr-suite-v4.jsonl")
+    }
+    println("emb-eval: " + kofEmbEvalFile(em, W, cfg, v.tokens, v.scores, file, cmdConfMilli(o)))
+    return 0
+}
+
 cmdTrain(CliOpts o): Int {
     var m = kflLoadModel(joinPath(o.root, "build/koflearn.w"))
     if (!m.ready()) {
@@ -410,6 +471,10 @@ main() {
             code = cmdConfigShow(o)
         } else if (o.cmd == "train") {
             code = cmdTrain(o)
+        } else if (o.cmd == "emb-train") {
+            code = cmdEmbTrain(o)
+        } else if (o.cmd == "emb-eval") {
+            code = cmdEmbEval(o)
         } else if (o.cmd == "eval") {
             code = cmdEval(o)
         } else if (o.cmd == "quant") {
