@@ -27,5 +27,16 @@ else
   unset _cand _koftool
 fi
 export KOF4J_ROOT
+# Pin do toolchain: o agente foi construído/ajustado contra o jar congelado 0.4.0
+# (old40). A crew trocou lib/kof.jar p/ 0.4.7 (regressão de acesso nativo a
+# array/String no hot path). Usar o launcher privado old40 por padrão, a menos
+# que o usuário force KOF/KOFAGENT_NO_PIN explicitamente.
+_kof_scripts="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+if [ -z "${KOF:-}" ] && [ -z "${KOFAGENT_NO_PIN:-}" ] \
+   && [ -x "$_kof_scripts/kof-old40" ] \
+   && [ -f "$KOF4J_ROOT/lib/kof.jar.old40" ]; then
+  KOF="$_kof_scripts/kof-old40"
+fi
+unset _kof_scripts
 KOF="${KOF:-$KOF4J_ROOT/bin/kof}"
 export KOF

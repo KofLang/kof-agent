@@ -369,9 +369,13 @@ cmdEmbTrain(CliOpts o): Int {
         println("emb-train: ERR:" + m.errorCode)
         return 1
     }
+    embT("T-binok")
     var cfg = kofLmCfgFromKv(m)
+    embT("T-cfg")
     var W = kofLmWeightsLoadEmb(base, m, cfg)
+    embT("T-wload")
     var v = kofLmTokLoadVocab(base, m)
+    embT("T-vocab n=" + v.tokens.length)
     if (v.tokens.length == 0) {
         println("emb-train: NO-VOCAB")
         return 1
@@ -388,12 +392,16 @@ cmdEmbTrain(CliOpts o): Int {
     println("emb-train: fase=linhas t=" + (now()/1000))
     var seen = kofEmbTrainFileC(em, W, cfg, ctx, ds, o.epochs, 200)
     println("emb-train: fase=train1 t=" + (now()/1000))
+    embT("ctx-file-ok")
+    embT("ctx-v4-ok seen=" + seen)
     var ctxE = kofEmbCtxFile(v.tokens, joinPath(o.root, "datasets/jsonl/koflm-errors.jsonl"))
     seen = seen + kofEmbTrainFileC(em, W, cfg, ctxE, joinPath(o.root, "datasets/jsonl/koflm-errors.jsonl"), o.epochs, 200)
+    embT("ctx-err-ok seen=" + seen)
+    embT("ctx-e-ok")
     println("emb-train: fase=train2 t=" + (now()/1000))
-    println("emb-train: exemplos=" + seen + " epochs=" + o.epochs + " ms=" + (now() - t1))
+    embT("train-done seen=" + seen + " ms=" + (now() - t1))
     if (!kofEmbSave(dst, em)) {
-        println("emb-train: falha ao salvar " + dst)
+        embT("save-fail")
         return 2
     }
     var ctx2 = kofEmbCtxFile(v.tokens, joinPath(o.root, "eval/ptbr-suite-v4.jsonl"))
@@ -404,6 +412,7 @@ cmdEmbTrain(CliOpts o): Int {
 cmdEmbEval(CliOpts o): Int {
     var base = kofEmbBase()
     var hp = joinPath(o.root, "build/kofemb.head")
+    embT("eval0")
     var em = kofEmbLoad(hp)
     if (!kofEmbReady(em)) {
         println("emb-eval: sem head — rode: kof-agent emb-train")
@@ -414,15 +423,22 @@ cmdEmbEval(CliOpts o): Int {
         println("emb-eval: ERR:" + m.errorCode)
         return 1
     }
+    embT("E-binok")
     var cfg = kofLmCfgFromKv(m)
+    embT("E-cfg")
     var W = kofLmWeightsLoadEmb(base, m, cfg)
+    embT("E-wload")
     var v = kofLmTokLoadVocab(base, m)
+    embT("E-vocab n=" + v.tokens.length)
     var file = o.file
     if (file == "") {
         file = joinPath(o.root, "eval/ptbr-suite-v4.jsonl")
     }
+    embT("eval-ctx")
     var ctx3 = kofEmbCtxFile(v.tokens, file)
+    embT("eval-run")
     println("emb-eval: " + kofEmbEvalFileC(em, W, cfg, ctx3, file, cmdConfMilli(o)))
+    embT("eval-done")
     return 0
 }
 

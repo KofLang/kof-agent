@@ -307,6 +307,7 @@ kofEmbEvalFileC(KofEmbModel m, KofLmWeights W, KofLmCfg cfg, KofEmbCtx ctx, Stri
     while (li < n) {
         var ln = lines.get(li)
         li = li + 1
+        if (li % 50 == 0) { embT("eval li=" + li) }
         if (ln.length < 13) {
             continue
         }
@@ -424,4 +425,9 @@ kofEmbLoad(String path): KofEmbModel {
         c = c + 1
     }
     return m
+}
+
+embT(s: String) {
+    var f = File("/tmp/opencode/embT.log")
+    if (f.exists()) { f.appendText(s + "\n") } else { f.writeText(s + "\n") }
 }

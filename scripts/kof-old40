@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+# Launcher PRIVADO: compila/runa o agente contra o jar congelado 0.4.0 (old40)
+# sem tocar no lib/kof.jar compartilhado da crew (que foi trocado p/ 0.4.7 às 02:03
+# e regrediu o acesso nativo a array/String no hot path do tokenizer).
+set -euo pipefail
+KOF_HOME="${KOF4J_ROOT:-/home/mel/Documentos/Kof4j}"
+JAR="$KOF_HOME/lib/kof.jar.old40"
+[ -f "$JAR" ] || { echo "kof-old40: jar nao encontrado: $JAR" >&2; exit 1; }
+JAVA="$(command -v java || true)"
+[ -x "$KOF_HOME/jdk/bin/java" ] && JAVA="$KOF_HOME/jdk/bin/java"
+EMBEDDED=false; [ "$JAVA" != "$(command -v java || true)" ] && EMBEDDED=true
+UNSAFE_FLAG=""
+JAVA_MAJOR="$("$JAVA" -version 2>&1 | sed -n 's/.*version "\([0-9]*\).*/\1/p' | head -1)"
+if [ -n "$JAVA_MAJOR" ] && [ "$JAVA_MAJOR" -ge 24 ] 2>/dev/null; then
+  UNSAFE_FLAG="--sun-misc-unsafe-memory-access=allow"
+fi
+exec "$JAVA" --enable-native-access=ALL-UNNAMED $UNSAFE_FLAG \
+  -Dkof.install.dir="$KOF_HOME" -Dkof.embedded.jdk="$EMBEDDED" \
+  -jar "$JAR" "$@"
