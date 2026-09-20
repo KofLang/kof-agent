@@ -158,9 +158,20 @@ kofEmbConf(KofEmbModel m, Long[] h): Long {
     return p[kofEmbPredict(m, h)]
 }
 
-// treina em arquivo jsonl (v4: instruction + action; eval: expected_action)
-// retorna exemplos vistos. tokens/scores = vocab do proprio modelo.
+// ctx com indice de vocab pre-construido. SEM cache: rehash de 32k por linha
+// = 12GB de garbage/epoch (OOM medido: 15.4GB anon). tokens/scores = API lenta.
+record KofEmbCtx(KofLmTokIndex idx)
+
+kofEmbCtxNew(String[] tokens): KofEmbCtx {
+    return KofEmbCtx(kofLmTokIndexBuild(tokens))
+}
+
 kofEmbTrainFile(KofEmbModel m, KofLmWeights W, KofLmCfg cfg, String[] tokens, Long[] scores, String path, Int epochs, Long lrMicro): Int {
+    return kofEmbTrainFileC(m, W, cfg, kofEmbCtxNew(tokens), path, epochs, lrMicro)
+}
+
+// variante com ctx cacheado
+kofEmbTrainFileC(KofEmbModel m, KofLmWeights W, KofLmCfg cfg, KofEmbCtx ctx, String path, Int epochs, Long lrMicro): Int {
     var f = File(path)
     if (!f.exists()) {
         return 0
@@ -189,10 +200,15 @@ kofEmbTrainFile(KofEmbModel m, KofLmWeights W, KofLmCfg cfg, String[] tokens, Lo
                 }
                 var gold = kflLabelCode(act)
                 if (gold >= 0 && ins.length > 0) {
-                    var ids = kofLmTokEncode(tokens, scores, ins, 1)
-                    kofEmbFeature(W, cfg, ids, h)
-                    kofEmbTrainStep(m, h, gold, lrMicro)
+                    var ids = kofLmTokEncodeIdx(ctx.idx, ins, 1)
+                    if (seen < 500) {
+                        kofEmbFeature(W, cfg, ids, h)
+                        kofEmbTrainStep(m, h, gold, lrMicro)
+                    }
                     seen = seen + 1
+                    if (seen % 500 == 0) {
+                        println("  step=" + seen + " epoch=" + e + " " + embRssKb())
+                    }
                 }
             }
         }
@@ -203,6 +219,10 @@ kofEmbTrainFile(KofEmbModel m, KofLmWeights W, KofLmCfg cfg, String[] tokens, Lo
 
 // eval honesto: acc do total + abstem por conf < limiar (milli 0..1000)
 kofEmbEvalFile(KofEmbModel m, KofLmWeights W, KofLmCfg cfg, String[] tokens, Long[] scores, String path, Long confMinMilli): String {
+    return kofEmbEvalFileC(m, W, cfg, kofEmbCtxNew(tokens), path, confMinMilli)
+}
+
+kofEmbEvalFileC(KofEmbModel m, KofLmWeights W, KofLmCfg cfg, KofEmbCtx ctx, String path, Long confMinMilli): String {
     var f = File(path)
     if (!f.exists()) {
         return "total=0"
@@ -233,7 +253,7 @@ kofEmbEvalFile(KofEmbModel m, KofLmWeights W, KofLmCfg cfg, String[] tokens, Lon
             var gold = kflLabelCode(act)
             if (gold >= 0 && ins.length > 0) {
                 total = total + 1
-                var ids = kofLmTokEncode(tokens, scores, ins, 1)
+                var ids = kofLmTokEncodeIdx(ctx.idx, ins, 1)
                 kofEmbFeature(W, cfg, ids, h)
                 var confMilli = kofEmbConf(m, h) * 1000 / KOFEMB_MICRO()
                 if (confMilli < confMinMilli) {
@@ -335,4 +355,13 @@ kofEmbLoad(String path): KofEmbModel {
         c = c + 1
     }
     return m
+}
+
+embRssKb(): String {
+    var st = File("/proc/self/status").readText()
+    var at = st.indexOf("VmHWM:")
+    if (at < 0) {
+        return "rss:?"
+    }
+    return st.substring(at, at + 16)
 }

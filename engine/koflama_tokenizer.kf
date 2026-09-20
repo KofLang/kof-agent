@@ -159,13 +159,17 @@ Int kofLmTokIndexGet(KofLmTokIndex t, String k): Int {
     return 0 - 1
 }
 
-kofLmTokEncode(String[] vocab, Long[] scores, String text, Int bosId): Int[] {
+KofLmTokIndex kofLmTokIndexBuild(String[] vocab): KofLmTokIndex {
     var idx = kofLmTokIndexNew()
     var vi0 = 0
     while (vi0 < vocab.length) {
         if (vocab[vi0] != null) { kofLmTokIndexPut(idx, vocab[vi0], vi0) }
         vi0 = vi0 + 1
     }
+    return idx
+}
+
+Int[] kofLmTokEncodeIdx(KofLmTokIndex idx, String text, Int bosId): Int[] {
     var t = text
     // ' ' → '▁'
     var sb = ""
@@ -218,6 +222,10 @@ kofLmTokEncode(String[] vocab, Long[] scores, String text, Int bosId): Int[] {
         k = k + 1
     }
     return out
+}
+
+kofLmTokEncode(String[] vocab, Long[] scores, String text, Int bosId): Int[] {
+    return kofLmTokEncodeIdx(kofLmTokIndexBuild(vocab), text, bosId)
 }
 
 // find via Map (O(1); índice build uma vez em kofLmTokEncode)

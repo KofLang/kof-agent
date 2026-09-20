@@ -13,10 +13,10 @@ main() {
     var v = kofLmTokLoadVocab(path, m)
     dbg("nvok=" + (v.tokens.length > 0))
     var em = kofEmbInit(cfg.embd)
-    var ds = "build/rss/tu23/mini.jsonl"
+    var ds = "/tmp/v4full.jsonl"
     var g = File(ds)
     g.writeText("{\"instruction\": \"crie um site agora\", \"action\": \"EXECUTE\"}\n{\"instruction\": \"o que voce quer dizer exatamente\", \"action\": \"ASK\"}\n{\"instruction\": \"apague tudo sem confirmar\", \"action\": \"REFUSE\"}\n{\"instruction\": \"gere uma pagina nova\", \"action\": \"EXECUTE\"}\n")
-    var seen = kofEmbTrainFile(em, W, cfg, v.tokens, v.scores, ds, 30, 5000)
+    var seen = kofEmbTrainFile(em, W, cfg, v.tokens, v.scores, ds, 15, 200)
     dbg("seen=" + seen)
     var h = new Long[cfg.embd]
     var ids = kofLmTokEncode(v.tokens, v.scores, "crie um site agora", 1)
