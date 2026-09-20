@@ -157,26 +157,55 @@ kofEmbConf(KofEmbModel m, Long[] h): Long {
     kofEmbSoftmaxMicro(sc, p)
     return p[kofEmbPredict(m, h)]
 }
+// ctx: indice de vocab + texto do dataset lido UMA vez.
+// Em native, readText() de arquivo grande vaza memoria bruta (testado: 192KB
+// lidos 15x = OOM 16GB). Treino/eval andam por scan sobre ctx.txt.
+record KofEmbCtx(KofLmTokIndex idx, String txt)
 
-// ctx com indice de vocab pre-construido. SEM cache: rehash de 32k por linha
-// = 12GB de garbage/epoch (OOM medido: 15.4GB anon). tokens/scores = API lenta.
-record KofEmbCtx(KofLmTokIndex idx)
+kofEmbPhase(): Int { return 4 }
+
+// parse sem concat: busca "key" char a char; retorna valor via substring
+kflJsonFieldZ(String line, String key): String {
+    var n = line.length
+    var k = 0
+    while (k + key.length + 1 < n) {
+        if (line.charAt(k) == 34) {
+            var m = 0
+            var ok = true
+            while (m < key.length) {
+                if (line.charAt(k + 1 + m) != key.charAt(m)) { ok = false }
+                m = m + 1
+            }
+            if (ok && line.charAt(k + 1 + key.length) == 34) {
+                var i = k + key.length + 2
+                while (i < n && (line.charAt(i) == 32 || line.charAt(i) == 58)) { i = i + 1 }
+                if (i < n && line.charAt(i) == 34) {
+                    var j = i + 1
+                    while (j < n && line.charAt(j) != 34 && line.charAt(j) != 92) { j = j + 1 }
+                    return line.substring(i + 1, j)
+                }
+            }
+        }
+        k = k + 1
+    }
+    return ""
+}
 
 kofEmbCtxNew(String[] tokens): KofEmbCtx {
-    return KofEmbCtx(kofLmTokIndexBuild(tokens))
+    return KofEmbCtx(kofLmTokIndexBuild(tokens), "")
 }
 
-kofEmbTrainFile(KofEmbModel m, KofLmWeights W, KofLmCfg cfg, String[] tokens, Long[] scores, String path, Int epochs, Long lrMicro): Int {
-    return kofEmbTrainFileC(m, W, cfg, kofEmbCtxNew(tokens), path, epochs, lrMicro)
-}
-
-// variante com ctx cacheado
-kofEmbTrainFileC(KofEmbModel m, KofLmWeights W, KofLmCfg cfg, KofEmbCtx ctx, String path, Int epochs, Long lrMicro): Int {
+kofEmbCtxFile(String[] tokens, String path): KofEmbCtx {
     var f = File(path)
-    if (!f.exists()) {
-        return 0
+    var txt = ""
+    if (f.exists()) {
+        txt = f.readText()
     }
-    var txt = f.readText()
+    return KofEmbCtx(kofLmTokIndexBuild(tokens), txt)
+}
+
+// varre txt (jsonl v4/errors) por epochs, passo SGD por exemplo. retorna vistos.
+kofEmbScan(String txt, KofLmTokIndex idx, KofLmWeights W, KofLmCfg cfg, KofEmbModel m, Int epochs, Long lrMicro): Int {
     var seen = 0
     var e = 0
     var h = new Long[cfg.embd]
@@ -193,22 +222,24 @@ kofEmbTrainFileC(KofEmbModel m, KofLmWeights W, KofLmCfg cfg, KofEmbCtx ctx, Str
                 pos = nl + 1
             }
             if (ln.length > 12) {
-                var ins = kflJsonField(ln, "instruction")
-                var act = kflJsonField(ln, "action")
+                var ins = kflJsonFieldZ(ln, "instruction")
+                var act = kflJsonFieldZ(ln, "action")
                 if (act.length == 0) {
-                    act = kflJsonField(ln, "expected_action")
+                    act = kflJsonFieldZ(ln, "expected_action")
                 }
                 var gold = kflLabelCode(act)
                 if (gold >= 0 && ins.length > 0) {
-                    var ids = kofLmTokEncodeIdx(ctx.idx, ins, 1)
-                    if (seen < 500) {
-                        kofEmbFeature(W, cfg, ids, h)
-                        kofEmbTrainStep(m, h, gold, lrMicro)
+                    var ph = kofEmbPhase()
+                    if (ph <= 2) {
+                        var ids = kofLmTokEncodeIdx(idx, ins, 1)
+                        if (ph <= 1) {
+                            kofEmbFeature(W, cfg, ids, h)
+                            if (ph <= 0) {
+                                kofEmbTrainStep(m, h, gold, lrMicro)
+                            }
+                        }
                     }
                     seen = seen + 1
-                    if (seen % 500 == 0) {
-                        println("  step=" + seen + " epoch=" + e + " " + embRssKb())
-                    }
                 }
             }
         }
@@ -217,17 +248,38 @@ kofEmbTrainFileC(KofEmbModel m, KofLmWeights W, KofLmCfg cfg, KofEmbCtx ctx, Str
     return seen
 }
 
-// eval honesto: acc do total + abstem por conf < limiar (milli 0..1000)
+// API lenta (re-constrói idx; le 1x)
+kofEmbTrainFile(KofEmbModel m, KofLmWeights W, KofLmCfg cfg, String[] tokens, Long[] scores, String path, Int epochs, Long lrMicro): Int {
+    return kofEmbTrainFileC(m, W, cfg, kofEmbCtxNew(tokens), path, epochs, lrMicro)
+}
+
+// variante com ctx cacheado; txt ja carregado => zero re-read
+kofEmbTrainFileC(KofEmbModel m, KofLmWeights W, KofLmCfg cfg, KofEmbCtx ctx, String path, Int epochs, Long lrMicro): Int {
+    var txt = ctx.txt
+    if (txt.length == 0) {
+        var f = File(path)
+        if (!f.exists()) {
+            return 0
+        }
+        txt = f.readText()
+    }
+    return kofEmbScan(txt, ctx.idx, W, cfg, m, epochs, lrMicro)
+}
+
+// eval honesto (leitura unica): acc do total + abstem por conf < limiar (milli)
 kofEmbEvalFile(KofEmbModel m, KofLmWeights W, KofLmCfg cfg, String[] tokens, Long[] scores, String path, Long confMinMilli): String {
     return kofEmbEvalFileC(m, W, cfg, kofEmbCtxNew(tokens), path, confMinMilli)
 }
 
 kofEmbEvalFileC(KofEmbModel m, KofLmWeights W, KofLmCfg cfg, KofEmbCtx ctx, String path, Long confMinMilli): String {
-    var f = File(path)
-    if (!f.exists()) {
-        return "total=0"
+    var txt = ctx.txt
+    if (txt.length == 0) {
+        var f = File(path)
+        if (!f.exists()) {
+            return "total=0"
+        }
+        txt = f.readText()
     }
-    var txt = f.readText()
     var pos = 0
     var total = 0
     var ok = 0
@@ -245,40 +297,29 @@ kofEmbEvalFileC(KofEmbModel m, KofLmWeights W, KofLmCfg cfg, KofEmbCtx ctx, Stri
             pos = nl + 1
         }
         if (ln.length > 12) {
-            var ins = kflJsonField(ln, "instruction")
-            var act = kflJsonField(ln, "action")
-            if (act.length == 0) {
-                act = kflJsonField(ln, "expected_action")
-            }
-            var gold = kflLabelCode(act)
+            var ins = kflJsonFieldZ(ln, "instruction")
+            var exp = kflJsonFieldZ(ln, "expected_action")
+            var gold = kflLabelCode(exp)
             if (gold >= 0 && ins.length > 0) {
                 total = total + 1
                 var ids = kofLmTokEncodeIdx(ctx.idx, ins, 1)
                 kofEmbFeature(W, cfg, ids, h)
-                var confMilli = kofEmbConf(m, h) * 1000 / KOFEMB_MICRO()
-                if (confMilli < confMinMilli) {
+                var p = kofEmbPredict(m, h)
+                var conf = kofEmbConf(m, h) * 1000 / 1000000
+                if (conf >= confMinMilli) {
                     perguntou = perguntou + 1
-                    if (gold == KFL_ASK()) {
+                    if (p == gold) {
                         ok = ok + 1
-                    }
-                } else {
-                    var pred = kofEmbPredict(m, h)
-                    if (pred == gold) {
-                        ok = ok + 1
-                    } else if (gold != KFL_ASK()) {
+                    } else {
                         chute = chute + 1
                     }
                 }
             }
         }
     }
-    if (total == 0) {
-        return "total=0"
-    }
-    return "total=" + total + " acc=" + ok * 100 / total + "% chute=" + chute * 100 / total + "% perguntou=" + perguntou
+    return "total=" + total + " acc=" + ok * 100 / (total + 1) + "% chute=" + chute * 100 / (total + 1) + "% perguntou=" + perguntou
 }
 
-// ---- persistencia binaria (crc cobre payload)
 
 kofEmbSave(String path, KofEmbModel m): Bool {
     var payload = m.e * 3 * 8 + 24
